@@ -43,11 +43,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test (workspace packages)
         run: pnpm test
-
-      - name: Build
-        run: pnpm build
