@@ -1,0 +1,42 @@
+{
+  "name": "@kron/sdk",
+  "version": "0.1.0",
+  "description": "KRON SDK — give AI agents economic autonomy with policy-controlled payments on Algorand",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "algorand",
+    "ai-agents",
+    "mcp",
+    "x402",
+    "payments",
+    "policy-engine",
+    "autonomous-agents"
+  ],
+  "dependencies": {
+    "@kron/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
+  }
+}

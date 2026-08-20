@@ -1,0 +1,280 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Matter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Sarvam-inspired minimal palette */
+  --color-canvas: #f8f7f4;
+  --color-surface: #ffffff;
+  --color-surface-2: #f2f1ed;
+  --color-line: #e8e6e1;
+  --color-line-strong: #d9d6cf;
+  --color-ink: #1c1917;
+  --color-ink-2: #57534e;
+  --color-ink-3: #a8a29e;
+  --color-accent: #4f46e5;
+  --color-accent-soft: #eef2ff;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+}
+
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv02", "cv03", "ss01";
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d2cc; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #b8b5ad; }
+
+/* Selection */
+::selection { background: #dbeafe; color: #1e3a8a; }
+
+/* ------------------------------------------------------------------ */
+/* Motion system — restrained, refined, purposeful                       */
+/* ------------------------------------------------------------------ */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes softPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.18); }
+  50% { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
+}
+@keyframes drawLine {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes gridFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.anim-fade-up { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-fade-in { animation: fadeIn 0.4s ease both; }
+.anim-scale-in { animation: scaleIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-slide-in-right { animation: slideInRight 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-soft-pulse { animation: softPulse 2.4s ease-in-out infinite; }
+.anim-breathe { animation: breathe 2.6s ease-in-out infinite; }
+
+.stagger-children > * { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 480ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 540ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 600ms; }
+.stagger-children > *:nth-child(12) { animation-delay: 660ms; }
+
+/* ------------------------------------------------------------------ */
+/* Surface primitives (light, minimal, soft shadow)                    */
+/* ------------------------------------------------------------------ */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+.card-hover:hover {
+  border-color: var(--color-line-strong);
+  box-shadow: 0 8px 30px -12px rgba(28, 25, 23, 0.12);
+  transform: translateY(-1px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Accent ring (used sparingly, like Sarvam's soft lavender)            */
+/* ------------------------------------------------------------------ */
+
+.accent-card {
+  position: relative;
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background:
+    linear-gradient(135deg, rgba(238, 242, 255, 0.6), rgba(255, 255, 255, 0) 55%),
+    var(--color-surface);
+}
+.accent-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.35), rgba(79, 70, 229, 0.05) 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Skeleton loading shimmer                                            */
+/* ------------------------------------------------------------------ */
+
+.skeleton {
+  background: linear-gradient(90deg, #ecebe6 25%, #f5f4f0 50%, #ecebe6 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+/* ------------------------------------------------------------------ */
+/* Subtle dotted grid background (very faint)                          */
+/* ------------------------------------------------------------------ */
+
+.dotted-grid {
+  background-image: radial-gradient(#e2e0da 1px, transparent 1px);
+  background-size: 22px 22px;
+  animation: gridFade 1.2s ease both;
+}
+
+/* ------------------------------------------------------------------ */
+/* Timeline connector (light theme)                                    */
+/* ------------------------------------------------------------------ */
+
+.timeline-connector {
+  width: 1.5px;
+  background: linear-gradient(to bottom, var(--color-accent), var(--color-success));
+  opacity: 0.35;
+  transform-origin: top;
+  animation: drawLine 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.timeline-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--color-line-strong);
+  background: var(--color-surface);
+  transition: all 0.3s ease;
+}
+.timeline-dot.confirmed {
+  border-color: var(--color-success);
+  background: var(--color-success);
+}
+.timeline-dot.pending {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  animation: softPulse 2s ease-in-out infinite;
+}
+.timeline-dot.failed {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+}
+.timeline-dot.blocked {
+  border-color: var(--color-warning);
+  background: var(--color-warning);
+}
+
+/* ------------------------------------------------------------------ */
+/* Network badge (quiet, monochrome-ish)                               */
+/* ------------------------------------------------------------------ */
+
+.network-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-line);
+  color: var(--color-ink-2);
+  background: var(--color-surface-2);
+}
+.network-badge.testnet { color: #92400e; border-color: #fcd34d; background: #fffbeb; }
+.network-badge.localnet { color: #3730a3; border-color: #c7d2fe; background: #eef2ff; }
+.network-badge.mainnet { color: #065f46; border-color: #a7f3d0; background: #ecfdf5; }
+
+/* ------------------------------------------------------------------ */
+/* Verified on-chain badge (quiet success)                             */
+/* ------------------------------------------------------------------ */
+
+.badge-onchain {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-success);
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 9999px;
+  padding: 2px 8px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Live feed terminal (quiet paper console)                            */
+/* ------------------------------------------------------------------ */
+
+.terminal {
+  position: relative;
+  overflow: hidden;
+  background: #fbfaf8;
+  border: 1px solid var(--color-line);
+}
+.terminal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.012) 51%, transparent 100%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 10;
+}
+.terminal-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24%;
+  background: linear-gradient(to bottom, transparent, rgba(79, 70, 229, 0.06), transparent);
+  animation: scanline 5s linear infinite;
+  pointer-events: none;
+  z-index: 11;
+}
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(320%); }
+}

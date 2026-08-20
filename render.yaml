@@ -1,0 +1,82 @@
+# KRON — Render one-click deploy (free tier)
+#
+# Two web services, both built from the repo Dockerfiles used by
+# docker-compose.prod.yml. Set the secrets below in the Render dashboard
+# after creating the services, or use the "New Blueprint" flow and fill
+# them in the generated .env.
+#
+#   API_PUBLIC_URL      -> https://<api-service>.onrender.com
+#   RESOURCE_SERVER_URL -> https://<resource-server-service>.onrender.com
+#   DASHBOARD_URL       -> the deployed dashboard origin (for CORS)
+#
+# Note: free-tier services have no persistent disk — SQLite resets on
+# recycle/redeploy. For a persistent demo DB, point DATABASE_URL at a free
+# managed Postgres (e.g. Neon / Supabase). See docs/DEPLOYMENT.md.
+
+services:
+  - type: web
+    name: kron-api
+    runtime: docker
+    dockerfilePath: apps/api/Dockerfile
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "8787"
+      - key: DATABASE_URL
+        value: file:/data/kron.db
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: RESOURCE_SERVER_URL
+        sync: false
+      - key: DASHBOARD_URL
+        sync: false
+      - key: ALGORAND_NETWORK
+        value: testnet
+      - key: ALGOD_URL
+        value: https://testnet-api.algonode.cloud
+      - key: ALGOD_TOKEN
+        value: ""
+      - key: INDEXER_URL
+        value: https://testnet-idx.algonode.cloud
+      - key: INDEXER_TOKEN
+        value: ""
+      - key: SESSION_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: FUNDING_MNEMONIC
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        value: admin@kron.dev
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: FORCE_ESCALATE
+        value: "false"
+
+  - type: web
+    name: kron-resource-server
+    runtime: docker
+    dockerfilePath: apps/resource-server/Dockerfile
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "9100"
+      - key: KRON_BASE_URL
+        sync: false
+      - key: ALGORAND_NETWORK
+        value: testnet
+      - key: ALGOD_URL
+        value: https://testnet-api.algonode.cloud
+      - key: ALGOD_TOKEN
+        value: ""
+      - key: INDEXER_URL
+        value: https://testnet-idx.algonode.cloud
+      - key: INDEXER_TOKEN
+        value: ""
+      - key: MERCHANT_MNEMONIC
+        sync: false

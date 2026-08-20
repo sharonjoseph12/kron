@@ -1,0 +1,23 @@
+{
+  "name": "@kron/demo-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/agent.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/agent.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@kron/llm-agent": "workspace:*",
+    "@kron/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.7.3"
+  }
+}

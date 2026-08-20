@@ -1,0 +1,320 @@
+// KRON data model — complete economic traceability.
+//
+//   Agent -> Session -> ToolCall -> PaymentRequest -> PaymentDecision
+//                                                              -> Settlement
+// PRD §19 — traceability chain must survive end to end.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity & auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String?
+  role            String    @default("viewer") // admin | operator | viewer
+  // Algorand address for Pera Wallet / Sign-in-with-Algorand logins. Users
+  // created this way get a synthetic `pera-<prefix>@wallet.kron.dev` email
+  // and an unusable random passwordHash (they authenticate via wallet sigs).
+  algorandAddress String?   @unique
+  createdAt       DateTime  @default(now())
+  sessions        Session[]
+  apiKeys         ApiKey[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// API keys let agents (and admins) authenticate programmatically without a
+// session cookie — used by the SDK, MCP clients and autonomous LLM agents.
+model ApiKey {
+  id         String    @id @default(cuid())
+  keyHash    String    @unique // SHA-256 of the raw key; raw key shown once at creation
+  prefix     String // first 8 chars of the raw key for identification
+  name       String?
+  agentId    String? // when set, the key can only act as this agent
+  userId     String
+  revoked    Boolean   @default(false)
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent      Agent?    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([agentId])
+}
+
+// One-time nonce used by Sign-in-with-Algorand (Pera Wallet QR login).
+// Created by the challenge endpoint, consumed exactly once by the verify
+// endpoint, and expiring after a few minutes to prevent replays.
+model LoginChallenge {
+  id        String   @id @default(cuid())
+  nonce     String   @unique
+  expiresAt DateTime
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Agents & wallets
+// ---------------------------------------------------------------------------
+
+model Agent {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("idle") // idle | running | waiting | payment_processing | completed | failed
+  createdAt   DateTime @default(now())
+  userId      String?
+  wallet      Wallet?
+  sessions    AgentSession[]
+  policies    Policy[]
+  payments    PaymentRequest[]
+  alerts      Alert[]
+  apiKeys     ApiKey[]
+}
+
+model Wallet {
+  id           String      @id @default(cuid())
+  agentId      String      @unique
+  agent        Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  address      String      @unique
+  encryptedKey String // AES-256-GCM ciphertext of the signing mnemonic. Never returned by the API.
+  network      String      @default("testnet") // localnet | testnet | mainnet
+  createdAt    DateTime    @default(now())
+}
+
+model AgentSession {
+  id        String          @id @default(cuid())
+  agentId   String
+  agent     Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  task      String?
+  status    String          @default("idle")
+  startedAt DateTime        @default(now())
+  endedAt   DateTime?
+  toolCalls ToolCall[]
+  payments  PaymentRequest[]
+  timeline  TimelineEvent[]
+}
+
+// ---------------------------------------------------------------------------
+// MCP integration
+// ---------------------------------------------------------------------------
+
+model McpServer {
+  id            String    @id @default(cuid())
+  name          String
+  url           String
+  transport     String    @default("streamable-http")
+  authTokenEnc  String? // encrypted auth token, never returned
+  status        String    @default("offline") // healthy | degraded | offline | disabled
+  enabled       Boolean   @default(true)
+  lastCheckedAt DateTime?
+  latencyMs     Int?
+  error         String?
+  createdAt     DateTime  @default(now())
+  tools         McpTool[]
+
+  @@map("MCPServer")
+}
+
+model McpTool {
+  id          String    @id @default(cuid())
+  serverId    String
+  server      McpServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  inputSchema Json?
+  cost        Float? // optional advertised price in ALGO
+  @@unique([serverId, name])
+  @@map("MCPTool")
+}
+
+model ToolCall {
+  id          String              @id @default(cuid())
+  sessionId   String
+  session     AgentSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  mcpServerId String?
+  toolName    String
+  arguments   Json
+  result      Json?
+  isPaid      Boolean             @default(false)
+  paymentId   String?             @unique
+  durationMs  Int?
+  error       String?
+  status      String              @default("started") // started | completed | failed
+  createdAt   DateTime            @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Policies
+// ---------------------------------------------------------------------------
+
+model Policy {
+  id        String          @id @default(cuid())
+  agentId   String
+  agent     Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+  versions  PolicyVersion[]
+  @@unique([agentId, id]) // one policy chain per agent
+}
+
+model PolicyVersion {
+  id                 String           @id @default(cuid())
+  policyId           String
+  policy             Policy           @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  version            Int
+  name               String
+  perCallLimitMicro  BigInt
+  hardCeilingMicro   BigInt
+  sessionBudgetMicro BigInt
+  dailyBudgetMicro   BigInt
+  maxDailyPayments   Int
+  unknownRecipient   String           @default("block") // block | escalate | allow
+  firstTimeService   String           @default("escalate") // block | escalate | allow
+  recipientAllowlist Json
+  recipientBlocklist Json
+  serviceAllowlist   Json
+  serviceBlocklist   Json
+  emergencyStop      Boolean          @default(false)
+  active             Boolean          @default(false)
+  createdBy          String?
+  createdAt          DateTime         @default(now())
+  decisions          PaymentDecision[]
+  @@unique([policyId, version])
+}
+
+// ---------------------------------------------------------------------------
+// Economic flow — the traceability chain
+// ---------------------------------------------------------------------------
+
+model PaymentRequest {
+  id               String            @id @default(cuid())
+  clientRequestId  String            @unique // deterministic idempotency key
+  agentId          String
+  agent            Agent             @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  sessionId        String
+  session          AgentSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  toolCallId       String
+  service          String
+  resourceId       String
+  resourceName     String
+  recipient        String
+  amountMicro      BigInt
+  network          String
+  instructionUrl   String?
+  note             String?
+  status           String            @default("requested")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  decision         PaymentDecision?
+  settlement       Settlement?
+  escalations      Escalation[]
+}
+
+model PaymentDecision {
+  id                 String          @id @default(cuid())
+  paymentId          String          @unique
+  payment            PaymentRequest  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  decision           String // AUTO_APPROVED | ESCALATED | BLOCKED
+  reasons            Json // human-readable string[]
+  rulesTriggered     Json // RuleHit[]
+  policyVersionId    String
+  policyVersion      PolicyVersion   @relation(fields: [policyVersionId], references: [id])
+  policyVersionNumber Int
+  createdAt          DateTime        @default(now())
+  escalations        Escalation[]
+}
+
+model Settlement {
+  id          String        @id @default(cuid())
+  paymentId   String        @unique
+  payment     PaymentRequest @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  txId        String        @unique
+  round       Int
+  sender      String
+  recipient   String
+  amountMicro BigInt
+  network     String
+  confirmedAt DateTime      @default(now())
+  verified    Boolean       @default(false) // proof verified against the chain
+  appId       Int?          // KRON policy-anchor smart contract app ID
+  policyHash  String?       // SHA-256 hash of the policy decision anchored on-chain
+  appCallTxId String?       // Transaction ID of the app call in the atomic group
+}
+
+model Escalation {
+  id         String     @id @default(cuid())
+  paymentId  String
+  payment    PaymentRequest  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  decisionId String     @unique
+  decision   PaymentDecision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  status     String     @default("pending") // pending | approved | denied
+  summary    String
+  decidedBy  String?
+  decidedAt  DateTime?
+  createdAt  DateTime   @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Observability
+// ---------------------------------------------------------------------------
+
+model TimelineEvent {
+  id        String        @id @default(cuid())
+  sessionId String
+  session   AgentSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  agentId   String
+  seq       Int
+  step      String // TIMELINE_STEPS
+  status    String // pending | confirmed | failed | blocked
+  message   String
+  detail    Json?
+  ts        DateTime      @default(now())
+  @@index([sessionId, seq])
+}
+
+model AuditEvent {
+  id           String   @id @default(cuid())
+  ts           DateTime @default(now())
+  actorId      String?
+  actorType    String   @default("user") // user | system | agent
+  action       String
+  targetType   String
+  targetId     String?
+  summary      String
+  detail       Json?
+  policyVersion Int?
+  @@index([ts])
+}
+
+model Alert {
+  id         String    @id @default(cuid())
+  agentId    String?
+  agent      Agent?    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  severity   String    @default("info") // info | warning | critical
+  message    String
+  detail     Json?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}

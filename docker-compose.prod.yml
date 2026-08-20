@@ -1,0 +1,73 @@
+# KRON — production deployment (Public TestNet, no local chain required)
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Secrets are interpolated from a root `.env` (same dir as this file) — or
+# exported in the shell — and fall back to safe defaults:
+#
+#   SESSION_SECRET / ENCRYPTION_KEY  → if empty, the API auto-generates them
+#                                      at boot (sessions reset per restart)
+#   SEED_ADMIN_PASSWORD              → if empty, a random admin password is
+#                                      printed to the API logs on first boot
+#   MERCHANT_MNEMONIC                → funded TestNet account for the merchant
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: kron-api
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      NODE_ENV: production
+      API_PORT: "8787"
+      # SQLite in a named volume — swap for Postgres by changing the
+      # datasource in prisma/schema.prisma when scaling out.
+      DATABASE_URL: "file:/data/kron.db"
+      API_PUBLIC_URL: "${API_PUBLIC_URL:-http://localhost:8787}"
+      RESOURCE_SERVER_URL: "${RESOURCE_SERVER_URL:-http://localhost:9100}"
+      ALGORAND_NETWORK: "${ALGORAND_NETWORK:-testnet}"
+      ALGOD_URL: "${ALGOD_URL:-https://testnet-api.algonode.cloud}"
+      ALGOD_TOKEN: "${ALGOD_TOKEN:-}"
+      INDEXER_URL: "${INDEXER_URL:-https://testnet-idx.algonode.cloud}"
+      INDEXER_TOKEN: "${INDEXER_TOKEN:-}"
+      SESSION_SECRET: "${SESSION_SECRET:-}"
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY:-}"
+      SEED_ADMIN_EMAIL: "${SEED_ADMIN_EMAIL:-admin@kron.dev}"
+      SEED_ADMIN_PASSWORD: "${SEED_ADMIN_PASSWORD:-}"
+      FORCE_ESCALATE: "${FORCE_ESCALATE:-false}"
+    volumes:
+      - kron-prod-db:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  resource-server:
+    build:
+      context: .
+      dockerfile: apps/resource-server/Dockerfile
+    container_name: kron-resource-server
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    environment:
+      NODE_ENV: production
+      PORT: "9100"
+      KRON_BASE_URL: "${RESOURCE_SERVER_URL:-http://localhost:9100}"
+      ALGORAND_NETWORK: "${ALGORAND_NETWORK:-testnet}"
+      ALGOD_URL: "${ALGOD_URL:-https://testnet-api.algonode.cloud}"
+      ALGOD_TOKEN: "${ALGOD_TOKEN:-}"
+      INDEXER_URL: "${INDEXER_URL:-https://testnet-idx.algonode.cloud}"
+      INDEXER_TOKEN: "${INDEXER_TOKEN:-}"
+      MERCHANT_MNEMONIC: "${MERCHANT_MNEMONIC:-}"
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  kron-prod-db:

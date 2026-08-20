@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.env
+**/.env
+*.db
+*.db-journal
+*.log
+dev-data
+docker-data
+.kron
+pnpm-debug.log*

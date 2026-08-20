@@ -1,0 +1,103 @@
+services:
+  # KRON application database
+  postgres:
+    image: postgres:16-alpine
+    container_name: kron-postgres
+    environment:
+      POSTGRES_USER: kron
+      POSTGRES_PASSWORD: kron
+      POSTGRES_DB: kron
+    ports:
+      - "5433:5432"
+    volumes:
+      - kron-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kron -d kron"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Database backing the Algorand indexer (see note below)
+  pg-indexer:
+    image: postgres:16-alpine
+    container_name: kron-pg-indexer
+    environment:
+      POSTGRES_USER: indexer
+      POSTGRES_PASSWORD: indexer
+      POSTGRES_DB: indexer_db
+    volumes:
+      - kron-pgindexer:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U indexer -d indexer_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    profiles: ["explorer"]
+
+  # Algorand node: private dev network, dev-mode (instant blocks)
+  algod:
+    image: algorand/algod:latest
+    container_name: kron-algod
+    profiles: ["localnet"]
+    ports:
+      - "4001:8080" # algod REST API
+      - "4002:7833" # kmd REST API
+    environment:
+      NETWORK: ""
+      DEV_MODE: "1"
+      START_KMD: "1"
+      TOKEN: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      KMD_TOKEN: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ADMIN_TOKEN: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      NUM_ROUNDS: "60000"
+    volumes:
+      - kron-algod:/algod/data
+      - ./docker/algod/config.json:/algod/data/config.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/v2/status -H 'X-Algo-API-Token: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' >/dev/null"]
+      interval: 5s
+      timeout: 4s
+      retries: 60
+      start_period: 30s
+
+  # Algorand indexer (blockchain explorer API). Optional — only used for
+  # read-side block exploring. Modern indexer images no longer import blocks
+  # themselves (Conduit does that), so this is behind the "explorer" profile:
+  #   docker compose --profile explorer up -d
+  # KRON verifies payments against algod directly and does not need it.
+  indexer:
+    image: algorand/indexer:3.8.1
+    container_name: kron-indexer
+    ports:
+      - "8980:8980"
+    depends_on:
+      pg-indexer:
+        condition: service_healthy
+      algod:
+        condition: service_healthy
+    volumes:
+      - kron-indexerdata:/data
+    command:
+      - daemon
+      - --data-dir
+      - /data
+      - -P
+      - "host=pg-indexer port=5432 user=indexer password=indexer dbname=indexer_db sslmode=disable"
+      - --server
+      - ":8980"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf 'http://localhost:8980/health' >/dev/null || curl -sf http://localhost:8980 >/dev/null"]
+      interval: 5s
+      timeout: 4s
+      retries: 60
+      start_period: 60s
+    profiles: ["explorer"]
+
+volumes:
+  kron-pgdata:
+  kron-pgindexer:
+  kron-algod:
+  kron-indexerdata:

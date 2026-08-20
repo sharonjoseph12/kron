@@ -1,0 +1,105 @@
+# pragma version 10
+// KRON Policy Anchor Contract v2 — ARC-4 method dispatch
+
+txn ApplicationID
+int 0
+==
+bnz handle_create
+
+// --- ARC-4 dispatch on ApplicationArgs[0] (4-byte selector) ---
+txn ApplicationArgs 0
+byte 0xec5e4747
+==
+bnz handle_anchor_policy
+
+txn ApplicationArgs 0
+byte 0x817d3e72
+==
+bnz handle_get_payment_count
+
+txn ApplicationArgs 0
+byte 0x22a4fb91
+==
+bnz handle_get_last_policy_hash
+
+int 0
+return
+
+// anchor_policy(byte[32] policy_hash, string agent_id, uint64 amount_micro)void
+handle_anchor_policy:
+  txn NumAppArgs
+  int 4
+  ==
+  bnz anchor_args_ok
+  int 0
+  return
+anchor_args_ok:
+  byte "total_payments"
+  app_global_get
+  int 1
+  +
+  byte "total_payments"
+  app_global_put
+
+  byte "last_policy_hash"
+  txn ApplicationArgs 1
+  app_global_put
+
+  byte "last_agent_id"
+  txn ApplicationArgs 2
+  extract 2 0
+  app_global_put
+
+  byte "last_amount_micro"
+  txn ApplicationArgs 3
+  btoi
+  app_global_put
+
+  int 1
+  return
+
+// get_payment_count()uint64
+handle_get_payment_count:
+  txn NumAppArgs
+  int 1
+  ==
+  bnz count_args_ok
+  int 0
+  return
+count_args_ok:
+  byte "total_payments"
+  app_global_get
+  store 0
+  int 1
+  return
+
+// get_last_policy_hash()byte[32]
+handle_get_last_policy_hash:
+  txn NumAppArgs
+  int 1
+  ==
+  bnz hash_args_ok
+  int 0
+  return
+hash_args_ok:
+  byte "last_policy_hash"
+  app_global_get
+  store 0
+  int 1
+  return
+
+handle_create:
+  byte "total_payments"
+  int 0
+  app_global_put
+  byte "last_policy_hash"
+  byte ""
+  app_global_put
+  byte "last_agent_id"
+  byte ""
+  app_global_put
+  byte "last_amount_micro"
+  int 0
+  app_global_put
+  int 1
+  return
