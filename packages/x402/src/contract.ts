@@ -25,6 +25,9 @@ export const ARC4_METHODS = {
   anchorPolicy: "anchor_policy(byte[32],string,uint64)void",
   getPaymentCount: "get_payment_count()uint64",
   getLastPolicyHash: "get_last_policy_hash()byte[32]",
+  getAgentPolicyHash: "get_agent_policy_hash(string)byte[32]",
+  setEmergencyStop: "set_emergency_stop(bool)void",
+  flush: "flush()void",
 } as const;
 
 /**
@@ -52,6 +55,11 @@ export function arc4EncodeUint64(value: bigint): Uint8Array {
   return out;
 }
 
+/** ARC-4 encode a bool: single byte 0x00 (false) or 0x80 (true). */
+export function arc4EncodeBool(value: boolean): Uint8Array {
+  return new Uint8Array([value ? 0x80 : 0x00]);
+}
+
 /** ARC-4 app args for an `anchor_policy` call: [selector, hash, agent, amount]. */
 export function buildAnchorPolicyArgs(args: {
   policyHash: string;
@@ -64,6 +72,21 @@ export function buildAnchorPolicyArgs(args: {
     arc4EncodeString(args.agentId),
     arc4EncodeUint64(args.amountMicro),
   ];
+}
+
+/** ARC-4 app args for `set_emergency_stop(bool)`: [selector, bool]. */
+export function buildSetEmergencyStopArgs(stopped: boolean): Uint8Array[] {
+  return [arc4MethodSelector(ARC4_METHODS.setEmergencyStop), arc4EncodeBool(stopped)];
+}
+
+/** ARC-4 app args for `get_agent_policy_hash(string)`: [selector, agent_id]. */
+export function buildGetAgentPolicyHashArgs(agentId: string): Uint8Array[] {
+  return [arc4MethodSelector(ARC4_METHODS.getAgentPolicyHash), arc4EncodeString(agentId)];
+}
+
+/** ARC-4 app args for `flush()void`: [selector]. */
+export function buildFlushArgs(): Uint8Array[] {
+  return [arc4MethodSelector(ARC4_METHODS.flush)];
 }
 
 /* ------------------------------------------------------------------ */
@@ -136,11 +159,21 @@ export function buildPolicyHash(input: PolicyHashInput): string {
  *   - anchor_policy(byte[32],string,uint64)void  → ec5e4747
  *   - get_payment_count()uint64                  → 817d3e72
  *   - get_last_policy_hash()byte[32]             → 22a4fb91
+ *   - get_agent_policy_hash(string)byte[32]      → 9fba667f
+ *   - set_emergency_stop(bool)void               → 481676f5  (creator only)
+ *   - flush()void                                → 7f9acc63  (creator only, inner txn)
+ *
+ * State: global `total_payments`, `last_policy_hash`, `last_agent_id`,
+ * `last_amount_micro`, `emergency_stop`; per-agent box `ag:<agent_id>` holding
+ * the agent's most recent policy hash (byte[32]).
  *
  * Return values follow the ARC-4 convention (scratch slot 0 before `int 1`).
  */
 export const APPROVAL_TEAL = `#pragma version 10
-// KRON Policy Anchor Contract v2 — ARC-4 method dispatch
+// KRON Policy Anchor Contract v3 — ARC-4 method dispatch
+// Globals: total_payments, last_policy_hash, last_agent_id,
+//          last_amount_micro, emergency_stop
+// Boxes:   ag:<agent_id> -> byte[32] policy hash
 
 txn ApplicationID
 int 0
@@ -163,6 +196,21 @@ byte 0x22a4fb91
 ==
 bnz handle_get_last_policy_hash
 
+txn ApplicationArgs 0
+byte 0x9fba667f
+==
+bnz handle_get_agent_policy_hash
+
+txn ApplicationArgs 0
+byte 0x481676f5
+==
+bnz handle_set_emergency_stop
+
+txn ApplicationArgs 0
+byte 0x7f9acc63
+==
+bnz handle_flush
+
 int 0
 return
 
@@ -175,11 +223,17 @@ handle_anchor_policy:
   int 0
   return
 anchor_args_ok:
+  // reject while emergency stop is engaged
+  byte "emergency_stop"
+  app_global_get
+  bnz anchor_blocked
+
   byte "total_payments"
   app_global_get
   int 1
   +
   byte "total_payments"
+  swap
   app_global_put
 
   byte "last_policy_hash"
@@ -196,7 +250,18 @@ anchor_args_ok:
   btoi
   app_global_put
 
+  // per-agent box: "ag:" + agent_id -> policy_hash
+  byte "ag:"
+  txn ApplicationArgs 2
+  extract 2 0
+  concat
+  txn ApplicationArgs 1
+  box_put
+
   int 1
+  return
+anchor_blocked:
+  int 0
   return
 
 // get_payment_count()uint64
@@ -229,6 +294,86 @@ hash_args_ok:
   int 1
   return
 
+// get_agent_policy_hash(string agent_id)byte[32]
+handle_get_agent_policy_hash:
+  txn NumAppArgs
+  int 2
+  ==
+  bnz agent_hash_args_ok
+  int 0
+  return
+agent_hash_args_ok:
+  byte "ag:"
+  txn ApplicationArgs 1
+  extract 2 0
+  concat
+  box_get
+  // stack: [value, exists]
+  bnz agent_hash_found
+  pop
+  byte 0x0000000000000000000000000000000000000000000000000000000000000000
+  store 0
+  int 1
+  return
+agent_hash_found:
+  store 0
+  int 1
+  return
+
+// set_emergency_stop(bool stopped)void — creator only
+handle_set_emergency_stop:
+  global CreatorAddress
+  txn Sender
+  ==
+  bnz set_es_authorized
+  int 0
+  return
+set_es_authorized:
+  txn NumAppArgs
+  int 2
+  ==
+  bnz set_es_args_ok
+  int 0
+  return
+set_es_args_ok:
+  txn ApplicationArgs 1
+  byte 0x80
+  ==
+  byte "emergency_stop"
+  swap
+  app_global_put
+  int 1
+  return
+
+// flush()void — forward the app's entire ALGO balance to the creator
+handle_flush:
+  global CreatorAddress
+  txn Sender
+  ==
+  bnz flush_authorized
+  int 0
+  return
+flush_authorized:
+  txn NumAppArgs
+  int 1
+  ==
+  bnz flush_args_ok
+  int 0
+  return
+flush_args_ok:
+  int 1
+  itxn_begin
+  int pay
+  itxn_field TypeEnum
+  global CreatorAddress
+  itxn_field Receiver
+  global CurrentApplicationAddress
+  balance
+  itxn_field Amount
+  itxn_submit
+  int 1
+  return
+
 handle_create:
   byte "total_payments"
   int 0
@@ -240,6 +385,9 @@ handle_create:
   byte ""
   app_global_put
   byte "last_amount_micro"
+  int 0
+  app_global_put
+  byte "emergency_stop"
   int 0
   app_global_put
   int 1
@@ -385,7 +533,7 @@ export async function deployKronContract(args: DeployAppArgs): Promise<DeployedA
     sender: account.addr,
     approvalProgram,
     clearProgram,
-    numGlobalInts: 2,     // total_payments, last_amount_micro
+    numGlobalInts: 3,     // total_payments, last_amount_micro, emergency_stop
     numGlobalByteSlices: 2, // last_policy_hash, last_agent_id
     numLocalInts: 0,
     numLocalByteSlices: 0,
@@ -504,7 +652,7 @@ export const STABLECOIN_ASSETS: Record<Network, { USDC: number; USDT: number }> 
  */
 export const KRON_ARC4_CONTRACT_ABI = {
   name: "KronPolicyAnchor",
-  desc: "Enterprise Policy Anchor and Cryptographic Audit Contract for Autonomous AI Agents",
+  desc: "Policy Anchor and Cryptographic Audit Contract for Autonomous AI Agents",
   methods: [
     {
       name: "anchor_policy",
@@ -527,6 +675,28 @@ export const KRON_ARC4_CONTRACT_ABI = {
       desc: "Returns the latest anchored policy hash (raw SHA-256 digest)",
       args: [],
       returns: { type: "byte[32]" }
+    },
+    {
+      name: "get_agent_policy_hash",
+      desc: "Returns the anchored policy hash for a specific agent from box storage",
+      args: [
+        { type: "string", name: "agent_id", desc: "Autonomous agent identifier" }
+      ],
+      returns: { type: "byte[32]" }
+    },
+    {
+      name: "set_emergency_stop",
+      desc: "Creator-only freeze switch — halts all future policy anchoring",
+      args: [
+        { type: "bool", name: "stopped", desc: "True engages the emergency stop" }
+      ],
+      returns: { type: "void" }
+    },
+    {
+      name: "flush",
+      desc: "Creator-only inner transaction — forwards the app balance back to the creator",
+      args: [],
+      returns: { type: "void" }
     }
   ],
   // App IDs are auto-deployed per environment (see ensureKronApp) and are

@@ -19,6 +19,9 @@ RUN pnpm install --frozen-lockfile
 # Build workspace deps first (their dist outputs are imported by the API at runtime)
 RUN pnpm --filter @kron/shared --filter @kron/x402 --filter @kron/policy-engine build
 
+# Pre-compile KRON TEAL bytecode (uses public TestNet algod when LocalNet is absent)
+RUN pnpm --filter @kron/x402 compile:teal
+
 # Generate the Prisma client and compile the API
 RUN pnpm --filter @kron/api prisma:generate
 RUN pnpm --filter @kron/api build

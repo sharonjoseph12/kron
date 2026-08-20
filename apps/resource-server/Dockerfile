@@ -1,4 +1,4 @@
-# KRON Resource Server — production build (testnet merchant)
+# KRON Resource Server - production build (testnet merchant)
 #
 #   docker build -f apps/resource-server/Dockerfile -t kron-resource-server .
 #   docker run --env-file apps/resource-server/.env -p 9100:9100 kron-resource-server

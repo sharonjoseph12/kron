@@ -14,6 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { OverviewStats, PaymentDTO } from "@kron/shared";
 import { api } from "../api/client.js";
 import {
   decisionColor,
@@ -37,6 +38,56 @@ const tooltipStyle = {
 };
 const axisTick = { fontSize: 11, fill: "#a8a29e" };
 
+function clamp01(n: number): number {
+  return Math.max(0, Math.min(1, n));
+}
+
+function computeFleetHealth(ov: OverviewStats): number {
+  const approval = clamp01(ov.approvalRatePct / 100);
+  const success = clamp01(ov.paymentSuccessRatePct / 100);
+  const runwayTerm =
+    ov.estimatedWalletDays == null
+      ? ov.burnRateAlgoPerDay > 0
+        ? 0.4
+        : 1
+      : clamp01(ov.estimatedWalletDays / 30);
+  const agentTerm = clamp01(ov.activeAgents / 5);
+  const consistency = (runwayTerm + agentTerm) / 2;
+  return Math.round(approval * 50 + success * 30 + consistency * 20);
+}
+
+function buildNarrative(
+  ov: OverviewStats | undefined,
+  recent: PaymentDTO[],
+  policyHash: string | null | undefined,
+): string[] {
+  const s: string[] = [];
+  if (recent.length > 0) {
+    const auto = recent.filter((p) => p.decision === "AUTO_APPROVED").length;
+    const blocked = recent.filter((p) => p.decision === "BLOCKED").length;
+    const escalated = recent.filter((p) => p.decision === "ESCALATED").length;
+    const confirmed = recent.filter((p) => p.status === "confirmed").length;
+    const spend = recent.reduce((sum, p) => sum + (p.amountAlgo || 0), 0);
+    const settled = confirmed === recent.length ? "all settled on-chain" : `${confirmed} settled on-chain`;
+    s.push(
+      `${recent.length} recent payment request${recent.length === 1 ? "" : "s"} — ${auto} auto-approved, ${blocked} blocked by policy, ${escalated} escalated; ${settled}.`,
+    );
+    if (spend > 0) s.push(`Total spend ${fmtAlgo(spend)} Ɖ across the latest batch.`);
+  } else if (ov && ov.totalPayments > 0) {
+    s.push(`${ov.totalPayments} payments processed so far — ${ov.autoApproved} auto-approved, ${ov.blocked} blocked, ${ov.escalated} escalated.`);
+  } else {
+    s.push("No payment activity yet.");
+  }
+  if (ov && ov.activeAgents > 0) {
+    const lat = ov.avgPaymentLatencyMs != null ? `${Math.round(ov.avgPaymentLatencyMs)}ms` : "steady";
+    s.push(`${ov.activeAgents} agent${ov.activeAgents === 1 ? "" : "s"} active with ${lat} settlement latency.`);
+  }
+  if (policyHash) {
+    s.push(`The on-chain anchor recorded the last policy hash ${shortId(policyHash, 16)}.`);
+  }
+  return s;
+}
+
 export default function Dashboard() {
   const overview = useQuery({
     queryKey: ["overview"],
@@ -56,6 +107,11 @@ export default function Dashboard() {
   const rows = agentsSpend.data?.rows ?? [];
   const points = spend.data?.points ?? [];
   const payments = recent.data?.payments ?? [];
+
+  const health = ov ? computeFleetHealth(ov) : null;
+  const healthTone = health == null ? "muted" : health >= 75 ? "ok" : health >= 50 ? "warn" : "err";
+  const narrative = buildNarrative(ov, payments, contract.data?.globalState.lastPolicyHash);
+  const narrativeLoading = overview.isPending || recent.isPending || agentsSpend.isPending;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -127,6 +183,68 @@ export default function Dashboard() {
           <Stat label="Avg Latency" value={ov?.avgPaymentLatencyMs != null ? `${Math.round(ov.avgPaymentLatencyMs)}ms` : "—"} sub="to settle" />
         </div>
       )}
+
+      {/* Fleet health + narrative */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="overflow-hidden">
+          <CardHeader title="Agent fleet health" subtitle="Approvals, settlement success, and spend consistency" />
+          {overview.isPending ? (
+            <div className="px-5 py-5">
+              <Spinner label="Loading fleet health…" />
+            </div>
+          ) : health == null ? (
+            <div className="px-5 py-5 text-sm text-[var(--color-ink-3)]">No telemetry yet.</div>
+          ) : (
+            <div className="flex flex-col gap-4 p-5">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-4xl font-semibold tabular-nums text-[var(--color-ink)]">
+                  {health}
+                  <span className="text-base font-medium text-[var(--color-ink-3)]"> / 100</span>
+                </span>
+                <Badge tone={healthTone}>
+                  {healthTone === "ok" ? "Healthy" : healthTone === "warn" ? "Watching" : "At risk"}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2.5">
+                  <div className="text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">Approval rate</div>
+                  <div className="mt-0.5 font-mono text-lg font-semibold text-[var(--color-ink)]">
+                    {fmtAlgo(ov?.approvalRatePct)}%
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2.5">
+                  <div className="text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">Payment success</div>
+                  <div className="mt-0.5 font-mono text-lg font-semibold text-[var(--color-ink)]">
+                    {fmtAlgo(ov?.paymentSuccessRatePct)}%
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2.5">
+                  <div className="text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">Active agents</div>
+                  <div className="mt-0.5 font-mono text-lg font-semibold text-[var(--color-ink)]">
+                    {fmtInt(ov?.activeAgents)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader title="What happened?" subtitle="Latest activity in plain English" />
+          {narrativeLoading ? (
+            <p className="px-5 py-5 text-sm text-[var(--color-ink-3)]">Waiting for telemetry…</p>
+          ) : (
+            <div className="px-5 py-4">
+              <p className="text-sm leading-relaxed text-[var(--color-ink-2)]">
+                <span className="font-medium text-[var(--color-ink)]">{narrative[0]}</span>
+                {narrative.slice(1).map((sentence, i) => (
+                  <span key={i}> {sentence}</span>
+                ))}
+              </p>
+            </div>
+          )}
+        </Card>
+      </div>
 
       {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -288,6 +406,12 @@ export default function Dashboard() {
             value={contract.data?.globalState.lastPolicyHash ? shortId(contract.data.globalState.lastPolicyHash, 24) : "—"}
             sub="last_policy_hash (byte[32])"
             accent="text-[var(--color-warning)]"
+          />
+          <Stat
+            label="Emergency stop"
+            value={contract.data?.globalState.emergencyStop ? "ENGAGED" : "armed"}
+            sub="set_emergency_stop (creator-only)"
+            accent={contract.data?.globalState.emergencyStop ? "text-red-600" : "text-[var(--color-success)]"}
           />
         </div>
         {contract.isError && (

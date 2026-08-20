@@ -29,6 +29,12 @@ function stepStatus(status: string): "confirmed" | "pending" | "failed" | "block
   return "pending";
 }
 
+function fmtDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "";
+  if (ms < 100) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 function StepIcon({ d }: { d: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4">
@@ -64,6 +70,25 @@ export function PaymentTimeline({ events }: { events: TimelineEvent[] }) {
     );
   }
 
+  const times = events.map((e) => {
+    const t = new Date(e.ts).getTime();
+    return Number.isNaN(t) ? null : t;
+  });
+  let settlementIdx = -1;
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i]?.status === "confirmed") {
+      settlementIdx = i;
+      break;
+    }
+  }
+  const totalMs =
+    times[0] != null &&
+    settlementIdx > 0 &&
+    times[settlementIdx] != null &&
+    times[settlementIdx]! >= times[0]!
+      ? times[settlementIdx]! - times[0]!
+      : null;
+
   return (
     <div className="px-4 py-3">
       <div className="relative">
@@ -73,6 +98,10 @@ export function PaymentTimeline({ events }: { events: TimelineEvent[] }) {
           const status = stepStatus(event.status);
           const isLast = idx === events.length - 1;
           const detail = (event.detail ?? {}) as Record<string, string | number | null | undefined>;
+          const curMs = times[idx];
+          const prevMs = idx > 0 ? times[idx - 1] : null;
+          const elapsed = curMs != null && prevMs != null && curMs >= prevMs ? curMs - prevMs : null;
+          const isSettlement = idx === settlementIdx && totalMs != null;
 
           return (
             <div
@@ -111,6 +140,19 @@ export function PaymentTimeline({ events }: { events: TimelineEvent[] }) {
                   </p>
                 )}
                 <time className="text-[10px] text-[var(--color-ink-3)]">{fmtTs(event.ts)}</time>
+                {elapsed != null && (
+                  <span className="ml-1.5 inline-block rounded border border-[var(--color-line)] bg-[var(--color-surface-2)] px-1.5 py-px font-mono text-[10px] leading-tight text-[var(--color-ink-3)]">
+                    +{fmtDuration(elapsed)}
+                  </span>
+                )}
+                {isSettlement && totalMs != null && (
+                  <div className="mt-1.5">
+                    <span className="inline-flex items-center gap-1 rounded border border-[var(--color-line)] bg-[var(--color-surface-2)] px-1.5 py-px font-mono text-[10px] leading-tight text-[var(--color-ink-3)]">
+                      <span className="h-1 w-1 rounded-full bg-[var(--color-success)]" />
+                      {fmtDuration(totalMs)} settlement
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           );

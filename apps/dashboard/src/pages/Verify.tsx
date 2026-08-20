@@ -174,7 +174,10 @@ export default function Verify() {
                 <div>
                   <span className="text-xs text-[var(--color-ink-3)] block">Payment Transaction ID</span>
                   {proof.onChainProof.txId ? (
-                    <ExplorerLink url={proof.payment.explorerUrl} className="font-mono text-xs font-semibold">
+                    <ExplorerLink
+                      url={`https://testnet.algoexplorer.io/tx/${proof.onChainProof.txId}`}
+                      className="font-mono text-xs font-semibold"
+                    >
                       {proof.onChainProof.txId}
                     </ExplorerLink>
                   ) : (
@@ -185,7 +188,16 @@ export default function Verify() {
                 {proof.onChainProof.appCallTxId && (
                   <div>
                     <span className="text-xs text-[var(--color-ink-3)] block">Policy Anchor App Call (Tx 1 of Group)</span>
-                    <span className="font-mono text-xs text-[var(--color-accent)]">{proof.onChainProof.appCallTxId}</span>
+                    <a
+                      href={`https://testnet.algoexplorer.io/tx/${proof.onChainProof.appCallTxId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`View policy anchor app call transaction ${proof.onChainProof.appCallTxId} on AlgoExplorer`}
+                      className="font-mono text-xs text-[var(--color-accent)] underline-offset-2 hover:underline break-all"
+                    >
+                      {proof.onChainProof.appCallTxId}
+                      <span aria-hidden="true"> ↗</span>
+                    </a>
                   </div>
                 )}
 

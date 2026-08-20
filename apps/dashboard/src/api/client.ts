@@ -106,6 +106,7 @@ export const api = {
         lastPolicyHash: string | null;
         lastAgentId: string | null;
         lastAmountMicro: number;
+        emergencyStop: boolean;
       };
       settlements: number;
       createdAtRound: number;

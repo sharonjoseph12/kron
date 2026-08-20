@@ -61,6 +61,7 @@ export async function contractRoutes(fastify: FastifyInstance) {
         lastPolicyHash: typeof state["last_policy_hash"] === "string" ? state["last_policy_hash"] : null,
         lastAgentId: typeof state["last_agent_id"] === "string" ? state["last_agent_id"] : null,
         lastAmountMicro: Number(state["last_amount_micro"] ?? 0),
+        emergencyStop: Number(state["emergency_stop"] ?? 0) === 1,
       },
       settlements,
       createdAtRound: Number(app["created-at-round"] ?? 0),

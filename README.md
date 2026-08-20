@@ -1,11 +1,11 @@
 # KRON — Policy-Controlled Economic Runtime for AI Agents
 
 [![CI](https://github.com/sharonjoseph12/kron/actions/workflows/ci.yml/badge.svg)](https://github.com/sharonjoseph12/kron/actions/workflows/ci.yml)
-[![Algorand TestNet](https://img.shields.io/badge/Algorand-TestNet-00d2ff?style=flat&logo=algorand)](https://testnet.explorer.perawallet.app)
+[![Algorand TestNet](https://img.shields.io/badge/Algorand-TestNet-00d2ff?style=flat&logo=algorand)](https://testnet.algoexplorer.io)
 [![MCP Protocol](https://img.shields.io/badge/MCP-1.0-8b5cf6?style=flat)](https://modelcontextprotocol.io)
 [![x402 Micropayments](https://img.shields.io/badge/x402-Enabled-10b981?style=flat)](https://x402.org)
 [![TypeScript SDK](https://img.shields.io/badge/@kron/sdk-v0.1.0-blue?style=flat)](./packages/sdk)
-[![Tests Passing](https://img.shields.io/badge/Tests-74%20Passing-emerald?style=flat)](./packages)
+[![Tests Passing](https://img.shields.io/badge/Tests-77%20Passing-emerald?style=flat)](./packages)
 
 **One line:** KRON is the economic firewall and policy-governed payment runtime for autonomous AI agents on Algorand.
 
@@ -130,20 +130,22 @@ Prefer a clickable link over local Docker? Full production deployment instructio
 ## 🤖 Live Agent Demos
 
 ```bash
-# Multi-Agent Governance & Boundary Enforcement
-pnpm demo:multi
+# Autonomous agent driving x402 payments through the runtime (Anthropic model)
+pnpm demo:run
 
-# Agent-to-Agent (A2A) Autonomous Subcontracting & Settlement
-pnpm demo:a2a
+# Same demo forcing the OpenAI provider (needs OPENAI_API_KEY)
+pnpm demo:openai
 
-# Rogue-Agent Daily Budget Cap & Human Intervention
-pnpm demo:budget
+# Same demo forcing the Anthropic provider (needs ANTHROPIC_API_KEY)
+pnpm demo:claude
 ```
 
-1. **`researcher-01`** (0.05 limit) calls `market/report` (0.018 ALGO) -> **AUTO_APPROVED**
-2. **`trader-01`** (0.50 limit) calls `market/sentiment` (0.450 ALGO) -> **AUTO_APPROVED**
+A scripted run proves the full lifecycle on TestNet:
+
+1. **`researcher-01`** (0.05 ALGO limit) calls `market/report` (0.018 ALGO) -> **AUTO_APPROVED**
+2. **`trader-01`** (0.50 ALGO limit) calls `market/sentiment` (0.450 ALGO) -> **AUTO_APPROVED**
 3. **Boundary Test:** `researcher-01` tries to buy `market/sentiment` (0.450 ALGO) -> **BLOCKED by Policy Engine** (0 ALGO moved on chain).
-4. **A2A Delegation:** `researcher-01` hires `trader-01` for volatility subtask (0.035 ALGO) -> settled autonomously on Algorand.
+4. Every approved payment lands as an **atomic group** (app call + payment) in ~3.3s, with a clickable AlgoExplorer deep link from the dashboard.
 
 ---
 
@@ -153,7 +155,7 @@ pnpm demo:budget
 |---|---|---|
 | [`@kron/sdk`](./packages/sdk) | Official TypeScript SDK for 5-minute agent integration | 7 passing |
 | [`@kron/policy-engine`](./packages/policy-engine) | Pure deterministic policy rule engine (in-memory <5ms) + Velocity Anomaly Guard | 21 passing |
-| [`@kron/x402`](./packages/x402) | Algorand x402 protocol, atomic groups & proof verification | 18 passing |
+| [`@kron/x402`](./packages/x402) | Algorand x402 protocol, atomic groups, on-chain policy anchoring & proof verification | 21 passing |
 | [`@kron/shared`](./packages/shared) | Shared types, DTOs, schemas, constants | 4 passing |
 | [`apps/api`](./apps/api) | Fastify REST API, MCP Gateway, and SSE event hub | 11 passing |
 | [`apps/dashboard`](./apps/dashboard) | React + Tailwind + Recharts Operator Dashboard | — |
@@ -165,7 +167,7 @@ pnpm demo:budget
 ## 🧪 Testing & Verification
 
 ```bash
-# Run all unit test suites (74 passing: 57 packages + 11 API + 6 resource-server)
+# Run all unit test suites (77 passing: 60 packages + 11 API + 6 resource-server)
 pnpm test
 
 # Build all workspace packages

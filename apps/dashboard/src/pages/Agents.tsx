@@ -14,6 +14,7 @@ import {
   agentStatusTone,
   decisionTone,
   fmtAlgo,
+  fmtInt,
   fmtTs,
   shortId,
 } from "../lib/format.js";
@@ -217,13 +218,77 @@ function TimelineDrawer({
   );
 }
 
+type PolicyDiffRow = {
+  key: string;
+  label: string;
+  oldVal: string;
+  newVal: string;
+};
+
+const fmtArr = (v: unknown) => (Array.isArray(v) && v.length > 0 ? (v as string[]).join(", ") : "—");
+const fmtAlgoVal = (v: unknown) => `${fmtAlgo(Number(v))} Ɖ`;
+const fmtFlag = (v: unknown) => (v ? "on" : "off");
+
+function policyDiffRows(latest: PolicyConfig, older: PolicyConfig): PolicyDiffRow[] {
+  const rows: PolicyDiffRow[] = [];
+  const add = (key: string, label: string, oldV: unknown, newV: unknown, fmt: (v: unknown) => string) => {
+    const o = fmt(oldV);
+    const n = fmt(newV);
+    if (o === n) return;
+    rows.push({ key, label, oldVal: o, newVal: n });
+  };
+
+  add("name", "Name", older.name, latest.name, (v) => String(v));
+  add("perCallLimitAlgo", "Per-call limit", older.perCallLimitAlgo, latest.perCallLimitAlgo, fmtAlgoVal);
+  add("hardCeilingAlgo", "Hard ceiling", older.hardCeilingAlgo, latest.hardCeilingAlgo, fmtAlgoVal);
+  add("sessionBudgetAlgo", "Session budget", older.sessionBudgetAlgo, latest.sessionBudgetAlgo, fmtAlgoVal);
+  add("dailyBudgetAlgo", "Daily budget", older.dailyBudgetAlgo, latest.dailyBudgetAlgo, fmtAlgoVal);
+  add("maxDailyPayments", "Max daily payments", older.maxDailyPayments, latest.maxDailyPayments, (v) => fmtInt(Number(v)));
+  add("unknownRecipient", "Unknown recipient", older.unknownRecipient, latest.unknownRecipient, (v) => String(v));
+  add("firstTimeService", "First-time service", older.firstTimeService, latest.firstTimeService, (v) => String(v));
+  add("recipientAllowlist", "Recipient allowlist", older.recipientAllowlist, latest.recipientAllowlist, fmtArr);
+  add("recipientBlocklist", "Recipient blocklist", older.recipientBlocklist, latest.recipientBlocklist, fmtArr);
+  add("serviceAllowlist", "Service allowlist", older.serviceAllowlist, latest.serviceAllowlist, fmtArr);
+  add("serviceBlocklist", "Service blocklist", older.serviceBlocklist, latest.serviceBlocklist, fmtArr);
+  add("emergencyStop", "Emergency stop", older.emergencyStop, latest.emergencyStop, fmtFlag);
+
+  return rows;
+}
+
+function PolicyDiff({ latest, older }: { latest: PolicyConfig; older: PolicyConfig }) {
+  const rows = policyDiffRows(latest, older);
+  if (rows.length === 0) {
+    return <p className="text-xs text-[var(--color-ink-3)]">No differences between these versions.</p>;
+  }
+  return (
+    <div className="space-y-1.5">
+      {rows.map((r) => (
+        <div key={r.key} className="grid grid-cols-1 items-baseline gap-1 sm:grid-cols-[10rem_1fr_2rem_1fr]">
+          <span className="text-[11px] text-[var(--color-ink-3)]">{r.label}</span>
+          <span className="font-mono text-[11px] text-[var(--color-ink-3)] line-through">{r.oldVal}</span>
+          <span className="hidden text-center text-[var(--color-ink-3)] sm:block">→</span>
+          <span className="inline-flex w-fit items-center rounded-md bg-amber-50 px-2 py-0.5 font-mono text-[11px] text-amber-700 ring-1 ring-inset ring-amber-200">
+            {r.newVal}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PolicyEditor({ agentId, policy }: { agentId: string; policy: PolicyConfig }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<PolicyConfig>(policy);
   const [simResult, setSimResult] = useState<SimulationResult | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
+  const [showVersions, setShowVersions] = useState(true);
+  const [compareTo, setCompareTo] = useState<number | null>(null);
 
   const history = useQuery({ queryKey: ["policy-history", agentId], queryFn: () => api.getPolicyHistory(agentId) });
+
+  const versions = [...(history.data?.history ?? [])].sort((a, b) => b.version - a.version);
+  const latest = versions[0];
+  const older = versions.find((v) => v.version === compareTo) ?? null;
 
   const save = useMutation({
     mutationFn: () => api.updatePolicy(agentId, draftFrom(draft)),
@@ -312,35 +377,85 @@ function PolicyEditor({ agentId, policy }: { agentId: string; policy: PolicyConf
       {simError ? <ErrorBox message={simError} /> : null}
       {simResult ? <Verdict result={simResult} /> : null}
 
-      <div>
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-3)]">Version history</div>
-        {history.isPending ? (
-          <Spinner />
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {history.data?.history.map((h) => (
-              <div
-                key={h.version}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${
-                  h.active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--color-line)] bg-white text-[var(--color-ink)]"
-                }`}
-              >
-                <span className="font-mono font-semibold">v{h.version}</span>
-                {h.active ? (
-                  <span>active</span>
-                ) : (
-                  <button
-                    onClick={() => activate.mutate(h.version)}
-                    disabled={activate.isPending}
-                    className="font-medium text-[var(--color-accent)] hover:text-indigo-700"
-                  >
-                    activate
-                  </button>
-                )}
-              </div>
-            ))}
+      <div className="rounded-lg border border-[var(--color-line)] bg-white">
+        <button
+          onClick={() => setShowVersions((s) => !s)}
+          className="flex w-full items-center gap-2 px-3 py-2 text-left"
+        >
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className={`h-3.5 w-3.5 shrink-0 text-[var(--color-ink-3)] transition-transform ${showVersions ? "rotate-90" : ""}`}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 4l4 4-4 4" />
+          </svg>
+          <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-3)]">Policy versions</span>
+          <span className="ml-auto font-mono text-[11px] text-[var(--color-ink-3)]">{versions.length}</span>
+        </button>
+
+        {showVersions ? (
+          <div className="border-t border-[var(--color-line)] p-3">
+            {history.isPending ? (
+              <Spinner />
+            ) : versions.length === 0 ? (
+              <p className="py-2 text-center text-xs text-[var(--color-ink-3)]">No versions recorded yet.</p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {versions.map((h) => (
+                    <div
+                      key={h.version}
+                      className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-1.5 text-xs ${
+                        h.active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--color-line)] bg-white text-[var(--color-ink)]"
+                      }`}
+                    >
+                      <span className="font-mono font-semibold">v{h.version}</span>
+                      {h.version === latest?.version ? (
+                        <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-stone-500">
+                          current
+                        </span>
+                      ) : h.active ? (
+                        <Badge tone="ok">active</Badge>
+                      ) : null}
+                      <span className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-ink-2)]">{h.name || "—"}</span>
+                      <span className="font-mono text-[10px] text-[var(--color-ink-3)]">{fmtTs(h.createdAt)}</span>
+                      {!h.active && h.version !== latest?.version ? (
+                        <button
+                          onClick={() => activate.mutate(h.version)}
+                          disabled={activate.isPending}
+                          className="font-medium text-[var(--color-accent)] hover:text-indigo-700"
+                        >
+                          activate
+                        </button>
+                      ) : null}
+                      {h.version !== latest?.version ? (
+                        <button
+                          onClick={() => setCompareTo(compareTo === h.version ? null : h.version)}
+                          className={`font-medium hover:text-indigo-700 ${
+                            compareTo === h.version ? "text-[var(--color-ink)]" : "text-[var(--color-accent)]"
+                          }`}
+                        >
+                          {compareTo === h.version ? "hide diff" : "diff"}
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+
+                {compareTo != null && older && latest && compareTo !== latest.version ? (
+                  <div className="mt-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)]/60 p-3">
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-3)]">
+                      Changes from v{older.version} → v{latest.version}
+                    </div>
+                    <PolicyDiff latest={latest} older={older} />
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

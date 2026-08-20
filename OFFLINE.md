@@ -83,14 +83,14 @@ pnpm --filter @kron/dashboard dev
 ## Demo Scripts
 
 ```bash
-# Multi-agent governance (Researcher vs Trader + boundary block)
-pnpm demo:multi
+# Autonomous agent driving x402 payments through the runtime (local model default)
+pnpm demo:run
 
-# Agent-to-Agent autonomous subcontracting
-pnpm demo:a2a
+# Force OpenAI provider (needs OPENAI_API_KEY)
+pnpm demo:openai
 
-# Rogue-agent budget cap + human intervention
-pnpm demo:budget
+# Force Anthropic provider (needs ANTHROPIC_API_KEY)
+pnpm demo:claude
 ```
 
 ## Known Offline Gotchas

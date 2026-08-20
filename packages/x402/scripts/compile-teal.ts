@@ -19,23 +19,38 @@ try {
 }
 
 async function compile(source: string): Promise<string> {
-  const algodUrl = process.env.ALGOD_URL ?? "http://localhost:4001";
-  const algodToken = process.env.ALGOD_TOKEN ?? "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  const res = await fetch(`${algodUrl.replace(/\/$/, "")}/v2/teal/compile`, {
-    method: "POST",
-    headers: {
-      "X-Algo-API-Token": algodToken,
-      "Content-Type": "text/plain",
+  const candidates = [
+    {
+      url: process.env.ALGOD_URL ?? "http://localhost:4001",
+      token: process.env.ALGOD_TOKEN ?? "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     },
-    body: source,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`TEAL compile failed: ${res.status} ${text.slice(0, 400)}`);
+    // Public TestNet fallback so CI/docker builds can compile without LocalNet.
+    { url: "https://testnet-api.algonode.cloud", token: "" },
+  ];
+  let lastError: unknown = null;
+  for (const { url, token } of candidates) {
+    try {
+      const res = await fetch(`${url.replace(/\/$/, "")}/v2/teal/compile`, {
+        method: "POST",
+        headers: {
+          "X-Algo-API-Token": token,
+          "Content-Type": "text/plain",
+        },
+        body: source,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        lastError = new Error(`[${url}] TEAL compile failed: ${res.status} ${text.slice(0, 400)}`);
+        continue;
+      }
+      const body = (await res.json()) as { result?: string };
+      if (!body.result) throw new Error(`[${url}] TEAL compile returned no result`);
+      return body.result;
+    } catch (err) {
+      lastError = err;
+    }
   }
-  const body = (await res.json()) as { result?: string };
-  if (!body.result) throw new Error("TEAL compile returned no result");
-  return body.result;
+  throw lastError instanceof Error ? lastError : new Error("All TEAL compile endpoints failed");
 }
 
 async function main() {

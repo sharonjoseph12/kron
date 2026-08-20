@@ -86,7 +86,7 @@ export async function ensureKronApp(): Promise<number | null> {
       sender: account.addr,
       approvalProgram,
       clearProgram,
-      numGlobalInts: 2,       // total_payments, last_amount_micro
+      numGlobalInts: 3,       // total_payments, last_amount_micro, emergency_stop
       numGlobalByteSlices: 2, // last_policy_hash, last_agent_id
       numLocalInts: 0,
       numLocalByteSlices: 0,
@@ -119,6 +119,32 @@ export async function ensureKronApp(): Promise<number | null> {
       if (appIndex) {
         cachedAppId = Number(appIndex);
         console.log(`[kron-contract] Deployed KRON app ID: ${cachedAppId} (round ${conf.confirmedRound})`);
+        // Fund the app so the inner-transaction `flush()` has a balance to return.
+        try {
+          const fundParams = await algorand.getChainParams();
+          const fund = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            sender: account.addr,
+            receiver: algosdk.getApplicationAddress(cachedAppId),
+            amount: 100_000n, // 0.1 ALGO
+            suggestedParams: {
+              fee: Math.max(fundParams.minFee, 1000),
+              minFee: 1000,
+              flatFee: true,
+              firstValid: fundParams.firstValid,
+              lastValid: fundParams.lastValid,
+              genesisID: fundParams.genesisID,
+              genesisHash: Uint8Array.from(Buffer.from(fundParams.genesisHash, "base64")),
+            },
+          });
+          const signedFund = algosdk.signTransaction(fund, account.sk);
+          const { txId: fundTxId } = await algorand.submitRawTransaction(
+            Buffer.from(signedFund.blob).toString("base64"),
+          );
+          await algorand.waitForConfirmation(fundTxId);
+          console.log(`[kron-contract] Funded app ${cachedAppId} with 0.1 ALGO (inner-txn flush ready).`);
+        } catch (fundErr) {
+          console.warn(`[kron-contract] App funding skipped (flush() balance will be empty): ${fundErr instanceof Error ? fundErr.message : String(fundErr)}`);
+        }
         return cachedAppId;
       }
     }

@@ -1,5 +1,8 @@
-# pragma version 10
-// KRON Policy Anchor Contract v2 — ARC-4 method dispatch
+#pragma version 10
+// KRON Policy Anchor Contract v3 — ARC-4 method dispatch
+// Globals: total_payments, last_policy_hash, last_agent_id,
+//          last_amount_micro, emergency_stop
+// Boxes:   ag:<agent_id> -> byte[32] policy hash
 
 txn ApplicationID
 int 0
@@ -22,6 +25,21 @@ byte 0x22a4fb91
 ==
 bnz handle_get_last_policy_hash
 
+txn ApplicationArgs 0
+byte 0x9fba667f
+==
+bnz handle_get_agent_policy_hash
+
+txn ApplicationArgs 0
+byte 0x481676f5
+==
+bnz handle_set_emergency_stop
+
+txn ApplicationArgs 0
+byte 0x7f9acc63
+==
+bnz handle_flush
+
 int 0
 return
 
@@ -34,11 +52,17 @@ handle_anchor_policy:
   int 0
   return
 anchor_args_ok:
+  // reject while emergency stop is engaged
+  byte "emergency_stop"
+  app_global_get
+  bnz anchor_blocked
+
   byte "total_payments"
   app_global_get
   int 1
   +
   byte "total_payments"
+  swap
   app_global_put
 
   byte "last_policy_hash"
@@ -55,7 +79,18 @@ anchor_args_ok:
   btoi
   app_global_put
 
+  // per-agent box: "ag:" + agent_id -> policy_hash
+  byte "ag:"
+  txn ApplicationArgs 2
+  extract 2 0
+  concat
+  txn ApplicationArgs 1
+  box_put
+
   int 1
+  return
+anchor_blocked:
+  int 0
   return
 
 // get_payment_count()uint64
@@ -88,6 +123,86 @@ hash_args_ok:
   int 1
   return
 
+// get_agent_policy_hash(string agent_id)byte[32]
+handle_get_agent_policy_hash:
+  txn NumAppArgs
+  int 2
+  ==
+  bnz agent_hash_args_ok
+  int 0
+  return
+agent_hash_args_ok:
+  byte "ag:"
+  txn ApplicationArgs 1
+  extract 2 0
+  concat
+  box_get
+  // stack: [value, exists]
+  bnz agent_hash_found
+  pop
+  byte 0x0000000000000000000000000000000000000000000000000000000000000000
+  store 0
+  int 1
+  return
+agent_hash_found:
+  store 0
+  int 1
+  return
+
+// set_emergency_stop(bool stopped)void — creator only
+handle_set_emergency_stop:
+  global CreatorAddress
+  txn Sender
+  ==
+  bnz set_es_authorized
+  int 0
+  return
+set_es_authorized:
+  txn NumAppArgs
+  int 2
+  ==
+  bnz set_es_args_ok
+  int 0
+  return
+set_es_args_ok:
+  txn ApplicationArgs 1
+  byte 0x80
+  ==
+  byte "emergency_stop"
+  swap
+  app_global_put
+  int 1
+  return
+
+// flush()void — forward the app's entire ALGO balance to the creator
+handle_flush:
+  global CreatorAddress
+  txn Sender
+  ==
+  bnz flush_authorized
+  int 0
+  return
+flush_authorized:
+  txn NumAppArgs
+  int 1
+  ==
+  bnz flush_args_ok
+  int 0
+  return
+flush_args_ok:
+  int 1
+  itxn_begin
+  int pay
+  itxn_field TypeEnum
+  global CreatorAddress
+  itxn_field Receiver
+  global CurrentApplicationAddress
+  balance
+  itxn_field Amount
+  itxn_submit
+  int 1
+  return
+
 handle_create:
   byte "total_payments"
   int 0
@@ -99,6 +214,9 @@ handle_create:
   byte ""
   app_global_put
   byte "last_amount_micro"
+  int 0
+  app_global_put
+  byte "emergency_stop"
   int 0
   app_global_put
   int 1

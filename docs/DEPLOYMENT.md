@@ -7,7 +7,7 @@ Deploy KRON to a free host so a judge can click a link instead of running Docker
 | **API** | [`apps/api/Dockerfile`](../apps/api/Dockerfile) | 8787 | Fastify REST API, MCP Gateway, SSE events, dashboard backend |
 | **Resource Server** | [`apps/resource-server/Dockerfile`](../apps/resource-server/Dockerfile) | 9100 | Paid MCP tools gated by x402 on Algorand TestNet |
 
-Both Dockerfiles install the pnpm workspace with `--frozen-lockfile`, build the `@kron/shared` / `@kron/x402` / `@kron/policy-engine` deps, and compile their own app. On boot the API runs `prisma db push` + idempotent seed.
+Both Dockerfiles install the pnpm workspace with `--frozen-lockfile`, build the `@kron/shared` / `@kron/x402` / `@kron/policy-engine` deps, and compile their own app. The API image also pre-compiles the KRON TEAL contract into bytecode (`pnpm --filter @kron/x402 compile:teal`, with a public TestNet algod fallback) so the on-chain policy-anchor never depends on a live node at boot. On boot the API runs `prisma db push` + idempotent seed.
 
 ---
 
@@ -67,6 +67,7 @@ A [`render.yaml`](../render.yaml) is included at the repo root. It defines the t
 | `SESSION_SECRET` | recommend | Session signing secret (≥ 32 chars) | auto-generated* |
 | `ENCRYPTION_KEY` | recommend | 64-hex AES-256 key for wallet mnemonics | auto-generated* |
 | `FUNDING_MNEMONIC` | no | TestNet account that tops up agent wallets | — |
+| `KRON_APP_ID` | no | Pre-deployed policy-anchor app ID (auto-deploys on first payment when empty + funded) | — |
 | `SEED_ADMIN_EMAIL` | no | Seed admin login | `admin@kron.dev` |
 | `SEED_ADMIN_PASSWORD` | recommend | Seed admin password | random printed to logs |
 | `FORCE_ESCALATE` | no | Escalate every payment (governance demo) | `false` |
@@ -134,4 +135,5 @@ Then set the API's `DASHBOARD_URL` to the dashboard origin (e.g. `https://kron-d
 - [x] `https://<api>/healthz` returns 200
 - [x] Dashboard loads and logs in
 - [x] Create an agent, run a demo call, see an `AUTO_APPROVED` decision with a real TestNet tx ID
-- [x] Verify the tx in the `/verify` portal and on <https://testnet.explorer.perawallet.app>
+- [x] Verify the tx in the `/verify` portal and on <https://testnet.algoexplorer.io> (every settlement exposes a deep link)
+- [x] The policy-anchor contract shows the anchored policy hash, agent box hash, and the emergency-stop state

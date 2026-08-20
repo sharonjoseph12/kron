@@ -348,7 +348,7 @@ function PaymentDetailDrawer({
             {p.txId && (
               <div>
                 <span className="text-[var(--color-ink-3)] block mb-0.5">Payment Transaction ID:</span>
-                <ExplorerLink url={p.explorerUrl} className="font-mono text-xs break-all">
+                <ExplorerLink url={`https://testnet.algoexplorer.io/tx/${p.txId}`} className="font-mono text-xs break-all">
                   {p.txId}
                 </ExplorerLink>
               </div>
@@ -357,7 +357,16 @@ function PaymentDetailDrawer({
             {p.appCallTxId && (
               <div>
                 <span className="text-[var(--color-ink-3)] block mb-0.5">Policy Anchor App Call Tx ID:</span>
-                <span className="font-mono text-xs text-[var(--color-ink)] break-all">{p.appCallTxId}</span>
+                <a
+                  href={`https://testnet.algoexplorer.io/tx/${p.appCallTxId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`View policy anchor app call transaction ${p.appCallTxId} on AlgoExplorer`}
+                  className="font-mono text-xs text-[var(--color-accent)] underline-offset-2 hover:underline break-all"
+                >
+                  {p.appCallTxId}
+                  <span aria-hidden="true"> ↗</span>
+                </a>
               </div>
             )}
 
