@@ -55,10 +55,10 @@ export default function Verify() {
   const proof = verifyQuery.data;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="anim-fade-up">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold text-[var(--color-ink)]">On-Chain Policy Verification</h1>
+          <h1 className="display-serif text-xl font-semibold text-[var(--color-ink)]">On-Chain Policy Verification</h1>
           <Badge tone="ok">Independent Cryptographic Proof</Badge>
         </div>
         <p className="mt-0.5 text-sm text-[var(--color-ink-3)]">
@@ -101,7 +101,7 @@ export default function Verify() {
                   key={p.id}
                   type="button"
                   onClick={() => handleQuickSelect(p.txId ?? p.id)}
-                  className="rounded bg-[var(--color-surface-2)] border border-[var(--color-line)] px-2 py-1 font-mono text-[11px] text-[var(--color-ink-2)] hover:bg-white hover:text-[var(--color-accent)] transition"
+                  className="rounded bg-[var(--color-surface-2)] border border-[var(--color-line)] px-2 py-1 font-mono text-[11px] text-[var(--color-ink-2)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-accent)] transition"
                 >
                   {p.resourceName} ({p.txId ? shortId(p.txId, 8) : shortId(p.id, 6)})
                 </button>
@@ -115,8 +115,8 @@ export default function Verify() {
       {verifyQuery.isFetching ? (
         <Spinner label="Verifying proof against Algorand node & policy registry…" />
       ) : verifyQuery.isError ? (
-        <Card className="p-8 text-center border-red-200 bg-red-50">
-          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-[var(--color-danger)]">
+        <Card className="p-8 text-center border-[#e5b0a6] bg-[var(--color-danger-soft)]">
+          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#f5cdc4] text-[var(--color-danger)]">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -129,10 +129,10 @@ export default function Verify() {
       ) : proof ? (
         <div className="space-y-6 anim-fade-up">
           {/* Main Statement Banner */}
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+          <div className="rounded-xl border border-[#a8cfb8] bg-[var(--color-success-soft)] p-5 spotlight">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-[var(--color-success)] border border-emerald-200">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#d3ead9] text-[var(--color-success)] border border-[#a8cfb8]">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
@@ -154,7 +154,7 @@ export default function Verify() {
               {proof.onChainProof.txId && (
                 <ExplorerLink
                   url={proof.payment.explorerUrl}
-                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                  className="rounded-lg border border-[#a8cfb8] bg-[var(--color-success-soft)] px-4 py-2 text-xs font-semibold text-[var(--color-success)] hover:bg-[#d3ead9] transition"
                 >
                   View Block on AlgoExplorer
                 </ExplorerLink>

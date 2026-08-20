@@ -80,16 +80,16 @@ export default function Payments() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="anim-fade-up">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Payments & Escalations</h1>
+        <h1 className="display-serif text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Payments & Escalations</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-3)]">
           Traceable payment lifecycle — from agent MCP tool requests to Algorand atomic transaction settlement.
         </p>
       </div>
 
       {/* Escalation queue */}
-      <Card className="border-amber-200">
+      <Card className="border-[#d9c48f]">
         <CardHeader
           title="Escalation Queue"
           subtitle="Autonomous payments awaiting human operator authorization"
@@ -105,7 +105,7 @@ export default function Payments() {
               const escId = escMap[p.id];
               const busy = decide.isPending && decide.variables?.escId === escId;
               return (
-                <div key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                <div key={p.id} className="spotlight flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-[var(--color-ink)]">{p.resourceName}</span>
@@ -218,7 +218,7 @@ function PaymentRow({
   return (
     <tr
       onClick={onSelect}
-      className="border-b border-[var(--color-line)]/60 last:border-0 hover:bg-[var(--color-surface-2)]/60 cursor-pointer transition-colors"
+      className="spotlight trow-in border-b border-[var(--color-line)]/60 last:border-0 hover:bg-[var(--color-surface-2)]/60 cursor-pointer transition-colors"
     >
       <td className="px-4 py-2.5">
         <div className="text-[var(--color-ink)] font-medium">{agentName}</div>
@@ -269,15 +269,15 @@ function PaymentDetailDrawer({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-stone-900/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-[rgba(51,51,51,0.4)] backdrop-blur-sm" onClick={onClose}>
       <div
-        className="h-full w-full max-w-xl overflow-y-auto border-l border-[var(--color-line)] bg-white p-6 space-y-6 shadow-2xl anim-slide-in-right"
+        className="h-full w-full max-w-xl overflow-y-auto border-l border-[var(--color-line)] bg-[var(--color-surface)] p-6 space-y-6 shadow-2xl anim-slide-in-right"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-[var(--color-line)] pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold text-[var(--color-ink)]">Payment Traceability & Audit</h2>
+              <h2 className="display-serif text-base font-semibold text-[var(--color-ink)]">Payment Traceability & Audit</h2>
               <Badge tone={paymentStatusTone(p.status)}>{p.status}</Badge>
             </div>
             <p className="font-mono text-xs text-[var(--color-ink-3)] mt-0.5">ID: {p.id}</p>
@@ -391,7 +391,7 @@ function PaymentDetailDrawer({
                 href={p.explorerUrl ?? `https://testnet.explorer.perawallet.app/tx/${p.txId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-50 border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition"
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--color-success-soft)] border border-[#a8cfb8] px-3 py-2 text-xs font-semibold text-[var(--color-success)] hover:bg-[#d3ead9] transition"
               >
                 View Confirmed Block on AlgoExplorer
               </a>

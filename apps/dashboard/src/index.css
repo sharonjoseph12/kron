@@ -1,23 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", "Matter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Matter", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-serif: "Noto Serif", ui-serif, Georgia, Cambria, "Times New Roman", serif;
 
-  /* Sarvam-inspired minimal palette */
-  --color-canvas: #f8f7f4;
-  --color-surface: #ffffff;
-  --color-surface-2: #f2f1ed;
-  --color-line: #e8e6e1;
-  --color-line-strong: #d9d6cf;
-  --color-ink: #1c1917;
-  --color-ink-2: #57534e;
-  --color-ink-3: #a8a29e;
-  --color-accent: #4f46e5;
-  --color-accent-soft: #eef2ff;
-  --color-success: #059669;
-  --color-warning: #d97706;
-  --color-danger: #dc2626;
+  /* ============================================================ */
+  /* Indus by Sarvam — design tokens (extracted from live CSS)      */
+  /* Warm heritage cream + charcoal editorial theme                 */
+  /* ============================================================ */
+  --color-canvas: #f5f2ea;      /* background 42 17% 96%           */
+  --color-surface: #f7f0e1;     /* card 39 58% 95%                  */
+  --color-surface-2: #eae2d1;   /* hover / accent 42 18% 89%        */
+  --color-surface-3: #f8f8f4;   /* background-secondary 60 7% 97%   */
+  --color-line: #ddd3ba;        /* soft warm divider                 */
+  --color-line-strong: #333333; /* charcoal border 0 0% 20%          */
+  --color-ink: #333333;         /* foreground 0 0% 20%               */
+  --color-ink-2: #6a6152;       /* warm secondary content            */
+  --color-ink-3: #968b75;       /* warm tertiary content             */
+  --color-accent: #e05f3c;      /* terracotta (chart-1, interactive) */
+  --color-accent-soft: #f6e0d4; /* soft terracotta wash              */
+  --color-success: #2f7d5e;     /* deep green (success fg 203 37%22%)*/
+  --color-success-soft: #e2f2e6;
+  --color-warning: #9a6b12;     /* warm amber                        */
+  --color-warning-soft: #f3e7c8;
+  --color-danger: #c0392b;      /* warm red                          */
+  --color-danger-soft: #fbe0da; /* destructive 9 83% 95%             */
+  --color-info: #20609a;
+  --color-gold: #e3c361;        /* chart-4 43 74% 66%                */
+  --color-chart-1: #e8744e;     /* 12 76% 61%                        */
+  --color-chart-2: #2b9a8b;     /* 173 58% 39%                       */
+  --color-chart-3: #274050;     /* 197 37% 24%                       */
+  --color-chart-5: #f28b3f;     /* 27 87% 67%                        */
 }
 
 html {
@@ -34,34 +48,56 @@ body {
   font-feature-settings: "cv02", "cv03", "ss01";
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::selection { background: #eae2d1; color: #1a1a1a; }
+
+/* Scrollbar — warm charcoal on cream */
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d4d2cc; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #b8b5ad; }
-
-/* Selection */
-::selection { background: #dbeafe; color: #1e3a8a; }
+::-webkit-scrollbar-thumb { background: #cfc4a8; border-radius: 9999px; border: 2px solid var(--color-canvas); }
+::-webkit-scrollbar-thumb:hover { background: #b4a885; }
 
 /* ------------------------------------------------------------------ */
-/* Motion system — restrained, refined, purposeful                       */
+/* Indus animation system — tatva motion                               */
 /* ------------------------------------------------------------------ */
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(14px); }
+@keyframes tatva-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tatva-blur-fade-in {
+  from { opacity: 0; filter: blur(6px); transform: translateY(6px); }
+  to   { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+@keyframes tatva-check-pop {
+  0%   { transform: scale(0); }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes tatva-live-ping {
+  0%   { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.4); }
+}
+@keyframes tatva-table-row-in {
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+@keyframes tatva-skeleton-shimmer {
+  0%   { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
 }
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
+@keyframes tatva-bounce-down {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(4px); }
 }
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(16px); }
-  to   { opacity: 1; transform: translateX(0); }
+@keyframes ripple {
+  0%   { opacity: 0.8; border-width: 2px; transform: scale(0.3); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes typing {
+  0%, 100% { opacity: 0.6; transform: scale(0.6); }
+  50%      { opacity: 1; transform: scale(1); }
 }
 @keyframes shimmer {
   0% { background-position: -400px 0; }
@@ -69,72 +105,125 @@ body {
 }
 @keyframes softPulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  50% { opacity: 0.4; }
 }
-@keyframes breathe {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.18); }
-  50% { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
-}
-@keyframes drawLine {
-  from { transform: scaleY(0); }
-  to { transform: scaleY(1); }
-}
-@keyframes gridFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+@keyframes drawLine { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(320%); } }
 
-.anim-fade-up { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.anim-fade-in { animation: fadeIn 0.4s ease both; }
-.anim-scale-in { animation: scaleIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.anim-slide-in-right { animation: slideInRight 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* Legacy aliases so existing components animate straight away */
+.anim-fade-up { animation: fadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-fade-in { animation: tatva-fade-in 0.4s ease both; }
+.anim-blur-fade-in { animation: tatva-blur-fade-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-scale-in { animation: tatva-check-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-slide-in-right { animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .anim-soft-pulse { animation: softPulse 2.4s ease-in-out infinite; }
-.anim-breathe { animation: breathe 2.6s ease-in-out infinite; }
+.anim-live-ping { position: relative; }
+.anim-live-ping::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: tatva-live-ping 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
 
-.stagger-children > * { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2)  { animation-delay: 60ms; }
-.stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
-.stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
-.stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
-.stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
-.stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
-.stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
-.stagger-children > *:nth-child(9)  { animation-delay: 480ms; }
-.stagger-children > *:nth-child(10) { animation-delay: 540ms; }
-.stagger-children > *:nth-child(11) { animation-delay: 600ms; }
-.stagger-children > *:nth-child(12) { animation-delay: 660ms; }
+.stagger-children > * { animation: tatva-blur-fade-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.stagger-children > *:nth-child(1)  { animation-delay: 40ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 100ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 220ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 280ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 340ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 400ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 460ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 520ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 580ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 640ms; }
+.stagger-children > *:nth-child(12) { animation-delay: 700ms; }
 
 /* ------------------------------------------------------------------ */
-/* Surface primitives (light, minimal, soft shadow)                    */
+/* Typing dots (AI composing indicator)                                */
+/* ------------------------------------------------------------------ */
+.typing-dots { display: inline-flex; align-items: center; gap: 3px; }
+.typing-dots span {
+  width: 4px; height: 4px; border-radius: 9999px; background: currentColor;
+  animation: typing 1.2s ease-in-out infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+/* ------------------------------------------------------------------ */
+/* Cursor interaction — the Indus "changes as you move" feel           */
+/* ------------------------------------------------------------------ */
+
+/* Ripple ring on click (injected by main.tsx) */
+.ripple-ring {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  border-color: rgba(51, 51, 51, 0.4);
+  border-style: solid;
+  transform: scale(0.3);
+  animation: ripple 0.6s ease-out forwards;
+  z-index: 60;
+}
+
+/* Mouse-follow spotlight on cards/rows: a warm radial glow that tracks
+   the cursor. main.tsx sets --spot-x / --spot-y on .spotlight elements. */
+.spotlight { position: relative; overflow: hidden; }
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    420px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(224, 95, 60, 0.09),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  border-radius: inherit;
+}
+.spotlight:hover::before { opacity: 1; }
+
+/* ------------------------------------------------------------------ */
+/* Surface primitives — warm cream cards, charcoal edges               */
 /* ------------------------------------------------------------------ */
 
 .card {
+  position: relative;
   background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: 1rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 0.5rem;
   transition:
-    border-color 0.3s ease,
-    box-shadow 0.3s ease,
-    transform 0.3s ease;
+    background 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s ease;
 }
 .card-hover:hover {
-  border-color: var(--color-line-strong);
-  box-shadow: 0 8px 30px -12px rgba(28, 25, 23, 0.12);
-  transform: translateY(-1px);
+  background: var(--color-surface-2);
+  box-shadow: 0 14px 40px -18px rgba(51, 51, 51, 0.28);
+  transform: translateY(-2px);
 }
-
-/* ------------------------------------------------------------------ */
-/* Accent ring (used sparingly, like Sarvam's soft lavender)            */
-/* ------------------------------------------------------------------ */
+.card-hover:active { transform: translateY(0); }
 
 .accent-card {
   position: relative;
-  border: 1px solid var(--color-line);
-  border-radius: 1rem;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 0.5rem;
   background:
-    linear-gradient(135deg, rgba(238, 242, 255, 0.6), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(135deg, rgba(224, 95, 60, 0.07), rgba(255, 255, 255, 0) 45%),
     var(--color-surface);
+  transition: background 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+}
+.accent-card:hover {
+  background:
+    linear-gradient(135deg, rgba(224, 95, 60, 0.13), rgba(255, 255, 255, 0) 55%),
+    var(--color-surface);
+  box-shadow: 0 14px 40px -18px rgba(51, 51, 51, 0.25);
+  transform: translateY(-2px);
 }
 .accent-card::before {
   content: "";
@@ -142,7 +231,7 @@ body {
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.35), rgba(79, 70, 229, 0.05) 60%);
+  background: linear-gradient(135deg, rgba(224, 95, 60, 0.5), rgba(51, 51, 51, 0.15) 60%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -151,33 +240,77 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Skeleton loading shimmer                                            */
+/* Buttons — near-black Indus gradient, shifts on hover                */
+/* ------------------------------------------------------------------ */
+
+.btn-indus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  color: #fffcf6;
+  background: linear-gradient(180deg, hsl(0 0% 20%), hsl(0 0% 10%));
+  border: 1px solid #1a1a1a;
+  transition:
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(51, 51, 51, 0.3);
+}
+.btn-indus:hover {
+  background: linear-gradient(180deg, hsl(0 0% 15%), hsl(0 0% 25%));
+  box-shadow: 0 6px 18px -8px rgba(51, 51, 51, 0.5);
+}
+.btn-indus:active { transform: scale(0.97); }
+.btn-indus:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-cream {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-line-strong);
+  transition: background 0.3s ease, transform 0.15s ease, color 0.3s ease;
+}
+.btn-cream:hover { background: var(--color-surface-2); color: #1a1a1a; }
+.btn-cream:active { transform: scale(0.97); }
+.btn-cream:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ------------------------------------------------------------------ */
+/* Skeleton loading shimmer (Indus warm shimmer)                       */
 /* ------------------------------------------------------------------ */
 
 .skeleton {
-  background: linear-gradient(90deg, #ecebe6 25%, #f5f4f0 50%, #ecebe6 75%);
-  background-size: 800px 100%;
-  animation: shimmer 1.6s infinite linear;
+  background: linear-gradient(90deg, #ece5d4 0%, #f8f5ec 50%, #ece5d4 100%);
+  background-size: 1000px 100%;
+  animation: tatva-skeleton-shimmer 1.6s linear infinite;
+  border-radius: 0.375rem;
 }
 
 /* ------------------------------------------------------------------ */
-/* Subtle dotted grid background (very faint)                          */
+/* Subtle dotted grid background                                       */
 /* ------------------------------------------------------------------ */
 
 .dotted-grid {
-  background-image: radial-gradient(#e2e0da 1px, transparent 1px);
+  background-image: radial-gradient(#d8cdb0 1px, transparent 1px);
   background-size: 22px 22px;
-  animation: gridFade 1.2s ease both;
+  animation: tatva-fade-in 1.2s ease both;
 }
 
 /* ------------------------------------------------------------------ */
-/* Timeline connector (light theme)                                    */
+/* Timeline connector                                                  */
 /* ------------------------------------------------------------------ */
 
 .timeline-connector {
   width: 1.5px;
   background: linear-gradient(to bottom, var(--color-accent), var(--color-success));
-  opacity: 0.35;
+  opacity: 0.4;
   transform-origin: top;
   animation: drawLine 1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -192,6 +325,7 @@ body {
 .timeline-dot.confirmed {
   border-color: var(--color-success);
   background: var(--color-success);
+  box-shadow: 0 0 0 4px rgba(47, 125, 94, 0.15);
 }
 .timeline-dot.pending {
   border-color: var(--color-accent);
@@ -208,7 +342,7 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Network badge (quiet, monochrome-ish)                               */
+/* Network badge (warm heritage tones)                                 */
 /* ------------------------------------------------------------------ */
 
 .network-badge {
@@ -218,16 +352,16 @@ body {
   text-transform: uppercase;
   padding: 3px 7px;
   border-radius: 9999px;
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-line-strong);
   color: var(--color-ink-2);
-  background: var(--color-surface-2);
+  background: var(--color-surface-3);
 }
-.network-badge.testnet { color: #92400e; border-color: #fcd34d; background: #fffbeb; }
-.network-badge.localnet { color: #3730a3; border-color: #c7d2fe; background: #eef2ff; }
-.network-badge.mainnet { color: #065f46; border-color: #a7f3d0; background: #ecfdf5; }
+.network-badge.testnet { color: #8a5a10; border-color: #cfb98a; background: #f3e7c8; }
+.network-badge.localnet { color: #2b5b7c; border-color: #a9c6da; background: #e3eef6; }
+.network-badge.mainnet { color: #2f7d5e; border-color: #a8cfb8; background: #e2f2e6; }
 
 /* ------------------------------------------------------------------ */
-/* Verified on-chain badge (quiet success)                             */
+/* Verified on-chain badge                                             */
 /* ------------------------------------------------------------------ */
 
 .badge-onchain {
@@ -238,27 +372,29 @@ body {
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--color-success);
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  background: var(--color-success-soft);
+  border: 1px solid #a8cfb8;
   border-radius: 9999px;
   padding: 2px 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+a:hover .badge-onchain { transform: scale(1.04); }
 
 /* ------------------------------------------------------------------ */
-/* Live feed terminal (quiet paper console)                            */
+/* Live feed terminal (warm paper console)                             */
 /* ------------------------------------------------------------------ */
 
 .terminal {
   position: relative;
   overflow: hidden;
-  background: #fbfaf8;
-  border: 1px solid var(--color-line);
+  background: #faf7ef;
+  border: 1px solid var(--color-line-strong);
 }
 .terminal::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.012) 51%, transparent 100%);
+  background: linear-gradient(to bottom, transparent 50%, rgba(51, 51, 51, 0.02) 51%, transparent 100%);
   background-size: 100% 4px;
   pointer-events: none;
   z-index: 10;
@@ -269,12 +405,17 @@ body {
   left: 0;
   right: 0;
   height: 24%;
-  background: linear-gradient(to bottom, transparent, rgba(79, 70, 229, 0.06), transparent);
+  background: linear-gradient(to bottom, transparent, rgba(224, 95, 60, 0.08), transparent);
   animation: scanline 5s linear infinite;
   pointer-events: none;
   z-index: 11;
 }
-@keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(320%); }
-}
+
+/* ------------------------------------------------------------------ */
+/* Table row entrance (Indus staggered reveal)                         */
+/* ------------------------------------------------------------------ */
+
+.trow-in { animation: tatva-table-row-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Serif editorial display — echoes Indus' heritage typography */
+.display-serif { font-family: var(--font-serif); font-weight: 600; letter-spacing: -0.02em; }

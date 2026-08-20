@@ -82,10 +82,10 @@ export default function Mcp() {
   const list = servers.data?.servers ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="flex items-center justify-between">
         <div className="anim-fade-up">
-          <h1 className="text-xl font-semibold text-[var(--color-ink)]">MCP Servers</h1>
+          <h1 className="display-serif text-2xl font-semibold tracking-tight text-[var(--color-ink)]">MCP Servers</h1>
           <p className="mt-0.5 text-sm text-[var(--color-ink-3)]">
             Resource servers that agents reach via MCP, billed through KRON.
           </p>
@@ -96,7 +96,7 @@ export default function Mcp() {
       </div>
 
       {showRegister ? (
-        <form onSubmit={onRegister} className="rounded-xl border border-[var(--color-line)] bg-white p-4">
+        <form onSubmit={onRegister} className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-3)] p-4 spotlight anim-fade-up">
           <div className="grid gap-3 md:grid-cols-4">
             <label>
               <span className={labelClass}>Name</span>

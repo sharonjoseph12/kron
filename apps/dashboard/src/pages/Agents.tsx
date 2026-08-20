@@ -111,7 +111,7 @@ function draftFrom(p: PolicyConfig) {
 
 function Verdict({ result }: { result: SimulationResult }) {
   return (
-    <div className="space-y-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
+    <div className="space-y-3 rounded-lg border border-[#a9c6da] bg-[#e3eef6]/60 p-3 anim-fade-up">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-3)]">Simulation result</span>
         <span className="font-mono text-sm font-semibold text-[var(--color-success)]">
@@ -120,7 +120,7 @@ function Verdict({ result }: { result: SimulationResult }) {
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
         {(["autoApproved", "escalated", "blocked"] as const).map((k) => (
-          <div key={k} className="rounded-md border border-[var(--color-line)] bg-white px-2 py-2">
+          <div key={k} className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface-3)] px-2 py-2">
             <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">{k.replace("auto", "auto-")}</div>
             <div className="font-mono text-sm text-[var(--color-ink)]">
               {result.simulated[k]} <span className="text-[10px] text-[var(--color-ink-3)]">(was {result.current[k]})</span>
@@ -134,7 +134,7 @@ function Verdict({ result }: { result: SimulationResult }) {
         <span className="font-mono">{fmtAlgo(result.current.spendAlgo)} Ɖ</span>
       </div>
       {result.blockedDetails.length > 0 ? (
-        <div className="max-h-32 overflow-y-auto rounded-md border border-[var(--color-line)] bg-white p-2">
+        <div className="max-h-32 overflow-y-auto rounded-md border border-[var(--color-line)] bg-[var(--color-surface-3)] p-2">
           {result.blockedDetails.map((b) => (
             <div key={b.requestId} className="flex items-start gap-2 py-0.5 font-mono text-[11px]">
               <span className="text-[var(--color-danger)]">block</span>
@@ -150,7 +150,7 @@ function Verdict({ result }: { result: SimulationResult }) {
 
 function EvaluateVerdict({ evaluation }: { evaluation: PolicyEvaluation }) {
   return (
-    <div className="space-y-2 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
+    <div className="space-y-2 rounded-lg border border-[#a9c6da] bg-[#e3eef6]/60 p-3 anim-fade-up">
       <div className="flex items-center gap-2">
         <Badge tone={decisionTone(evaluation.decision)}>{evaluation.decision}</Badge>
         <span className="font-mono text-xs text-[var(--color-ink-2)]">
@@ -192,14 +192,14 @@ function TimelineDrawer({
   const events = timeline.data?.events ?? [];
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-stone-900/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-[rgba(51,51,51,0.4)] backdrop-blur-sm" onClick={onClose}>
       <div
-        className="h-full w-full max-w-md overflow-y-auto border-l border-[var(--color-line)] bg-white p-5 shadow-2xl"
+        className="h-full w-full max-w-md overflow-y-auto border-l border-[var(--color-line)] bg-[var(--color-surface-3)] p-5 shadow-2xl anim-slide-in-right"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-[var(--color-ink)]">Timeline</h3>
+            <h3 className="display-serif text-sm font-semibold text-[var(--color-ink)]">Timeline</h3>
             <p className="font-mono text-[11px] text-[var(--color-ink-3)]">session {shortId(session.id, 10)}</p>
           </div>
           <button onClick={onClose} className={btnGhost}>
@@ -267,7 +267,7 @@ function PolicyDiff({ latest, older }: { latest: PolicyConfig; older: PolicyConf
           <span className="text-[11px] text-[var(--color-ink-3)]">{r.label}</span>
           <span className="font-mono text-[11px] text-[var(--color-ink-3)] line-through">{r.oldVal}</span>
           <span className="hidden text-center text-[var(--color-ink-3)] sm:block">→</span>
-          <span className="inline-flex w-fit items-center rounded-md bg-amber-50 px-2 py-0.5 font-mono text-[11px] text-amber-700 ring-1 ring-inset ring-amber-200">
+          <span className="inline-flex w-fit items-center rounded-md bg-[var(--color-warning-soft)] px-2 py-0.5 font-mono text-[11px] text-[var(--color-warning)] ring-1 ring-inset ring-[#d9c48f]">
             {r.newVal}
           </span>
         </div>
@@ -333,7 +333,7 @@ function PolicyEditor({ agentId, policy }: { agentId: string; policy: PolicyConf
           <span className={`${labelClass} mb-2 cursor-pointer select-none`}>
             <input
               type="checkbox"
-              className="mr-2 accent-red-500"
+              className="mr-2 accent-[var(--color-danger)]"
               checked={draft.emergencyStop}
               onChange={(e) => set("emergencyStop", e.target.checked)}
             />
@@ -377,7 +377,7 @@ function PolicyEditor({ agentId, policy }: { agentId: string; policy: PolicyConf
       {simError ? <ErrorBox message={simError} /> : null}
       {simResult ? <Verdict result={simResult} /> : null}
 
-      <div className="rounded-lg border border-[var(--color-line)] bg-white">
+      <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-3)]">
         <button
           onClick={() => setShowVersions((s) => !s)}
           className="flex w-full items-center gap-2 px-3 py-2 text-left"
@@ -408,12 +408,12 @@ function PolicyEditor({ agentId, policy }: { agentId: string; policy: PolicyConf
                     <div
                       key={h.version}
                       className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-1.5 text-xs ${
-                        h.active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--color-line)] bg-white text-[var(--color-ink)]"
+                        h.active ? "border-[#a8cfb8] bg-[var(--color-success-soft)] text-[var(--color-success)]" : "border-[var(--color-line)] bg-[var(--color-surface-3)] text-[var(--color-ink)]"
                       }`}
                     >
                       <span className="font-mono font-semibold">v{h.version}</span>
                       {h.version === latest?.version ? (
-                        <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-stone-500">
+                        <span className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[var(--color-ink-3)]">
                           current
                         </span>
                       ) : h.active ? (
@@ -425,7 +425,7 @@ function PolicyEditor({ agentId, policy }: { agentId: string; policy: PolicyConf
                         <button
                           onClick={() => activate.mutate(h.version)}
                           disabled={activate.isPending}
-                          className="font-medium text-[var(--color-accent)] hover:text-indigo-700"
+                          className="font-medium text-[var(--color-accent)] hover:text-[#b8451f]"
                         >
                           activate
                         </button>
@@ -433,7 +433,7 @@ function PolicyEditor({ agentId, policy }: { agentId: string; policy: PolicyConf
                       {h.version !== latest?.version ? (
                         <button
                           onClick={() => setCompareTo(compareTo === h.version ? null : h.version)}
-                          className={`font-medium hover:text-indigo-700 ${
+                          className={`font-medium hover:text-[#b8451f] ${
                             compareTo === h.version ? "text-[var(--color-ink)]" : "text-[var(--color-accent)]"
                           }`}
                         >
@@ -626,7 +626,7 @@ function AgentDetail({
               </thead>
               <tbody>
                 {(sessions.data?.sessions ?? []).map((s) => (
-                  <tr key={s.id} className="border-b border-[var(--color-line)]/60 last:border-0 hover:bg-[var(--color-surface-2)]/60 transition-colors">
+                  <tr key={s.id} className="trow-in spotlight border-b border-[var(--color-line)]/60 last:border-0 hover:bg-[var(--color-surface-2)]/60 transition-colors">
                     <td className="max-w-[16rem] truncate px-3 py-2 text-[var(--color-ink)]">{s.task ?? "—"}</td>
                     <td className="px-3 py-2">
                       <Badge tone={agentStatusTone(s.status)}>{s.status}</Badge>
@@ -705,7 +705,7 @@ export default function Agents() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="anim-fade-up">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Agents</h1>
+          <h1 className="display-serif text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Agents</h1>
           <p className="mt-1 text-sm text-[var(--color-ink-3)]">
             {list.length} agent{list.length === 1 ? "" : "s"} · each has a dedicated Algorand wallet and economic policy.
           </p>
@@ -716,7 +716,7 @@ export default function Agents() {
       </div>
 
       {showCreate ? (
-        <form onSubmit={onCreate} className="rounded-xl border border-[var(--color-line)] bg-white p-4 anim-fade-up">
+        <form onSubmit={onCreate} className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-3)] p-4 anim-fade-up">
           <div className="grid gap-3 md:grid-cols-3">
             <label>
               <span className={labelClass}>Name</span>

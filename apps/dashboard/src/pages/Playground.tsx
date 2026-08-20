@@ -172,11 +172,11 @@ console.log("Reasons:", evaluation.evaluation.reasons);`,
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="anim-fade-up">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-[var(--color-ink)]">Interactive SDK Playground</h1>
+            <h1 className="display-serif text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Interactive SDK Playground</h1>
             <Badge tone="ok">Live TestNet Sandbox</Badge>
           </div>
           <p className="mt-0.5 text-sm text-[var(--color-ink-3)]">
@@ -213,7 +213,7 @@ console.log("Reasons:", evaluation.evaluation.reasons);`,
             }}
             className={`rounded-lg px-3.5 py-2 text-xs font-medium transition ${
               selectedSnippetId === snip.id
-                ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                ? "bg-[var(--color-accent-soft)] text-[#b8451f] border border-[#e0a185]"
                 : "bg-transparent text-[var(--color-ink-3)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)]"
             }`}
           >
@@ -240,11 +240,12 @@ console.log("Reasons:", evaluation.evaluation.reasons);`,
             }
           />
           <div className="p-4 flex-1 flex flex-col">
-            <div className="relative rounded-lg border border-[var(--color-line)] bg-[#fbfaf8] p-4 font-mono text-xs text-[var(--color-ink)] overflow-x-auto">
-              <div className="absolute right-3 top-3 text-[10px] uppercase font-bold tracking-wider text-[var(--color-ink-2)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[var(--color-line)]">
+            <div className="relative terminal rounded-lg p-4 font-mono text-xs text-[var(--color-ink)] overflow-x-auto">
+              <div className="terminal-scanline" />
+              <div className="absolute right-3 top-3 z-20 text-[10px] uppercase font-bold tracking-wider text-[var(--color-ink-2)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[var(--color-line)]">
                 TypeScript SDK
               </div>
-              <pre className="text-[var(--color-ink)] leading-relaxed font-mono whitespace-pre-wrap">
+              <pre className="relative z-20 text-[var(--color-ink)] leading-relaxed font-mono whitespace-pre-wrap">
                 {currentSnippet.code}
               </pre>
             </div>
@@ -271,15 +272,18 @@ console.log("Reasons:", evaluation.evaluation.reasons);`,
           />
           <div className="p-4 flex-1 flex flex-col space-y-4">
             {/* Terminal output box */}
-            <div className="h-44 w-full overflow-y-auto rounded-lg border border-[var(--color-line)] bg-[#fbfaf8] p-3 font-mono text-xs text-[var(--color-ink)] space-y-1">
+            <div className="terminal h-44 w-full overflow-y-auto rounded-lg p-3 font-mono text-xs text-[var(--color-ink)]">
+              <div className="terminal-scanline" />
               {logs.length === 0 ? (
-                <span className="text-[var(--color-ink-3)]">Console ready. Click "Run in Sandbox" to execute.</span>
+                <span className="relative z-20 text-[var(--color-ink-3)]">Console ready. Click "Run in Sandbox" to execute.</span>
               ) : (
-                logs.map((l, i) => (
-                  <div key={i} className="text-[var(--color-success)]">
-                    {l}
-                  </div>
-                ))
+                <div className="relative z-20 space-y-1">
+                  {logs.map((l, i) => (
+                    <div key={i} className="text-[var(--color-success)]">
+                      {l}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 

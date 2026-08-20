@@ -72,14 +72,19 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen bg-[var(--color-canvas)]">
-      <aside className="fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-[var(--color-line)] bg-white/85 backdrop-blur-xl">
+      <aside className="fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-[var(--color-line)] bg-[var(--color-canvas)]">
         <div className="flex items-center gap-3 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-ink)] font-mono text-sm font-bold text-white">
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a1a1a] font-mono text-sm font-bold text-[#fffcf6] shadow-sm">
             K
+            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--color-accent)] anim-live-ping" />
           </div>
           <div>
-            <div className="font-mono text-sm font-semibold tracking-[0.18em] text-[var(--color-ink)]">KRON</div>
-            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-ink-3)]">Operator Console</div>
+            <div className="display-serif text-[15px] font-semibold tracking-[0.16em] text-[var(--color-ink)]">
+              KRON
+            </div>
+            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-ink-3)]">
+              Operator Console
+            </div>
           </div>
         </div>
         <div className="px-5 pb-3">
@@ -95,14 +100,18 @@ export default function Layout() {
               className={({ isActive }) =>
                 `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-[var(--color-accent)] text-white shadow-sm"
+                    ? "bg-[#1a1a1a] text-[#fffcf6] shadow-sm"
                     : "text-[var(--color-ink-2)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)]"
                 }`
               }
             >
               <Icon d={item.icon} />
               {item.label}
-              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-current opacity-0 transition-opacity group-hover:opacity-30" />
+              {item.to === "/payments" ? (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
+              ) : (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-current opacity-0 transition-opacity group-hover:opacity-30" />
+              )}
             </NavLink>
           ))}
         </nav>
@@ -110,9 +119,9 @@ export default function Layout() {
         <div className="px-3 mt-5">
           <button
             onClick={() => setShowKillModal(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 transition hover:bg-red-100 active:scale-[0.98]"
+            className="btn-cream w-full items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold tracking-wide text-[var(--color-danger)] border-[#e5b0a6] bg-[var(--color-danger-soft)] hover:bg-[#f5cdc4] hover:text-[#a03220]"
           >
-            <span className="h-2 w-2 rounded-full bg-red-500 anim-soft-pulse" />
+            <span className="h-2 w-2 rounded-full bg-[var(--color-danger)] anim-live-ping" />
             EMERGENCY STOP
           </button>
         </div>
@@ -122,18 +131,18 @@ export default function Layout() {
             Powered by Algorand
           </div>
           <div className="flex items-center gap-2.5 px-1 py-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-xs font-semibold text-[var(--color-ink-2)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-xs font-semibold text-[var(--color-ink-2)] ring-1 ring-[var(--color-line)]">
               {data?.user?.email?.[0]?.toUpperCase() ?? "?"}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-xs font-medium text-[var(--color-ink)]">{data?.user?.email}</div>
+              <div className="truncate text-xs font-semibold text-[var(--color-ink)]">{data?.user?.email}</div>
               <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">{data?.user?.role}</div>
             </div>
           </div>
           <button
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
-            className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink-3)] transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+            className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink-3)] transition hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)] disabled:opacity-50"
           >
             <LogoutIcon />
             {logout.isPending ? "Signing out…" : "Sign out"}
@@ -142,14 +151,12 @@ export default function Layout() {
       </aside>
 
       <main className="ml-60 flex-1 px-8 py-7">
-        <Outlet />
+        <div className="stagger-children">
+          <Outlet />
+        </div>
       </main>
 
-      <Modal
-        title="Global Emergency Stop"
-        isOpen={showKillModal}
-        onClose={() => setShowKillModal(false)}
-      >
+      <Modal title="Global Emergency Stop" isOpen={showKillModal} onClose={() => setShowKillModal(false)}>
         <div className="space-y-4">
           <p className="text-sm text-[var(--color-ink-2)]">
             This will trigger the <strong className="text-[var(--color-ink)]">emergency stop</strong> across all registered AI
@@ -158,17 +165,13 @@ export default function Layout() {
           </p>
 
           {killSuccess && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+            <div className="rounded-lg border border-[#a8cfb8] bg-[var(--color-success-soft)] px-3 py-2 text-xs font-semibold text-[var(--color-success)]">
               All autonomous agent spending has been halted.
             </div>
           )}
 
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              onClick={() => setShowKillModal(false)}
-              className={btnGhost}
-              disabled={emergencyStopAll.isPending}
-            >
+            <button onClick={() => setShowKillModal(false)} className={btnGhost} disabled={emergencyStopAll.isPending}>
               Cancel
             </button>
             <button

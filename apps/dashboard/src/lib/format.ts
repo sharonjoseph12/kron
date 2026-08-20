@@ -32,12 +32,12 @@ export function fmtTs(iso: string | null | undefined): string {
 export type BadgeTone = "ok" | "warn" | "err" | "info" | "muted" | "accent";
 
 export const badgeClass: Record<BadgeTone, string> = {
-  ok: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  warn: "bg-amber-50 text-amber-700 ring-amber-200",
-  err: "bg-red-50 text-red-700 ring-red-200",
-  info: "bg-sky-50 text-sky-700 ring-sky-200",
-  muted: "bg-stone-100 text-stone-500 ring-stone-200",
-  accent: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+  ok: "bg-[var(--color-success-soft)] text-[var(--color-success)] ring-[#a8cfb8]",
+  warn: "bg-[var(--color-warning-soft)] text-[var(--color-warning)] ring-[#d9c48f]",
+  err: "bg-[var(--color-danger-soft)] text-[var(--color-danger)] ring-[#e5b0a6]",
+  info: "bg-[#e3eef6] text-[var(--color-info)] ring-[#a9c6da]",
+  muted: "bg-[var(--color-surface-2)] text-[var(--color-ink-3)] ring-[var(--color-line)]",
+  accent: "bg-[var(--color-accent-soft)] text-[#b8451f] ring-[#e0a185]",
 };
 
 export function decisionTone(d: PolicyDecision | string | null | undefined): BadgeTone {

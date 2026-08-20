@@ -143,11 +143,11 @@ export default function Simulation() {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="anim-fade-up">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-[var(--color-ink)]">Policy Simulation & What-If Engine</h1>
+            <h1 className="display-serif text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Policy Simulation & What-If Engine</h1>
             <Badge tone="ok">Governance Differentiator</Badge>
           </div>
           <p className="mt-0.5 text-sm text-[var(--color-ink-3)]">
@@ -173,7 +173,7 @@ export default function Simulation() {
       </div>
 
       {appliedMsg && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+        <div className="rounded-lg border border-[#a8cfb8] bg-[var(--color-success-soft)] p-3 text-sm text-[var(--color-success)]">
           {appliedMsg}
         </div>
       )}
@@ -385,25 +385,25 @@ export default function Simulation() {
                       <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="sim-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.9} />
-                            <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.4} />
+                            <stop offset="0%" stopColor="#e05f3c" stopOpacity={0.9} />
+                            <stop offset="100%" stopColor="#e05f3c" stopOpacity={0.4} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#ecebe6" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#a8a29e" }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: "#a8a29e" }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ddd3ba" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#968b75" }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: "#968b75" }} axisLine={false} tickLine={false} />
                         <Tooltip
                           contentStyle={{
-                            background: "#ffffff",
-                            border: "1px solid #e8e6e1",
+                            background: "#f8f8f4",
+                            border: "1px solid #ddd3ba",
                             borderRadius: 10,
                             fontSize: 12,
-                            color: "#1c1917",
-                            boxShadow: "0 8px 30px -12px rgba(28,25,23,0.15)",
+                            color: "#333333",
+                            boxShadow: "0 8px 30px -12px rgba(51,51,51,0.15)",
                           }}
                         />
                         <Legend formatter={(v: string) => <span className="text-xs text-[var(--color-ink-2)]">{v}</span>} />
-                        <Bar dataKey="Current" fill="#d6d3d1" radius={[5, 5, 0, 0]} maxBarSize={48} />
+                        <Bar dataKey="Current" fill="#333333" radius={[5, 5, 0, 0]} maxBarSize={48} />
                         <Bar dataKey="Simulated" fill="url(#sim-fill)" radius={[5, 5, 0, 0]} maxBarSize={48} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -421,7 +421,7 @@ export default function Simulation() {
                       {simResult.blockedDetails.map((b, idx) => (
                         <div
                           key={b.requestId || idx}
-                          className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs"
+                          className="flex items-center justify-between rounded-lg border border-[#e5b0a6] bg-[var(--color-danger-soft)] px-3 py-2 text-xs spotlight"
                         >
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-[var(--color-danger)] font-bold">BLOCKED</span>
@@ -435,7 +435,7 @@ export default function Simulation() {
                 )}
 
                 {/* Activate Policy Button */}
-                <div className="flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
+                <div className="flex items-center justify-between rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-3)] p-4 spotlight">
                   <div>
                     <div className="font-semibold text-[var(--color-ink)]">Satisfied with the simulation result?</div>
                     <div className="text-xs text-[var(--color-ink-2)]">
@@ -453,7 +453,7 @@ export default function Simulation() {
               </div>
             ) : (
               <GlassCard className="flex h-96 flex-col items-center justify-center p-8 text-center text-[var(--color-ink-3)]">
-                <div className="mb-3 rounded-full border border-indigo-200 bg-indigo-50 p-4 text-[var(--color-accent)]">
+                <div className="mb-3 rounded-full border border-[var(--color-line)] bg-[var(--color-surface-2)] p-4 text-[var(--color-accent)]">
                   <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>

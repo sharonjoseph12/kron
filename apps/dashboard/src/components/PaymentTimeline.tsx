@@ -170,8 +170,8 @@ export function PaymentTimelineCard({ events }: { events: TimelineEvent[] }) {
         subtitle="Real-time transaction flow with on-chain policy anchoring"
         right={
           events.length > 0 ? (
-            <span className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 anim-soft-pulse" />
+            <span className="flex items-center gap-1.5 rounded-full border border-[#a8cfb8] bg-[var(--color-success-soft)] px-3 py-1 text-[11px] font-medium text-[var(--color-success)]">
+              <span className="h-2 w-2 rounded-full bg-[var(--color-success)] anim-soft-pulse" />
               {events.length} steps
             </span>
           ) : null

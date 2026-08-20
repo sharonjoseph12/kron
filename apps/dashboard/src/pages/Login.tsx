@@ -96,21 +96,22 @@ export default function Login() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--color-canvas)] px-4">
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[42rem] -translate-x-1/2 rounded-full bg-indigo-500/5 blur-3xl" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/3 border-l border-[var(--color-line)] dotted-grid lg:block" />
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[42rem] -translate-x-1/2 rounded-full bg-[var(--color-accent)]/5 blur-3xl" />
 
       <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 anim-fade-up">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-ink)] font-mono text-xl font-bold text-white shadow-sm">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-ink)] font-mono text-xl font-bold text-[#fffcf6] shadow-sm">
             K
           </div>
           <div className="text-center">
-            <h1 className="font-mono text-2xl font-bold tracking-widest text-[var(--color-ink)]">KRON</h1>
+            <h1 className="display-serif text-3xl font-bold tracking-tight text-[var(--color-ink)]">KRON</h1>
             <p className="mt-1 text-sm text-[var(--color-ink-3)]">Policy-Controlled Economic Runtime</p>
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="anim-fade-up stagger-children rounded-2xl border border-[var(--color-line)] bg-white p-6 shadow-sm">
-          <h2 className="mb-5 text-sm font-semibold text-[var(--color-ink)]">Operator sign in</h2>
+        <form onSubmit={onSubmit} className="anim-blur-fade-in stagger-children rounded-2xl border border-[var(--color-line-strong)] bg-[var(--color-surface-3)] p-6 shadow-sm">
+          <h2 className="mb-5 display-serif text-base font-semibold tracking-tight text-[var(--color-ink)]">Operator sign in</h2>
 
           <div className="mb-4">
             <label className={labelClass} htmlFor="email">

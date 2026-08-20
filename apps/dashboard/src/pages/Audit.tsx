@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client.js";
-import { badgeClass, fmtTs, shortId } from "../lib/format.js";
+import { fmtTs, shortId } from "../lib/format.js";
 import { Badge, Card, CardHeader, Mono, Spinner } from "../components/ui.js";
 
 const actionTone: Record<string, "ok" | "warn" | "err" | "info" | "muted"> = {
@@ -44,7 +44,7 @@ export default function Audit() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-[var(--color-line)] text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
+                <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-ink-2)]">
                   <th className="px-4 py-2.5 font-medium">Time</th>
                   <th className="px-4 py-2.5 font-medium">Actor</th>
                   <th className="px-4 py-2.5 font-medium">Action</th>
@@ -55,13 +55,13 @@ export default function Audit() {
               </thead>
               <tbody>
                 {entries.map((e) => (
-                  <tr key={e.id} className="border-b border-[var(--color-line)]/60 last:border-0 hover:bg-[var(--color-surface-2)]/60 transition-colors">
+                  <tr key={e.id} className="trow-in spotlight border-b border-[var(--color-line)] last:border-0 hover:bg-[var(--color-surface-2)] transition-colors">
                     <td className="whitespace-nowrap px-4 py-2 font-mono text-[11px] text-[var(--color-ink-3)]">{fmtTs(e.ts)}</td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
-                        <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ring-1 ring-inset ${badgeClass.muted}`}>
-                          {e.actorType}
-                        </span>
+                        <Badge tone="muted">
+                          <span className="font-mono uppercase">{e.actorType}</span>
+                        </Badge>
                         <span className="font-mono text-[11px] text-[var(--color-ink-2)]">{shortId(e.actorId ?? "", 6)}</span>
                       </div>
                     </td>
