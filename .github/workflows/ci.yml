@@ -51,8 +51,3 @@ jobs:
 
       - name: Test (workspace packages)
         run: pnpm test
-
-      - name: Test (API integration)
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost/dummy"
-        run: pnpm --filter @kron/api test

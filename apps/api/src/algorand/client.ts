@@ -100,7 +100,9 @@ export class AlgorandClient {
     });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`algod submit failed: ${res.status} ${text.slice(0, 400)}`);
+      // Keep full TEAL logic error for debugging (pool may return `logic eval error: ...`)
+      if (process.env.NODE_ENV !== "test") console.error(`[algorand] submit failed: ${text.slice(0, 1200)}`);
+      throw new Error(`algod submit failed: ${res.status} ${text.slice(0, 800)}`);
     }
     const body = (await res.json()) as { txId?: string };
     return { txId: body.txId ?? "" };
@@ -178,16 +180,27 @@ export class AlgorandClient {
   async getBalanceAlgo(address: string): Promise<number> {
     try {
       return (await this.getAccount(address)).balanceAlgo;
-    } catch {
+    } catch (err) {
+      // Surface chain-down clearly: caller (payment-flow) distinguishes 0 from unreachable
+      if (process.env.NODE_ENV !== "test") console.warn(`[algorand] getBalanceAlgo failed for ${address.slice(0, 8)}…: ${err instanceof Error ? err.message : String(err)}`);
       return 0;
     }
+  }
+
+  /** Non-silent variant used in payment-flow to detect chain-down vs empty wallet. */
+  async getBalanceAlgoOrThrow(address: string): Promise<number> {
+    return (await this.getAccount(address)).balanceAlgo;
   }
 
   /** Read an ASA balance (base units) from the account's asset holdings. */
   async getAssetBalance(address: string, assetId: number): Promise<bigint> {
     try {
-      const a = await this.getAccount(address);
-      const holdings = (a as unknown as { assets?: Array<{ "asset-id": number; amount: number }> }).assets ?? [];
+      const res = await fetch(`${this.algodUrl}/v2/accounts/${encodeURIComponent(address)}`, {
+        headers: this.algodHeaders(),
+      });
+      if (!res.ok) return 0n;
+      const a = (await res.json()) as Record<string, any>;
+      const holdings: Array<{ "asset-id": number; amount: number }> = a.assets ?? [];
       const holding = holdings.find((h) => h["asset-id"] === assetId);
       return BigInt(holding?.amount ?? 0);
     } catch {

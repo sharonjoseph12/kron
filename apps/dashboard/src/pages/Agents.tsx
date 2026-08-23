@@ -561,9 +561,53 @@ function AgentDetail({
         ) : null}
       </div>
 
-      {/* Evaluate */}
+      {/* Evaluate & Quick Tests */}
       <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-3)]">Evaluate a payment</h3>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-3)]">
+            Policy Evaluation & Boundary Testing
+          </h3>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const perCall = policy.data?.policy.perCallLimitAlgo ?? 0.05;
+                const boundaryAmount = (perCall * 10).toFixed(3);
+                setRecipient("Y25K6W4U3Y3EOP6R6LRO6L6V5Q4A3M2L1K0J9I8H7G6F5E4D3C2B1A0Z9Y");
+                setAmount(boundaryAmount);
+                setService("market/sentiment");
+                evaluate.mutate({
+                  recipient: "Y25K6W4U3Y3EOP6R6LRO6L6V5Q4A3M2L1K0J9I8H7G6F5E4D3C2B1A0Z9Y",
+                  amountAlgo: Number(boundaryAmount),
+                  service: "market/sentiment",
+                } as any);
+              }}
+              className="rounded bg-[var(--color-danger-soft)] border border-[#e5b0a6] px-2.5 py-1 text-xs font-semibold text-[var(--color-danger)] hover:bg-[#f5cdc4] transition"
+              title="Test payment exceeding autonomous per-call limit (should be BLOCKED / ESCALATED)"
+            >
+              🔴 Rogue Agent Boundary Test
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const perCall = policy.data?.policy.perCallLimitAlgo ?? 0.05;
+                const safeAmount = (perCall * 0.4).toFixed(3);
+                setRecipient("Y25K6W4U3Y3EOP6R6LRO6L6V5Q4A3M2L1K0J9I8H7G6F5E4D3C2B1A0Z9Y");
+                setAmount(safeAmount);
+                setService("market/report");
+                evaluate.mutate({
+                  recipient: "Y25K6W4U3Y3EOP6R6LRO6L6V5Q4A3M2L1K0J9I8H7G6F5E4D3C2B1A0Z9Y",
+                  amountAlgo: Number(safeAmount),
+                  service: "market/report",
+                } as any);
+              }}
+              className="rounded bg-[var(--color-success-soft)] border border-[#a8cfb8] px-2.5 py-1 text-xs font-semibold text-[var(--color-success)] hover:bg-[#d3ead9] transition"
+              title="Test payment within autonomous per-call limit (should be AUTO_APPROVED)"
+            >
+              🟢 Test Compliant Spend
+            </button>
+          </div>
+        </div>
         <form onSubmit={onSubmitEvaluate} className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)]/60 p-3">
           <label className="min-w-[14rem] flex-1">
             <span className={labelClass}>Recipient</span>

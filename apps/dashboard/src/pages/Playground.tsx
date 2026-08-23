@@ -246,8 +246,17 @@ console.log("Reasons:", evaluation.evaluation.reasons);`,
           <div className="p-4 flex-1 flex flex-col">
             <div className="relative terminal rounded-lg p-4 font-mono text-xs text-[var(--color-ink)] overflow-x-auto">
               <div className="terminal-scanline" />
-              <div className="absolute right-3 top-3 z-20 text-[10px] uppercase font-bold tracking-wider text-[var(--color-ink-2)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[var(--color-line)]">
-                TypeScript SDK
+              <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(currentSnippet.code)}
+                  className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-ink-2)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[var(--color-line)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-ink)] transition"
+                >
+                  Copy
+                </button>
+                <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-ink-2)] bg-[var(--color-surface-2)] px-2 py-0.5 rounded border border-[var(--color-line)]">
+                  TypeScript SDK
+                </div>
               </div>
               <pre className="relative z-20 text-[var(--color-ink)] leading-relaxed font-mono whitespace-pre-wrap">
                 {currentSnippet.code}
@@ -256,7 +265,10 @@ console.log("Reasons:", evaluation.evaluation.reasons);`,
 
             <div className="mt-4 flex items-center justify-between text-xs text-[var(--color-ink-3)]">
               <span>SDK: <Mono>@kron/sdk v0.1.0</Mono></span>
-              <span>Network: <span className="text-[var(--color-accent)] font-mono">Algorand TestNet</span></span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)] anim-live-ping" />
+                Network: <span className="text-[var(--color-accent)] font-mono">Algorand TestNet</span>
+              </span>
             </div>
           </div>
         </Card>

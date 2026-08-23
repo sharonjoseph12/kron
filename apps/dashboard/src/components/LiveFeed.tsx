@@ -123,11 +123,13 @@ function describe(ev: StreamEvent): FeedEntry | null {
 
 export default function LiveFeed({ limit = 200 }: { limit?: number }) {
   const [entries, setEntries] = useState<FeedEntry[]>([]);
+  const [connected, setConnected] = useState(true);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const es = new EventSource(`${API_BASE}/api/events`);
     const onEvent = (e: MessageEvent) => {
+      setConnected(true);
       try {
         const parsed = JSON.parse(e.data) as StreamEvent;
         const entry = describe(parsed);
@@ -138,9 +140,8 @@ export default function LiveFeed({ limit = 200 }: { limit?: number }) {
       }
     };
     for (const t of EVENT_TYPES) es.addEventListener(t, onEvent);
-    es.onerror = () => {
-      /* EventSource auto-reconnects */
-    };
+    es.onopen = () => setConnected(true);
+    es.onerror = () => setConnected(false);
     return () => es.close();
   }, [limit]);
 
@@ -152,6 +153,11 @@ export default function LiveFeed({ limit = 200 }: { limit?: number }) {
   return (
     <div ref={boxRef} className="terminal h-[420px] overflow-y-auto overscroll-contain rounded-lg">
       <div className="terminal-scanline" />
+      {!connected && (
+        <div className="sticky top-0 z-30 flex items-center gap-2 bg-amber-50 px-3 py-1.5 text-xs text-amber-800 border-b border-amber-200">
+          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" /> Reconnecting to live feed…
+        </div>
+      )}
       {entries.length === 0 ? (
         <div className="flex h-full items-center justify-center font-mono text-xs text-[var(--color-ink-3)]">
           <span className="anim-soft-pulse">&gt; WAITING FOR EVENTS…</span>

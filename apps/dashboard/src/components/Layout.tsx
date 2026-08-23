@@ -42,6 +42,7 @@ export default function Layout() {
   const agentsQuery = useQuery({ queryKey: ["agents"], queryFn: api.listAgents });
 
   const [showKillModal, setShowKillModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [killSuccess, setKillSuccess] = useState(false);
 
   const logout = useMutation({
@@ -70,8 +71,31 @@ export default function Layout() {
     },
   });
 
+  const resetDemo = useMutation({
+    mutationFn: api.resetDemo,
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      setShowResetModal(false);
+    },
+  });
+
+  const resumeAll = useMutation({
+    mutationFn: async () => {
+      const agents = agentsQuery.data?.agents ?? [];
+      for (const a of agents) {
+        await api.updatePolicy(a.id, { emergencyStop: false });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agents"] });
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
+    },
+  });
+
+  const anyEmergencyStop = (agentsQuery.data?.agents ?? []).some((a: any) => a.emergencyStop);
+
   return (
-    <div className="flex min-h-screen bg-[var(--color-canvas)]">
+    <div className={`flex min-h-screen bg-[var(--color-canvas)] ${anyEmergencyStop ? "emergency-active" : ""}`}>
       <aside className="fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-[var(--color-line)] bg-[var(--color-canvas)]">
         <div className="flex items-center gap-3 px-5 py-5">
           <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a1a1a] font-mono text-sm font-bold text-[#fffcf6] shadow-sm">
@@ -116,13 +140,20 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="px-3 mt-5">
+        <div className="px-3 mt-5 flex flex-col gap-2">
           <button
             onClick={() => setShowKillModal(true)}
             className="btn-cream w-full items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold tracking-wide text-[var(--color-danger)] border-[#e5b0a6] bg-[var(--color-danger-soft)] hover:bg-[#f5cdc4] hover:text-[#a03220]"
           >
             <span className="h-2 w-2 rounded-full bg-[var(--color-danger)] anim-live-ping" />
             EMERGENCY STOP
+          </button>
+          <button
+            onClick={() => setShowResetModal(true)}
+            className="btn-cream w-full items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold tracking-wide text-[var(--color-ink-2)] hover:text-[var(--color-ink)]"
+            title="Clear payments & timeline for next demo run (keeps agents/wallets)"
+          >
+            ↺ RESET DEMO
           </button>
         </div>
 
@@ -151,6 +182,28 @@ export default function Layout() {
       </aside>
 
       <main className="ml-60 flex-1 px-8 py-7">
+        {anyEmergencyStop && (
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-[#c0392b] bg-[var(--color-danger-soft)] px-5 py-3 anim-fade-up">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#c0392b] text-white">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+              </span>
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-[var(--color-danger)]">Fleet Frozen — Emergency Stop Active</div>
+                <div className="text-[11px] text-[var(--color-ink-2)]">All autonomous agent spending is halted. No payments will be signed or settled.</div>
+              </div>
+            </div>
+            <button
+              onClick={() => resumeAll.mutate()}
+              disabled={resumeAll.isPending}
+              className="btn-indus whitespace-nowrap px-4 py-2 text-xs !bg-[var(--color-success)] !border-[#2f7d5e] hover:!bg-[#267050]"
+            >
+              {resumeAll.isPending ? "Resuming…" : "Resume Fleet"}
+            </button>
+          </div>
+        )}
         <div className="stagger-children">
           <Outlet />
         </div>
@@ -180,6 +233,28 @@ export default function Layout() {
               className={btnDanger}
             >
               {emergencyStopAll.isPending ? "Freezing Fleet…" : "Confirm Emergency Stop"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal title="Reset Demo" isOpen={showResetModal} onClose={() => setShowResetModal(false)}>
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-ink-2)]">
+            Clears all <strong className="text-[var(--color-ink)]">payments, settlements and timeline</strong> but keeps agents,
+            wallets and policies. Use between judge runs so the next demo starts clean.
+          </p>
+          {resetDemo.isError && (
+            <div className="rounded-lg border border-[#e5b0a6] bg-[var(--color-danger-soft)] px-3 py-2 text-xs text-[var(--color-danger)]">
+              {(resetDemo.error as Error)?.message ?? "Reset failed"}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button onClick={() => setShowResetModal(false)} className={btnGhost} disabled={resetDemo.isPending}>
+              Cancel
+            </button>
+            <button onClick={() => resetDemo.mutate()} disabled={resetDemo.isPending} className={btnDanger}>
+              {resetDemo.isPending ? "Resetting…" : "Confirm Reset"}
             </button>
           </div>
         </div>

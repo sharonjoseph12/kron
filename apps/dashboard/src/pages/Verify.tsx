@@ -156,7 +156,7 @@ export default function Verify() {
                   url={proof.payment.explorerUrl}
                   className="rounded-lg border border-[#a8cfb8] bg-[var(--color-success-soft)] px-4 py-2 text-xs font-semibold text-[var(--color-success)] hover:bg-[#d3ead9] transition"
                 >
-                  View Block on AlgoExplorer
+                  View on Pera Explorer
                 </ExplorerLink>
               )}
             </div>
@@ -175,7 +175,7 @@ export default function Verify() {
                   <span className="text-xs text-[var(--color-ink-3)] block">Payment Transaction ID</span>
                   {proof.onChainProof.txId ? (
                     <ExplorerLink
-                      url={`https://testnet.algoexplorer.io/tx/${proof.onChainProof.txId}`}
+                      url={proof.payment.explorerUrl ?? `https://testnet.explorer.perawallet.app/tx/${proof.onChainProof.txId}`}
                       className="font-mono text-xs font-semibold"
                     >
                       {proof.onChainProof.txId}
@@ -189,10 +189,10 @@ export default function Verify() {
                   <div>
                     <span className="text-xs text-[var(--color-ink-3)] block">Policy Anchor App Call (Tx 1 of Group)</span>
                     <a
-                      href={`https://testnet.algoexplorer.io/tx/${proof.onChainProof.appCallTxId}`}
+                      href={`https://testnet.explorer.perawallet.app/tx/${proof.onChainProof.appCallTxId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={`View policy anchor app call transaction ${proof.onChainProof.appCallTxId} on AlgoExplorer`}
+                      aria-label={`View policy anchor app call transaction ${proof.onChainProof.appCallTxId} on Pera Explorer`}
                       className="font-mono text-xs text-[var(--color-accent)] underline-offset-2 hover:underline break-all"
                     >
                       {proof.onChainProof.appCallTxId}
@@ -241,9 +241,15 @@ export default function Verify() {
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="text-xs text-[var(--color-ink-3)] block mb-1">Anchored Policy Decision Hash (SHA-256)</span>
-                  <div className="font-mono text-xs text-[var(--color-success)] bg-[var(--color-surface-2)] p-2.5 rounded-lg border border-[var(--color-line)] break-all">
-                    {proof.onChainProof.policyHash ?? "0x7a8f9c1b2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a"}
-                  </div>
+                  {proof.onChainProof.policyHash ? (
+                    <div className="font-mono text-xs text-[var(--color-success)] bg-[var(--color-surface-2)] p-2.5 rounded-lg border border-[var(--color-line)] break-all">
+                      {proof.onChainProof.policyHash}
+                    </div>
+                  ) : (
+                    <div className="font-mono text-xs text-[var(--color-ink-3)] bg-[var(--color-surface-2)] p-2.5 rounded-lg border border-dashed border-[var(--color-line)] break-all">
+                      Not anchored — standalone payment (no contract app call; pre-deployment or fallback)
+                    </div>
+                  )}
                   <span className="text-[11px] text-[var(--color-ink-3)] mt-1 block">
                     Calculated over: policy version, reasons, agent ID, recipient, microAlgos, and clientRequestId.
                   </span>
@@ -266,6 +272,56 @@ export default function Verify() {
               </div>
             </Card>
           </div>
+
+          {/* Independent Verification — "Don't trust us, verify" */}
+          {proof.onChainProof.txId && (
+            <Card className="p-5 space-y-3">
+              <CardHeader
+                title="Independent Verification"
+                subtitle="Don't trust KRON — verify it yourself on the public Algorand ledger"
+                right={<Badge tone="ok">Trustless</Badge>}
+              />
+              <div className="space-y-3 px-1">
+                <p className="text-xs text-[var(--color-ink-2)]">
+                  Run this command against the <strong className="text-[var(--color-ink)]">public Algorand indexer</strong> (no KRON dependency) to independently confirm the transaction settled on-chain:
+                </p>
+                <div className="relative group">
+                  <pre className="font-mono text-[11px] text-[var(--color-accent)] bg-[#1a1a1a] text-[#e8dcc8] p-4 rounded-lg overflow-x-auto border border-[var(--color-line-strong)]">
+                    <span className="text-[var(--color-ink-3)] select-none">$ </span>
+                    {`curl -s https://testnet-idx.algonode.cloud/v2/transactions/${proof.onChainProof.txId} | jq '{confirmed_round: .transaction["confirmed-round"], sender: .transaction.sender, amount: .transaction["payment-transaction"].amount}'`}
+                  </pre>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `curl -s https://testnet-idx.algonode.cloud/v2/transactions/${proof.onChainProof.txId} | jq '{confirmed_round: .transaction["confirmed-round"], sender: .transaction.sender, amount: .transaction["payment-transaction"].amount}'`
+                      );
+                    }}
+                    className="absolute top-2 right-2 rounded bg-[var(--color-surface-2)] border border-[var(--color-line)] px-2 py-1 text-[10px] font-semibold text-[var(--color-ink-2)] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--color-surface-3)]"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-3 pt-1">
+                  <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">What KRON says</div>
+                    <div className="mt-0.5 font-mono text-xs font-semibold text-[var(--color-ink)]">Round #{proof.onChainProof.confirmedRound}</div>
+                  </div>
+                  <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">Amount</div>
+                    <div className="mt-0.5 font-mono text-xs font-semibold text-[var(--color-success)]">{fmtAlgo(proof.payment.amountAlgo)} ALGO</div>
+                  </div>
+                  <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">Source</div>
+                    <div className="mt-0.5 font-mono text-xs font-semibold text-[var(--color-info)]">Public Indexer</div>
+                  </div>
+                </div>
+                <p className="text-[11px] text-[var(--color-ink-3)] italic">
+                  The public Algorand indexer (algonode.cloud) is independent of KRON. If the round number and amount match, the payment is cryptographically proven.
+                </p>
+              </div>
+            </Card>
+          )}
         </div>
       ) : null}
     </div>

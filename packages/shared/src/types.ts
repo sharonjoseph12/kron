@@ -87,6 +87,10 @@ export interface PolicyConfig {
   serviceBlocklist: string[];
   /** Emergency stop: when true no autonomous payments are allowed. */
   emergencyStop: boolean;
+  /** Velocity guard: max payments in rolling window (default 5/60s). */
+  velocityLimitCount?: number | null;
+  velocityWindowSeconds?: number | null;
+  velocityAction?: "block" | "escalate" | null;
   active: boolean;
   createdAt: string;
 }
@@ -105,6 +109,9 @@ export interface PolicyUpdateInput {
   serviceAllowlist?: string[];
   serviceBlocklist?: string[];
   emergencyStop?: boolean;
+  velocityLimitCount?: number | null;
+  velocityWindowSeconds?: number | null;
+  velocityAction?: "block" | "escalate" | null;
 }
 
 export interface PolicySnapshot {

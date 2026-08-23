@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { encryptMnemonic } from "../algorand/vault.js";
 import { callExternalTool, refreshMCPTools, toMCPServerDTO, type ToolOutcome } from "../mcp/gateway.js";
+import { isSafeUrl } from "../lib/ssrf.js";
 import { recordAudit } from "../services/audit.js";
 import { badRequest, notFound } from "../lib/http.js";
 import { currentUser, requireAuth } from "../lib/auth.js";
@@ -55,6 +56,8 @@ export async function mcpRoutes(fastify: FastifyInstance) {
   fastify.post("/api/mcp/servers", { preHandler: requireAuth }, async (request, reply) => {
     const parsed = CreateMCPServerSchema.safeParse(request.body);
     if (!parsed.success) return badRequest(reply, "Invalid MCP server payload");
+    const safe = isSafeUrl(parsed.data.url);
+    if (!safe.ok) return badRequest(reply, `SSRF blocked: ${safe.reason}`);
     const user = currentUser(request);
 
     const server = (await prisma.mcpServer.create({

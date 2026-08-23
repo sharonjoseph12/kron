@@ -5,6 +5,7 @@
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import { config } from "./config.js";
 import { authRoutes } from "./routes/auth.js";
@@ -18,6 +19,7 @@ import { auditRoutes } from "./routes/audit.js";
 import { eventsRoutes } from "./routes/events.js";
 import { healthRoutes } from "./routes/health.js";
 import { contractRoutes } from "./routes/contract.js";
+import { demoRoutes } from "./routes/demo.js";
 
 const dev = config.nodeEnv !== "production";
 
@@ -32,9 +34,13 @@ export async function buildServer() {
     ignoreTrailingSlash: true,
   });
 
+  await fastify.register(helmet, {
+    contentSecurityPolicy: false, // allow dashboard inline styles in dev; tighten in prod if needed
+    crossOriginEmbedderPolicy: false,
+  });
   await fastify.register(cookie);
   await fastify.register(cors, {
-    origin: dev ? true : config.dashboardUrl,
+    origin: dev ? [config.dashboardUrl, "http://localhost:5173", "http://127.0.0.1:5173"] : config.dashboardUrl,
     credentials: true,
   });
 
@@ -57,6 +63,7 @@ export async function buildServer() {
   await fastify.register(eventsRoutes);
   await fastify.register(healthRoutes);
   await fastify.register(contractRoutes);
+  await fastify.register(demoRoutes);
 
   return fastify;
 }
@@ -67,6 +74,10 @@ if (isMain || process.env.KRON_API_RUN === "1") {
   const server = await buildServer();
   try {
     await server.listen({ port: config.apiPort, host: "0.0.0.0" });
+    // Demo mode: ensure judge-ready agents/wallets/policies after boot
+    if (config.demoMode) {
+      import("./demo-mode.js").then((m) => m.ensureDemoMode().catch((e) => server.log.warn(e, "demo-mode ensure failed")));
+    }
   } catch (err) {
     server.log.error(err);
     process.exit(1);

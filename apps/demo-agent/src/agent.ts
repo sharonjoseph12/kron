@@ -7,6 +7,7 @@ dotenv.config({ path: resolve(import.meta.dirname, "../../../.env") });
 import {
   AnthropicProvider,
   OpenAIProvider,
+  GeminiProvider,
   connectKronTools,
   runAgentLoop,
   type AgentStep,
@@ -27,12 +28,14 @@ const RESOURCE_SERVER_NAME = env("KRON_RESOURCE_SERVER_NAME", "demo-resource");
 const RESOURCE_TRANSPORT = "streamable-http";
 const FUND_AMOUNT_ALGO = toNumber(env("KRON_FUND_AMOUNT_ALGO", "0.05"), 0.05);
 
-// LLM provider selection
-const LLM_PROVIDER = env("KRON_LLM_PROVIDER", "anthropic").toLowerCase(); // anthropic | openai
+// LLM provider selection (gemini is the default: free tier, native tool calling)
+const LLM_PROVIDER = env("KRON_LLM_PROVIDER", "gemini").toLowerCase(); // gemini | anthropic | openai
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", "");
 const ANTHROPIC_MODEL = env("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929");
 const OPENAI_API_KEY = env("OPENAI_API_KEY", "");
 const OPENAI_MODEL = env("OPENAI_MODEL", "gpt-4o");
+const GEMINI_API_KEY = env("GEMINI_API_KEY", "");
+const GEMINI_MODEL = env("GEMINI_MODEL", "gemini-2.5-flash");
 const MAX_ITERATIONS = toNumber(env("KRON_MAX_ITERATIONS", "10"), 10);
 const DEFAULT_PROMPT = env(
   "KRON_PROMPT",
@@ -94,6 +97,10 @@ function createProvider(override?: string): LLMProvider {
   if (providerName === "openai") {
     if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set (KRON_LLM_PROVIDER=openai)");
     return new OpenAIProvider({ apiKey: OPENAI_API_KEY, model: OPENAI_MODEL });
+  }
+  if (providerName === "gemini") {
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not set (KRON_LLM_PROVIDER=gemini)");
+    return new GeminiProvider({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL });
   }
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set (KRON_LLM_PROVIDER=anthropic)");
   return new AnthropicProvider({ apiKey: ANTHROPIC_API_KEY, model: ANTHROPIC_MODEL });
@@ -209,7 +216,15 @@ async function main(): Promise<void> {
   kv("Resource server", RESOURCE_SERVER_URL);
   kv("Agent name", KRON_AGENT_NAME);
   kv("LLM provider", LLM_PROVIDER);
-  kv("LLM model", LLM_PROVIDER === "openai" ? OPENAI_MODEL : ANTHROPIC_MODEL);
+  const activeModel =
+    LLM_PROVIDER === "gemini" ? GEMINI_MODEL : LLM_PROVIDER === "openai" ? OPENAI_MODEL : ANTHROPIC_MODEL;
+  if (flags.provider) {
+    const overrideModel =
+      flags.provider === "gemini" ? GEMINI_MODEL : flags.provider === "openai" ? OPENAI_MODEL : ANTHROPIC_MODEL;
+    kv("LLM model", overrideModel);
+  } else {
+    kv("LLM model", activeModel);
+  }
   kv("Max iterations", MAX_ITERATIONS);
   if (flags.createAgent) say("flag --create-agent: always create a fresh agent");
   if (flags.noFund) say("flag --no-fund: skip wallet funding");
