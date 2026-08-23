@@ -14,7 +14,7 @@ async function main() {
   // 1. Check /supported
   const suppRes = await fetch(`${facilitatorUrl}/supported`);
   console.log("GET /supported status:", suppRes.status);
-  const suppData = await suppRes.json();
+  const suppData = (await suppRes.json()) as any;
   console.log("Supported kinds:", JSON.stringify(suppData.kinds, null, 2));
 
   // 2. Generate a dummy testnet transaction to see how /verify and /settle respond
