@@ -131,8 +131,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         return reply.code(401).send({ error: "Challenge expired or already used" });
       }
 
-      const siwa = { nonce, issuedAt: challenge.createdAt.toISOString(), expiresAt: challenge.expiresAt.toISOString() };
-      const message = buildSiwaMessage(loginOrigin(), address, siwa);
+      const message = buildSiwaMessage(loginOrigin(), address, challenge);
       if (!verifySiwaSignature(message, address, signature)) {
         return reply.code(401).send({ error: "Signature verification failed" });
       }

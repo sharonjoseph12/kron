@@ -11,7 +11,7 @@ describe("x402 payment marker", () => {
     const instruction = instructionFor(BASE_URL, MERCHANT, resource);
 
     expect(instruction.schemaVersion).toBe("1.0");
-    expect(instruction.amount).toBe("18000");
+    expect(instruction.amount).toBe("10000");
     expect(instruction.asset).toEqual({ type: "algo", decimals: 6 });
     expect(instruction.network).toBe("testnet");
     expect(instruction.recipient).toBe(MERCHANT);
@@ -30,7 +30,7 @@ describe("x402 payment marker", () => {
     expect(extracted!.type).toBe(X402_PAYMENT_REQUIRED);
     expect(extracted!.challenge.scheme).toBe("x402");
     expect(extracted!.challenge.paymentUrl).toBe(`${BASE_URL}/instructions/premium-market-report`);
-    expect(extracted!.instruction.amount).toBe("18000");
+    expect(extracted!.instruction.amount).toBe("10000");
     expect(extracted!.instruction.recipient).toBe(MERCHANT);
     expect(extracted!.instruction.resource.id).toBe("premium-market-report");
   });
@@ -43,7 +43,7 @@ describe("x402 payment marker", () => {
     expect(instruction.asset.assetId).toBeTypeOf("number");
     expect(instruction.asset.assetId).toBeGreaterThan(0);
     expect(instruction.asset.decimals).toBe(6);
-    expect(instruction.amount).toBe("2500000");
+    expect(instruction.amount).toBe("20000");
   });
 
   it("returns null for free tool results", () => {

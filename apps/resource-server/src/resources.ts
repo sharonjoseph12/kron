@@ -22,7 +22,7 @@ const FALLBACK_RESOURCES: PaidResourceMap = {
     tool: "market/report",
     name: "Premium Market Research Report",
     description: "Live market intelligence: sector momentum, liquidity flows and asset-level pricing.",
-    amountMicro: "18000",
+    amountMicro: "10000",
     note: "kron:premium-market-report",
   },
   "premium-market-sentiment": {
@@ -30,7 +30,7 @@ const FALLBACK_RESOURCES: PaidResourceMap = {
     tool: "market/sentiment",
     name: "Real-Time Institutional Sentiment Indicators",
     description: "Live orderbook imbalance and 24h exchange flow across major venues.",
-    amountMicro: "450000",
+    amountMicro: "15000",
     note: "kron:premium-market-sentiment",
   },
   "premium-defi-yield": {
@@ -38,7 +38,7 @@ const FALLBACK_RESOURCES: PaidResourceMap = {
     tool: "market/defi-yield",
     name: "DeFi Yield & TVL Dashboard",
     description: "Real-time stablecoin yield curves, protocol TVL and liquidity pool APRs across Algorand DeFi.",
-    amountMicro: "2500000",
+    amountMicro: "20000",
     assetName: "USDC",
     note: "kron:premium-defi-yield",
   },

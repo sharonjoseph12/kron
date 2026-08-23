@@ -110,7 +110,7 @@ export default function Dashboard() {
 
   const health = ov ? computeFleetHealth(ov) : null;
   const healthTone = health == null ? "muted" : health >= 75 ? "ok" : health >= 50 ? "warn" : "err";
-  const narrative = buildNarrative(ov, payments, contract.data?.globalState.lastPolicyHash);
+  const narrative = buildNarrative(ov, payments, contract.data?.globalState?.lastPolicyHash);
   const narrativeLoading = overview.isPending || recent.isPending || agentsSpend.isPending;
 
   return (
@@ -386,32 +386,32 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4">
           <Stat
             label="Payments anchored"
-            value={fmtInt(contract.data?.globalState.totalPayments ?? 0)}
+            value={fmtInt(contract.data?.globalState?.totalPayments ?? 0)}
             sub="total_payments (uint64)"
             accent="text-[var(--color-accent)]"
           />
           <Stat
             label="Last amount"
-            value={contract.data?.globalState.lastAmountMicro ? `${fmtAlgo(contract.data.globalState.lastAmountMicro)} Ɖ` : "—"}
+            value={contract.data?.globalState?.lastAmountMicro ? `${fmtAlgo(contract.data.globalState.lastAmountMicro)} Ɖ` : "—"}
             sub="last_amount_micro (uint64)"
             accent="text-[var(--color-success)]"
           />
           <Stat
             label="Last agent"
-            value={contract.data?.globalState.lastAgentId ?? "—"}
+            value={contract.data?.globalState?.lastAgentId ?? "—"}
             sub="last_agent_id (bytes)"
           />
           <Stat
             label="Last policy hash"
-            value={contract.data?.globalState.lastPolicyHash ? shortId(contract.data.globalState.lastPolicyHash, 24) : "—"}
+            value={contract.data?.globalState?.lastPolicyHash ? shortId(contract.data.globalState.lastPolicyHash, 24) : "—"}
             sub="last_policy_hash (byte[32])"
             accent="text-[var(--color-warning)]"
           />
           <Stat
             label="Emergency stop"
-            value={contract.data?.globalState.emergencyStop ? "ENGAGED" : "armed"}
+            value={contract.data?.globalState?.emergencyStop ? "ENGAGED" : "armed"}
             sub="set_emergency_stop (creator-only)"
-            accent={contract.data?.globalState.emergencyStop ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}
+            accent={contract.data?.globalState?.emergencyStop ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}
           />
         </div>
         {contract.isError && (

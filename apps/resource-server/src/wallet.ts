@@ -30,23 +30,27 @@ export async function bootstrapMerchantWallet(): Promise<MerchantWallet> {
   const existing = loadMerchantWallet();
   if (existing) return existing;
 
-  if (!config.fundingMnemonic) {
-    throw new Error("FUNDING_MNEMONIC is required on first boot to create the merchant wallet");
-  }
-
   const account = algosdk.generateAccount();
   const mnemonic = algosdk.secretKeyToMnemonic(account.sk);
   const address = account.addr.toString();
 
-  const sent = await algod.sendPayment({
-    mnemonic: config.fundingMnemonic,
-    amountMicro: FUNDING_ALGO_MICRO,
-    recipient: address,
-    note: "kron:merchant-funding",
-  });
+  if (config.fundingMnemonic) {
+    try {
+      const sent = await algod.sendPayment({
+        mnemonic: config.fundingMnemonic,
+        amountMicro: FUNDING_ALGO_MICRO,
+        recipient: address,
+        note: "kron:merchant-funding",
+      });
+      console.log(`[wallet] merchant wallet created + funded: ${address} (tx ${sent.txId}, round ${sent.confirmedRound})`);
+    } catch (err) {
+      console.warn(`[wallet] funding failed, continuing with merchant address: ${err}`);
+    }
+  } else {
+    console.log(`[wallet] merchant wallet created: ${address}`);
+  }
 
   persistState(mnemonic);
-  console.log(`[wallet] merchant wallet created + funded: ${address} (tx ${sent.txId}, round ${sent.confirmedRound})`);
   return { address, funded: true };
 }
 

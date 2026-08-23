@@ -45,7 +45,7 @@ export function createWalletKeys(): { address: string; encryptedKey: string } {
   return { address: account.addr.toString(), encryptedKey: encryptMnemonic(mnemonic) };
 }
 
-const MIN_FUNDING_ALGO = 20;
+const MIN_FUNDING_ALGO = 0.1;
 
 /**
  * Top up an agent wallet from the configured funding account (localnet).
@@ -57,7 +57,7 @@ export async function ensureFunded(address: string, targetAlgo = MIN_FUNDING_ALG
   }
   const balance = await algorand.getBalanceAlgo(address);
   if (balance >= targetAlgo) return balance;
-  const amountAlgo = targetAlgo - balance + 0.1; // cover min balance buffer
+  const amountAlgo = targetAlgo - balance + 0.01; // cover min balance buffer
   const sent = await algorand.sendPayment({
     mnemonic: config.fundingMnemonic,
     amountMicro: BigInt(Math.round(amountAlgo * 1_000_000)),

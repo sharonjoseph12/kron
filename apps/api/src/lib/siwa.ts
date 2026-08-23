@@ -28,15 +28,13 @@ export function newChallenge(now = new Date()): SiwaChallenge {
 }
 
 /** Build the exact message a wallet must sign. Deterministic for a given challenge. */
-export function buildSiwaMessage(origin: string, address: string, challenge: SiwaChallenge): string {
+export function buildSiwaMessage(origin: string, address: string, challenge: { nonce: string }): string {
   return [
     "KRON Operator Login",
     "",
     `Origin: ${origin}`,
     `Address: ${address}`,
     `Nonce: ${challenge.nonce}`,
-    `Issued At: ${challenge.issuedAt}`,
-    `Expires At: ${challenge.expiresAt}`,
   ].join("\n");
 }
 
