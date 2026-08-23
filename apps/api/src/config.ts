@@ -57,6 +57,8 @@ export interface KronConfig {
   demoMode: boolean;
   /** Minutes an escalation stays actionable before it auto-expires. */
   escalationTtlMinutes: number;
+  /** GoPlausible x402 facilitator URL. Set empty to disable reporting. */
+  goPlausibleFacilitatorUrl: string;
 }
 
 export const config: KronConfig = {
@@ -90,6 +92,7 @@ export const config: KronConfig = {
   forceEscalate: optional("FORCE_ESCALATE", "false") === "true",
   demoMode: optional("DEMO_MODE", "false") === "true",
   escalationTtlMinutes: Number(optional("ESCALATION_TTL_MINUTES", "15")),
+  goPlausibleFacilitatorUrl: optional("GOPLAUSIBLE_FACILITATOR_URL", "https://facilitator.goplausible.xyz"),
 };
 
 export const IS_DEV = config.nodeEnv !== "production";
