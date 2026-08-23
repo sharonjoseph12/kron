@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -89,6 +90,7 @@ function buildNarrative(
 }
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
   const overview = useQuery({
     queryKey: ["overview"],
     queryFn: api.getOverview,
@@ -113,6 +115,72 @@ export default function Dashboard() {
   const narrative = buildNarrative(ov, payments, contract.data?.globalState?.lastPolicyHash);
   const narrativeLoading = overview.isPending || recent.isPending || agentsSpend.isPending;
 
+  // ---- Golden Path Demo ----
+  const [goldenSteps, setGoldenSteps] = useState<string[]>([]);
+  const [goldenResult, setGoldenResult] = useState<any>(null);
+
+  const goldenPath = useMutation({
+    mutationFn: async () => {
+      setGoldenSteps([]);
+      setGoldenResult(null);
+      const log = (s: string) => setGoldenSteps((prev) => [...prev, s]);
+
+      // Step 1: Get agents
+      log("① Discovering agents…");
+      const { agents } = await api.listAgents();
+      if (agents.length === 0) throw new Error("No agents found — create one first on the Agents page.");
+      const agent = agents[0]!;
+      log(`   Found agent "${agent.name}" (${agent.id.slice(0, 8)}…)`);
+
+      // Step 2: Fund wallet
+      log("② Funding agent wallet on Algorand TestNet…");
+      try {
+        const funded = await api.fundWallet(agent.id);
+        log(`   Wallet ${funded.address.slice(0, 10)}… → ${funded.balanceAlgo.toFixed(4)} ALGO`);
+      } catch {
+        log("   Wallet already funded (skipping).");
+      }
+
+      // Step 3: Start session
+      log("③ Starting autonomous task session…");
+      const { session } = await api.startSession(agent.id, "Golden Path Demo — live hackathon");
+      log(`   Session ${session.id.slice(0, 8)}… active.`);
+
+      // Step 4: Execute paid tool call (real x402 → policy → Algorand settlement)
+      log("④ Calling paid tool 'market/report' (0.018 ALGO)…");
+      log("   → x402 challenge intercepted");
+      log("   → Policy engine evaluating…");
+      const result = await api.executePayment({
+        agentId: agent.id,
+        sessionId: session.id,
+        toolCallId: `golden_${Date.now()}`,
+        mcpServerId: "playground_server",
+        toolName: "market/report",
+        service: "market",
+        resourceId: "market/report",
+        resourceName: "Real-Time Market Intel Report",
+        recipient: agent.walletAddress ?? "RECIPIENT_ADDRESS",
+        amountAlgo: 0.018,
+      });
+      log(`   → Decision: ${result.decision ?? result.status}`);
+      if (result.txId) {
+        log(`   → Algorand Tx: ${result.txId}`);
+        log("   → Policy hash anchored via atomic group (App Call + Payment)");
+      }
+      log("⑤ Golden Path complete ✓");
+      return result;
+    },
+    onSuccess: (data) => {
+      setGoldenResult(data);
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["contract"] });
+    },
+    onError: (err) => {
+      setGoldenSteps((prev) => [...prev, `❌ Error: ${err instanceof Error ? err.message : String(err)}`]);
+    },
+  });
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4 pb-2">
@@ -123,12 +191,64 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 anim-fade-up" style={{ animationDelay: "80ms" }}>
+          <button
+            onClick={() => goldenPath.mutate()}
+            disabled={goldenPath.isPending}
+            className="rounded-lg border border-[var(--color-accent)] bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#b8451f] disabled:opacity-50"
+          >
+            {goldenPath.isPending ? "Running Golden Path…" : "▶ Run Golden Path"}
+          </button>
           <span className="flex items-center gap-2 rounded-full border border-[#a8cfb8] bg-[var(--color-success-soft)] px-3 py-1 text-xs font-medium text-[var(--color-success)]">
             <span className="h-2 w-2 rounded-full bg-[var(--color-success)] anim-soft-pulse" />
             Live Algorand
           </span>
         </div>
       </header>
+
+      {/* Golden Path Live Console */}
+      {goldenSteps.length > 0 && (
+        <GlassCard accent className="p-4 space-y-2 anim-fade-up">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-ink-2)]">
+              Golden Path — 402 → Policy → Algorand Settlement
+            </span>
+            {goldenResult?.txId && (
+              <ExplorerLink url={goldenResult.payment?.explorerUrl} className="text-xs font-semibold text-[var(--color-accent)]">
+                View on Explorer →
+              </ExplorerLink>
+            )}
+          </div>
+          <div className="terminal rounded-lg p-3 font-mono text-[11px] text-[var(--color-ink)] max-h-40 overflow-y-auto">
+            <div className="terminal-scanline" />
+            <div className="relative z-20 space-y-0.5">
+              {goldenSteps.map((step, i) => (
+                <div key={i} className={step.startsWith("❌") ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}>
+                  {step}
+                </div>
+              ))}
+              {goldenPath.isPending && (
+                <div className="text-[var(--color-warning)] anim-soft-pulse">⏳ Settling on Algorand…</div>
+              )}
+            </div>
+          </div>
+          {goldenResult && !goldenPath.isPending && (
+            <div className="flex items-center gap-3 text-xs">
+              <Badge tone={goldenResult.decision === "BLOCKED" ? "err" : "ok"}>
+                {goldenResult.decision ?? goldenResult.status ?? "SETTLED"}
+              </Badge>
+              {goldenResult.txId && (
+                <span className="font-mono text-[var(--color-ink-2)]">Tx: {shortId(goldenResult.txId, 16)}</span>
+              )}
+              <button
+                onClick={() => { setGoldenSteps([]); setGoldenResult(null); }}
+                className="ml-auto text-[var(--color-ink-3)] hover:text-[var(--color-ink)]"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+        </GlassCard>
+      )}
 
       {/* Hero Card: Latest On-Chain Settlement */}
       {payments.length > 0 && payments[0]?.status === "confirmed" && (

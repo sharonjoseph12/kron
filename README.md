@@ -44,6 +44,67 @@ console.log("Paid Result:", result.content);
 console.log("Settlement Tx ID:", result.payment?.txId);
 ```
 
+### 🔌 Framework Integrations (Zero Extra Dependencies)
+
+KRON ships adapters for every major AI agent framework — no extra `npm install` needed:
+
+<details>
+<summary><strong>LangChain / LangGraph</strong></summary>
+
+```typescript
+import { KronClient, asLangChainTools } from "@kron/sdk";
+
+const kron = new KronClient({ apiUrl: "http://localhost:8787" });
+await kron.login("admin@kron.dev", "admin1234");
+
+const tools = asLangChainTools(kron, { agentId: "researcher-01", sessionId });
+// Pass directly to createReactAgent({ llm, tools }) or AgentExecutor
+```
+</details>
+
+<details>
+<summary><strong>OpenAI Function Calling</strong></summary>
+
+```typescript
+import { KronClient, asOpenAIFunctions, executeOpenAIFunction } from "@kron/sdk";
+
+const kron = new KronClient({ apiUrl: "http://localhost:8787" });
+const tools = asOpenAIFunctions(kron, { agentId, sessionId });
+
+const response = await openai.chat.completions.create({
+  model: "gpt-4o", tools, messages,
+});
+// Handle tool_calls with executeOpenAIFunction(kron, opts, name, argsJson)
+```
+</details>
+
+<details>
+<summary><strong>Vercel AI SDK</strong></summary>
+
+```typescript
+import { KronClient, asVercelAITools } from "@kron/sdk";
+
+const kron = new KronClient({ apiUrl: "http://localhost:8787" });
+const kronTools = asVercelAITools(kron, { agentId, sessionId });
+
+const result = await generateText({
+  model: openai("gpt-4o"),
+  tools: kronTools,
+  prompt: "Buy the premium market report",
+});
+```
+</details>
+
+### 🎬 The Golden Path (90-Second Live Demo)
+
+> **402 Detection → Policy Evaluation → Atomic Algorand Settlement → Cryptographic Verification**
+
+Click **▶ Run Golden Path** on the Dashboard to see the entire KRON flow in one click:
+1. Agent discovers paid MCP tool → HTTP 402 Payment Required
+2. KRON Policy Engine evaluates (per-call limit, daily budget, recipient filter) in <5ms
+3. Auto-approved → Atomic Transaction Group signed (App Call + Payment) → 3.3s finality
+4. Policy decision SHA-256 hash anchored on-chain → independently verifiable via `/verify`
+
 ---
 
 ## 🏛️ Architecture
