@@ -51,3 +51,9 @@ jobs:
 
       - name: Test (workspace packages)
         run: pnpm test
+
+      - name: Test (API integration)
+        run: pnpm --filter @kron/api test
+
+      - name: Test (resource-server)
+        run: pnpm --filter @kron/resource-server test

@@ -17,6 +17,7 @@ import { prisma } from "../db.js";
 import { executePaymentFlow, type ExecutePaymentResult } from "../services/payment-flow.js";
 import { recordAudit } from "../services/audit.js";
 import { hub } from "../events/hub.js";
+import { isSafeUrl } from "../lib/ssrf.js";
 
 interface ServerRecord {
   id: string;
@@ -66,6 +67,8 @@ function headersFor(server: ServerRecord): Record<string, string> {
 }
 
 async function withClient<T>(server: ServerRecord, fn: (client: Client) => Promise<T>): Promise<T> {
+  const safe = isSafeUrl(server.url);
+  if (!safe.ok) throw new Error(`SSRF blocked: ${safe.reason} (${server.url})`);
   const transport = transportFor(server, headersFor(server));
   const client = new Client({ name: "kron-gateway", version: "1.0.0" });
   await client.connect(transport);

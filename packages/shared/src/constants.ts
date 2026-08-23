@@ -18,6 +18,9 @@ export const DEFAULT_POLICY: Omit<
   serviceAllowlist: [],
   serviceBlocklist: [],
   emergencyStop: false,
+  velocityLimitCount: 5,
+  velocityWindowSeconds: 60,
+  velocityAction: "block",
 };
 
 export const ALGO_DECIMALS = 6;

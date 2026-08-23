@@ -64,7 +64,10 @@ Open **http://localhost:5173** → Login: `admin@kron.dev` / `admin1234`
 ## Tests
 
 ```bash
-pnpm test   # 68 passing across 5 packages + API integration suite
+pnpm test                          # 60 package tests (shared 4 + policy-engine 21 + x402 21 + sdk 7 + llm-agent 7)
+pnpm --filter @kron/api test       # 11 API integration tests
+pnpm --filter @kron/resource-server test  # 6 resource-server tests
+# Total: 77 passing, typecheck 10/10 workspaces, build 9/9
 ```
 
 ## Verify It Yourself (Judge Walkthrough)
@@ -97,7 +100,7 @@ curl -s http://localhost:8787/api/contract  (or open the dashboard's
 curl -s http://localhost:9100/resources  -> premium-defi-yield (assetName: USDC)
 ```
 
-What the judge sees: `Agent -> Session -> ToolCall -> PaymentRequest -> PaymentDecision -> Settlement`, with the settlement's `txId` resolvable on AlgoExplorer and its policy-decision hash anchored in an **atomic transaction group** (app call + payment). Both confirm together in ~3.3s or neither does.
+What the judge sees: `Agent -> Session -> ToolCall -> PaymentRequest -> PaymentDecision -> Settlement`, with the settlement's `txId` resolvable on Pera Explorer / Lora and its policy-decision hash anchored in an **atomic transaction group** (app call + payment). Both confirm together in ~3.3s or neither does.
 
 ## Team
 

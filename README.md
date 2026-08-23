@@ -1,11 +1,11 @@
 # KRON — Policy-Controlled Economic Runtime for AI Agents
 
 [![CI](https://github.com/sharonjoseph12/kron/actions/workflows/ci.yml/badge.svg)](https://github.com/sharonjoseph12/kron/actions/workflows/ci.yml)
-[![Algorand TestNet](https://img.shields.io/badge/Algorand-TestNet-00d2ff?style=flat&logo=algorand)](https://testnet.algoexplorer.io)
+[![Algorand TestNet](https://img.shields.io/badge/Algorand-TestNet-00d2ff?style=flat&logo=algorand)](https://testnet.explorer.perawallet.app)
 [![MCP Protocol](https://img.shields.io/badge/MCP-1.0-8b5cf6?style=flat)](https://modelcontextprotocol.io)
 [![x402 Micropayments](https://img.shields.io/badge/x402-Enabled-10b981?style=flat)](https://x402.org)
 [![TypeScript SDK](https://img.shields.io/badge/@kron/sdk-v0.1.0-blue?style=flat)](./packages/sdk)
-[![Tests Passing](https://img.shields.io/badge/Tests-77%20Passing-emerald?style=flat)](./packages)
+[![Tests Passing](https://img.shields.io/badge/Tests-77%20Passing-emerald?style=flat)](#-testing--verification)
 
 **One line:** KRON is the economic firewall and policy-governed payment runtime for autonomous AI agents on Algorand.
 
@@ -145,7 +145,7 @@ A scripted run proves the full lifecycle on TestNet:
 1. **`researcher-01`** (0.05 ALGO limit) calls `market/report` (0.018 ALGO) -> **AUTO_APPROVED**
 2. **`trader-01`** (0.50 ALGO limit) calls `market/sentiment` (0.450 ALGO) -> **AUTO_APPROVED**
 3. **Boundary Test:** `researcher-01` tries to buy `market/sentiment` (0.450 ALGO) -> **BLOCKED by Policy Engine** (0 ALGO moved on chain).
-4. Every approved payment lands as an **atomic group** (app call + payment) in ~3.3s, with a clickable AlgoExplorer deep link from the dashboard.
+4. Every approved payment lands as an **atomic group** (app call + payment) in ~3.3s, with a clickable Pera Explorer deep link from the dashboard.
 
 ---
 
@@ -168,10 +168,14 @@ A scripted run proves the full lifecycle on TestNet:
 
 ```bash
 # Run all unit test suites (77 passing: 60 packages + 11 API + 6 resource-server)
-pnpm test
+pnpm test                          # 60 package tests
+pnpm --filter @kron/api test       # 11 API integration tests
+pnpm --filter @kron/resource-server test  # 6 resource-server tests
+# Or all at once via CI: typecheck + build + 77 tests
 
-# Build all workspace packages
+# Build all workspace packages (9 workspaces, Vite code-split dashboard)
 pnpm build
+pnpm typecheck
 ```
 
 ---
@@ -183,3 +187,7 @@ pnpm build
 - [`HACKATHON.md`](./HACKATHON.md) — One-Page Judge Summary
 - [`OFFLINE.md`](./OFFLINE.md) — 24-Hour Offline Runbook
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — Architecture Diagrams & Data Flow
+- [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) — VPS / Render / Railway Deploy (TestNet)
+- [`docs/SCREENSHOTS.md`](./docs/SCREENSHOTS.md) — 5 Required Screenshots (Dashboard, Agents, Simulation, Verify, Playground)
+- [`JUDGE_PREP.md`](./JUDGE_PREP.md) — Tough Q&A + Rogue-Agent Demo
+- [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md) — Timed 3-Minute Rehearsal + Fallback Plan

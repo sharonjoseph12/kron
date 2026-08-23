@@ -3,7 +3,8 @@
 # From: C:\Projects\Kron\
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path | Split-Path -Parent
+# Robust even when invoked as `.\scripts\offline-bootstrap.ps1` or via absolute path
+$ProjectRoot = if ($PSScriptRoot) { Split-Path -Parent $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path | Split-Path -Parent }
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan

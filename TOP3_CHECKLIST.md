@@ -3,18 +3,18 @@
 ## Pre-Hackathon (Now — Day 0)
 
 ### Code Quality
-- [x] 68/68 tests passing (`pnpm test` + `pnpm --filter @kron/api test`)
-- [x] TypeScript typecheck clean across all 8 packages (`pnpm typecheck`)
-- [x] Build succeeds for all packages (`pnpm build`)
+- [x] 77/77 tests passing (60 packages + 11 API + 6 resource-server)
+- [x] TypeScript typecheck clean across all 10 workspaces (`pnpm typecheck`)
+- [x] Build succeeds for all packages (`pnpm build` — dashboard code-split, <30s)
 - [x] TEAL contract source saved to `packages/x402/teal/`
 - [x] TEAL compile script added (`pnpm --filter @kron/x402 compile:teal`)
 - [x] Smart contract auto-deploys on first payment (`ensureKronApp`)
 - [x] Hardcoded `KRON_APP_ID=1023` removed from `.env`
-- [x] ARC-4 ABI contract with method dispatch (`anchor_policy`, `get_payment_count`, `get_last_policy_hash`)
-- [x] `/api/contract` endpoint reads live app global state from the indexer
-- [x] Dashboard "Policy Anchor Contract" card shows on-chain state
-- [x] USDC (ASA) priced resource + atomic group asset-transfer settlement
-- [x] API integration test suite (11 tests, `pnpm --filter @kron/api test`)
+- [x] ARC-4 ABI contract with 6-method dispatch (`anchor_policy`, `get_payment_count`, `get_last_policy_hash`, `get_agent_policy_hash`, `set_emergency_stop`, `flush`)
+- [x] `/api/contract` endpoint reads live app global state from the indexer (type 2=uint, 1=bytes)
+- [x] Dashboard "Policy Anchor Contract" card shows on-chain state + code-split lazy routes
+- [x] USDC (ASA) priced resource + atomic group asset-transfer settlement + velocity guard wired
+- [x] API integration test suite (11 tests) + resource-server (6) + helmet + SSRF guard + atomic escalation
 
 ### Documentation
 - [x] `README.md` updated with architecture + offline docs links
@@ -115,16 +115,17 @@ kron-hackathon-submission/
 
 | Metric | Value |
 |---|---|
-| Tests Passing | 68/68 |
-| TypeCheck | Clean (9/9 packages) |
-| Build Time | < 30s |
-| Policy Evaluation | < 5ms |
+| Tests Passing | 77/77 (60+11+6) |
+| TypeCheck | Clean (10/10 workspaces) |
+| Build Time | < 30s (dashboard code-split: react/query/charts) |
+| Policy Evaluation | < 5ms (13 ordered rules, velocity guard live) |
 | On-Chain Finality | 3.3s (Algorand) |
-| Transaction Fee | < $0.0002 |
-| Dashboard Pages | 9 |
+| Transaction Fee | < $0.0002 (0.001 ALGO) |
+| Dashboard Pages | 9 (lazy-loaded, 1366x768 ready) |
 | SDK Integration | 5 lines of code |
-| Contract Methods | 3 (ARC-4: anchor_policy, get_payment_count, get_last_policy_hash) |
-| Payment Rails | ALGO + USDC/USDT (ASA) |
+| Contract Methods | 6 (ARC-4: anchor_policy, get_payment_count, get_last_policy_hash, get_agent_policy_hash, set_emergency_stop, flush) |
+| Payment Rails | ALGO + USDC/USDT (ASA) atomic groups |
+| Security | Helmet + rate-limit + SSRF guard + AES-256-GCM vault + idempotency |
 
 ## Top 3 Secret Sauce
 
@@ -132,5 +133,5 @@ kron-hackathon-submission/
 2. **Complete traceability**: `Agent → Session → ToolCall → PaymentRequest → PaymentDecision → Settlement` with full audit log.
 3. **Judge-friendly UX**: Interactive Playground lets judges click through the SDK without reading code.
 4. **Offline-ready**: One PowerShell script bootstraps everything. No internet needed after `pnpm install`.
-5. **Production-grade policy engine**: 21+ deterministic rules, velocity anomaly detection, what-if simulation.
+5. **Production-grade policy engine**: 13 ordered rules (6 hard-blocks, 3 escalations, 4 budgets), velocity anomaly (5/60s) actually wired, what-if simulation 25-500 tx.
 6. **A2A hiring**: Agents hiring agents with autonomous on-chain settlement — a narrative judges remember.

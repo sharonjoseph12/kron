@@ -24,7 +24,8 @@
     "bootstrap": "pnpm install && pnpm --filter @kron/api prisma:migrate && pnpm --filter @kron/api prisma:seed",
     "demo:run": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev",
     "demo:claude": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev -- --provider anthropic",
-    "demo:openai": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev -- --provider openai"
+    "demo:openai": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev -- --provider openai",
+    "demo:preflight": "npx tsx scripts/demo-preflight.ts"
   },
   "devDependencies": {
     "concurrently": "^10.0.4",

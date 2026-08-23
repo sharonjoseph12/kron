@@ -459,23 +459,38 @@ export async function settleEscalatedPayment(
   await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "SUBMITTED", status: "pending", message: "Submitting to Algorand…" });
 
   try {
-    const sent = await algorand.sendPayment({
+    // Use atomic group (app call + payment) so escalated approvals get same on-chain policy anchoring as auto-approved
+    const policyVersion = payment.decision?.policyVersionNumber ?? 1;
+    const decisionReasons = (payment.decision?.reasons as string[]) ?? ["Escalation approved by operator"];
+    const built = await buildKronPayment({
       mnemonic,
       amountMicro,
       recipient: payment.recipient,
-      note: `kron:${payment.resourceId}`,
+      policyVersion,
+      decision: "AUTO_APPROVED",
+      reasons: decisionReasons,
+      agentId: payment.agentId,
+      resourceId: payment.resourceId,
+      service: payment.service,
+      clientRequestId: payment.clientRequestId,
     });
+    const { txId: submittedTxId } = await algorand.submitRawTransaction(built.signedB64);
+    const paymentTxId = submittedTxId || built.paymentTxId;
+    const conf = await algorand.waitForConfirmation(paymentTxId);
 
     const settlement = await prisma.settlement.create({
       data: {
         paymentId: payment.id,
-        txId: sent.txId,
-        round: sent.confirmedRound,
-        sender: sent.sender,
+        txId: paymentTxId,
+        round: conf.confirmedRound,
+        sender: built.sender,
         recipient: payment.recipient,
         amountMicro,
         network,
         verified: true,
+        appId: built.appId,
+        policyHash: built.policyHash,
+        appCallTxId: built.appCallTxId,
       },
     });
 
@@ -485,8 +500,11 @@ export async function settleEscalatedPayment(
       include: { decision: true, settlement: true },
     });
 
-    await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "CONFIRMED", status: "confirmed", message: `Confirmed on Algorand (round ${sent.confirmedRound})`, detail: { txId: sent.txId, round: sent.confirmedRound } });
-    await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "PROOF_VERIFIED", status: "confirmed", message: "Payment proof verified on-chain" });
+    const atomicMsg = built.appId
+      ? `Confirmed on Algorand (round ${conf.confirmedRound}) — atomic group with policy anchor (app ${built.appId})`
+      : `Confirmed on Algorand (round ${conf.confirmedRound})`;
+    await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "CONFIRMED", status: "confirmed", message: atomicMsg, detail: { txId: paymentTxId, round: conf.confirmedRound, appId: built.appId, policyHash: built.policyHash, appCallTxId: built.appCallTxId } });
+    await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "PROOF_VERIFIED", status: "confirmed", message: built.policyHash ? `Policy hash ${built.policyHash.slice(0, 16)}… anchored on-chain` : "Payment proof verified on-chain" });
     await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "RESOURCE_DELIVERED", status: "confirmed", message: `${payment.resourceName} delivered to agent` });
     await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "AGENT_CONTINUES", status: "confirmed", message: "Agent continues task" });
 
@@ -498,7 +516,7 @@ export async function settleEscalatedPayment(
       targetType: "Settlement",
       targetId: settlement.id,
       policyVersion: payment.decision?.policyVersionNumber ?? undefined,
-      summary: `Escalation approved — settled ${microToAlgo(amountMicro).toFixed(4)} ALGO on ${network} (${sent.txId})`,
+      summary: `Escalation approved — settled ${microToAlgo(amountMicro).toFixed(4)} ALGO on ${network} (${paymentTxId})${built.appId ? ` — atomic group, app ${built.appId}` : ""}`,
     });
 
     return {
@@ -506,8 +524,8 @@ export async function settleEscalatedPayment(
       payment: toPaymentDTO(settled),
       decision: "AUTO_APPROVED",
       reasons: ["Escalation approved by operator"],
-      token: sent.signedTxnB64,
-      txId: sent.txId,
+      token: built.signedB64,
+      txId: paymentTxId,
       escalationId: null,
     };
   } catch (err) {

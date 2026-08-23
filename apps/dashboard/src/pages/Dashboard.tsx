@@ -110,7 +110,7 @@ export default function Dashboard() {
 
   const health = ov ? computeFleetHealth(ov) : null;
   const healthTone = health == null ? "muted" : health >= 75 ? "ok" : health >= 50 ? "warn" : "err";
-  const narrative = buildNarrative(ov, payments, contract.data?.globalState.lastPolicyHash);
+  const narrative = buildNarrative(ov, payments, contract.data?.globalState?.lastPolicyHash);
   const narrativeLoading = overview.isPending || recent.isPending || agentsSpend.isPending;
 
   return (
@@ -157,18 +157,26 @@ export default function Dashboard() {
                 url={payments[0].explorerUrl}
                 className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-3)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
               >
-                Verify on AlgoExplorer
+                Verify on Pera Explorer
               </ExplorerLink>
             )}
           </div>
         </GlassCard>
       )}
 
-      {/* Stat cards */}
+      {/* Stat cards — responsive at 1366x768 (6 cols = 2 rows, no horizontal scroll) */}
       {overview.isPending ? (
-        <Spinner label="Loading overview…" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="h-[92px] animate-pulse rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)]" />
+          ))}
+        </div>
+      ) : overview.isError ? (
+        <div className="rounded-xl border border-[#e5b0a6] bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
+          Could not load overview — check that the API is running at {import.meta.env.VITE_KRON_API_URL ?? "http://localhost:8787"}.
+        </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6 stagger-children">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 stagger-children">
           <Stat label="Total Spend" value={`${fmtAlgo(ov?.totalSpendAlgo)} Ɖ`} sub="All-time ALGO" accent="text-[var(--color-ink)]" />
           <Stat label="Today" value={`${fmtAlgo(ov?.todaySpendAlgo)} Ɖ`} sub="Since midnight" accent="text-[var(--color-accent)]" />
           <Stat label="Wallet Balance" value={`${fmtAlgo(ov?.walletBalanceAlgo)} Ɖ`} sub="Across wallets" />
@@ -386,32 +394,32 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4">
           <Stat
             label="Payments anchored"
-            value={fmtInt(contract.data?.globalState.totalPayments ?? 0)}
+            value={fmtInt(contract.data?.globalState?.totalPayments ?? 0)}
             sub="total_payments (uint64)"
             accent="text-[var(--color-accent)]"
           />
           <Stat
             label="Last amount"
-            value={contract.data?.globalState.lastAmountMicro ? `${fmtAlgo(contract.data.globalState.lastAmountMicro)} Ɖ` : "—"}
+            value={contract.data?.globalState?.lastAmountMicro ? `${fmtAlgo(contract.data.globalState.lastAmountMicro)} Ɖ` : "—"}
             sub="last_amount_micro (uint64)"
             accent="text-[var(--color-success)]"
           />
           <Stat
             label="Last agent"
-            value={contract.data?.globalState.lastAgentId ?? "—"}
+            value={contract.data?.globalState?.lastAgentId ?? "—"}
             sub="last_agent_id (bytes)"
           />
           <Stat
             label="Last policy hash"
-            value={contract.data?.globalState.lastPolicyHash ? shortId(contract.data.globalState.lastPolicyHash, 24) : "—"}
+            value={contract.data?.globalState?.lastPolicyHash ? shortId(contract.data.globalState.lastPolicyHash, 24) : "—"}
             sub="last_policy_hash (byte[32])"
             accent="text-[var(--color-warning)]"
           />
           <Stat
             label="Emergency stop"
-            value={contract.data?.globalState.emergencyStop ? "ENGAGED" : "armed"}
+            value={contract.data?.globalState?.emergencyStop ? "ENGAGED" : "armed"}
             sub="set_emergency_stop (creator-only)"
-            accent={contract.data?.globalState.emergencyStop ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}
+            accent={contract.data?.globalState?.emergencyStop ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}
           />
         </div>
         {contract.isError && (

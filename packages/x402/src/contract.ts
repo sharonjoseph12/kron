@@ -361,16 +361,28 @@ flush_authorized:
   int 0
   return
 flush_args_ok:
-  int 1
+  // Calculate available balance: total balance - min balance (100000 microAlgo)
+  global CurrentApplicationAddress
+  balance
+  int 100000
+  -
+  dup
+  // If available <= 0, nothing to flush
+  int 0
+  <=
+  bnz flush_empty
+  // Send available balance to creator
   itxn_begin
   int pay
   itxn_field TypeEnum
   global CreatorAddress
   itxn_field Receiver
-  global CurrentApplicationAddress
-  balance
   itxn_field Amount
   itxn_submit
+  int 1
+  return
+flush_empty:
+  pop
   int 1
   return
 

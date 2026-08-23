@@ -348,7 +348,7 @@ function PaymentDetailDrawer({
             {p.txId && (
               <div>
                 <span className="text-[var(--color-ink-3)] block mb-0.5">Payment Transaction ID:</span>
-                <ExplorerLink url={`https://testnet.algoexplorer.io/tx/${p.txId}`} className="font-mono text-xs break-all">
+                <ExplorerLink url={p.explorerUrl ?? `https://testnet.explorer.perawallet.app/tx/${p.txId}`} className="font-mono text-xs break-all">
                   {p.txId}
                 </ExplorerLink>
               </div>
@@ -358,10 +358,10 @@ function PaymentDetailDrawer({
               <div>
                 <span className="text-[var(--color-ink-3)] block mb-0.5">Policy Anchor App Call Tx ID:</span>
                 <a
-                  href={`https://testnet.algoexplorer.io/tx/${p.appCallTxId}`}
+                  href={`https://testnet.explorer.perawallet.app/tx/${p.appCallTxId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`View policy anchor app call transaction ${p.appCallTxId} on AlgoExplorer`}
+                  aria-label={`View policy anchor app call transaction ${p.appCallTxId} on Pera Explorer`}
                   className="font-mono text-xs text-[var(--color-accent)] underline-offset-2 hover:underline break-all"
                 >
                   {p.appCallTxId}
@@ -393,7 +393,7 @@ function PaymentDetailDrawer({
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--color-success-soft)] border border-[#a8cfb8] px-3 py-2 text-xs font-semibold text-[var(--color-success)] hover:bg-[#d3ead9] transition"
               >
-                View Confirmed Block on AlgoExplorer
+                View Confirmed Block on Pera Explorer
               </a>
             </div>
           )}

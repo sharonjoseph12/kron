@@ -1,0 +1,64 @@
+{
+  "name": "KronPolicyAnchor",
+  "desc": "Policy Anchor and Cryptographic Audit Contract for Autonomous AI Agents on Algorand. Every KRON payment is an atomic transaction group containing an app call to this contract (anchoring a SHA-256 policy decision hash) and a payment transaction. Both land atomically in ~3.3s or neither does.",
+  "methods": [
+    {
+      "name": "anchor_policy",
+      "desc": "Anchors a SHA-256 policy decision hash and registers the economic execution record (agent ID + amount). Rejected if emergency_stop is engaged.",
+      "args": [
+        { "type": "byte[32]", "name": "policy_hash", "desc": "SHA-256 hash of the deterministic policy decision" },
+        { "type": "string", "name": "agent_id", "desc": "Autonomous agent identifier" },
+        { "type": "uint64", "name": "amount_micro", "desc": "MicroAlgo or base asset unit value settled" }
+      ],
+      "returns": { "type": "void" }
+    },
+    {
+      "name": "get_payment_count",
+      "desc": "Returns the total count of verified payments settled and anchored under this contract instance.",
+      "args": [],
+      "returns": { "type": "uint64" }
+    },
+    {
+      "name": "get_last_policy_hash",
+      "desc": "Returns the latest anchored policy hash (raw SHA-256 digest, 32 bytes).",
+      "args": [],
+      "returns": { "type": "byte[32]" }
+    },
+    {
+      "name": "get_agent_policy_hash",
+      "desc": "Returns the most recently anchored policy hash for a specific agent from per-agent box storage (key: ag:<agent_id>).",
+      "args": [
+        { "type": "string", "name": "agent_id", "desc": "Autonomous agent identifier" }
+      ],
+      "returns": { "type": "byte[32]" }
+    },
+    {
+      "name": "set_emergency_stop",
+      "desc": "Creator-only freeze switch. When engaged (true), all future anchor_policy calls are rejected — no payments can be anchored on-chain until the creator releases the stop.",
+      "args": [
+        { "type": "bool", "name": "stopped", "desc": "True engages the emergency stop, false releases it" }
+      ],
+      "returns": { "type": "void" }
+    },
+    {
+      "name": "flush",
+      "desc": "Creator-only inner transaction — forwards the application's entire ALGO balance back to the creator address via an inner payment transaction.",
+      "args": [],
+      "returns": { "type": "void" }
+    }
+  ],
+  "state": {
+    "global": {
+      "num_uints": 3,
+      "num_byte_slices": 2
+    },
+    "local": {
+      "num_uints": 0,
+      "num_byte_slices": 0
+    }
+  },
+  "source": {
+    "approval": "teal/approval.teal",
+    "clear": "teal/clear.teal"
+  }
+}

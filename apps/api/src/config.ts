@@ -43,6 +43,7 @@ export interface KronConfig {
   seedAdminEmail: string;
   seedAdminPassword: string;
   forceEscalate: boolean;
+  demoMode: boolean;
 }
 
 export const config: KronConfig = {
@@ -74,6 +75,7 @@ export const config: KronConfig = {
   seedAdminEmail: optional("SEED_ADMIN_EMAIL", "admin@kron.dev"),
   seedAdminPassword: optional("SEED_ADMIN_PASSWORD", "admin1234"),
   forceEscalate: optional("FORCE_ESCALATE", "false") === "true",
+  demoMode: optional("DEMO_MODE", "false") === "true",
 };
 
 export const IS_DEV = config.nodeEnv !== "production";

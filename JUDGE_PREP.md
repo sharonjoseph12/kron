@@ -87,7 +87,7 @@
 | Claim | Proof |
 |---|---|
 | "3.3s settlement" | Algorand TestNet finality; every demo payment shows round + tx ID |
-| "Atomic group lands or nothing does" | Tx group in AlgoExplorer; app call + payment share a group ID |
+| "Atomic group lands or nothing does" | Tx group in Pera Explorer; app call + payment share a group ID |
 | "Every payment is verifiable" | `/verify` portal + ARC-2 note on-chain |
 | "Policy enforced before money moves" | BLOCKED cases never produce a payment txn |
 | "Contract can freeze the fleet" | `set_emergency_stop` is creator-only; state visible on the dashboard |
@@ -101,7 +101,7 @@
 1. **Login** to the dashboard (admin creds) — 5s
 2. **Show the fleet health card + contract card** (payments anchored, emergency stop armed) — 10s
 3. **Run one payment** through the demo agent → watch the live timeline animate with per-step durations → settlement chip (~3.3s) — 30s
-4. **Click the AlgoExplorer deep link** → show the atomic group (app call + payment) — 15s
+4. **Click the Pera Explorer deep link** → show the atomic group (app call + payment) — 15s
 5. **Rogue-agent block** (over-limit attempt) → "What happened?" panel — 15s
 6. **Fleet emergency stop** → contract flips to ENGAGED — 10s
 7. **Verify a past tx** in `/verify` — 5s
