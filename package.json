@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "concurrently -n shrd,pol,x402,llm,api,dash,res,demo -c gray,gray,gray,gray,blue,green,magenta,yellow --aggregate-output \"pnpm --filter @kron/shared dev\" \"pnpm --filter @kron/policy-engine dev\" \"pnpm --filter @kron/x402 dev\" \"pnpm --filter @kron/llm-agent dev\" \"pnpm --filter @kron/api dev\" \"pnpm --filter @kron/dashboard dev\" \"pnpm --filter @kron/resource-server dev\" \"pnpm --filter @kron/demo-agent dev\"",
+    "bootstrap": "pnpm install && pnpm --filter @kron/api prisma:migrate && pnpm --filter @kron/api prisma:seed",
+    "judge": "node scripts/judge.mjs",
     "dev:api": "pnpm --filter @kron/api dev",
     "dev:dashboard": "pnpm --filter @kron/dashboard dev",
     "dev:resource": "pnpm --filter @kron/resource-server dev",
@@ -21,7 +23,6 @@
     "db:seed": "pnpm --filter @kron/api prisma:seed",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "bootstrap": "pnpm install && pnpm --filter @kron/api prisma:migrate && pnpm --filter @kron/api prisma:seed",
     "demo:run": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev",
     "demo:claude": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev -- --provider anthropic",
     "demo:openai": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev -- --provider openai",

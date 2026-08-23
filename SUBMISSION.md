@@ -15,7 +15,7 @@
 
 ## Inspiration
 
-Autonomous AI agents powered by LLMs (Claude, GPT-4, local models) can reason, code, and execute multi-step workflows via protocols like Anthropic's Model Context Protocol (MCP). However, when agents encounter paid APIs, premium datasets, or specialized compute resources, their autonomy halts.
+Autonomous AI agents powered by LLMs (Gemini, Claude, GPT-4) can reason, code, and execute multi-step workflows via protocols like Anthropic's Model Context Protocol (MCP). However, when agents encounter paid APIs, premium datasets, or specialized compute resources, their autonomy halts.
 
 Developers are currently forced to either:
 1. Hardcode sensitive credit cards or raw API keys directly into agent runtimes.

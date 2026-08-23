@@ -273,8 +273,9 @@ model Escalation {
   payment    PaymentRequest  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   decisionId String     @unique
   decision   PaymentDecision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  status     String     @default("pending") // pending | approved | denied
+  status     String     @default("pending") // pending | approved | denied | expired
   summary    String
+  expiresAt  DateTime? // actionable window; null = never expires (legacy rows)
   decidedBy  String?
   decidedAt  DateTime?
   createdAt  DateTime   @default(now())

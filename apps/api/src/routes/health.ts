@@ -54,7 +54,7 @@ export async function healthRoutes(fastify: FastifyInstance) {
       service: "kron-api",
       version: "1.0.0",
       network: config.algorandNetwork,
-      postgres: dbOk ? "ok" : "down",
+      database: dbOk ? "ok" : "down",
       algod: algodOk ? "ok" : "down",
       checks: {
         db: dbOk ? "ok" : "down",

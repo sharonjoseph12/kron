@@ -1,7 +1,7 @@
 /**
  * Policy service — persistence + evaluation glue.
  * Converts stored PolicyVersion rows into the engine's PolicyRuleSet and
- * computes spend/trust context from Postgres before calling the engine.
+ * computes spend/trust context from SQLite before calling the engine.
  */
 import type {
   PolicyConfig,
@@ -12,6 +12,7 @@ import { DEFAULT_POLICY } from "@kron/shared";
 import { evaluatePayment, type PolicyRuleSet } from "@kron/policy-engine";
 import { prisma } from "../db.js";
 import { algoToMicro, toAlgo } from "../lib/money.js";
+import { configureAgentOnChain } from "../algorand/contract.js";
 import type { PolicyVersion } from "@prisma/client";
 
 export function policyVersionToRuleSet(v: PolicyVersion): PolicyRuleSet {
@@ -97,6 +98,13 @@ export async function buildContext(agentId: string, sessionId?: string) {
     where: { agentId, status: { in: ["confirmed", "authorized", "submitted"] }, createdAt: { gte: sinceWindow } },
   });
 
+  // Behavioral anomaly scoring: trailing payment trail (most recent last)
+  const anomalyTrail = confirmed
+    .filter((p) => p.createdAt >= since24h)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .slice(-50)
+    .map((p) => ({ amountMicro: p.amountMicro, recipient: p.recipient, timestampMs: p.createdAt.getTime() }));
+
   return {
     sessionSpendMicro,
     dailySpendMicro,
@@ -104,6 +112,7 @@ export async function buildContext(agentId: string, sessionId?: string) {
     knownRecipients,
     knownServices,
     recentPaymentCountInWindow: recentInWindow,
+    recentPayments: anomalyTrail,
   };
 }
 
@@ -190,6 +199,11 @@ export async function createPolicyVersion(
     }),
     prisma.policyVersion.create({ data: { policyId: policy.id, ...next } }),
   ]);
+
+  // Mirror the new limits into ON-CHAIN enforcement: anchor_policy will reject
+  // any grouped payment above these ceilings (contract configure_agent).
+  // Best-effort and non-blocking — the off-chain engine remains authoritative.
+  void configureAgentOnChain(agentId, next.perCallLimitMicro, next.dailyBudgetMicro);
 
   return prisma.policyVersion.findFirst({
     where: { policyId: policy.id, version: next.version },

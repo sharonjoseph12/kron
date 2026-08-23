@@ -96,7 +96,10 @@ export function buildSetRuntimeArgs(runtimeAddress: string): Uint8Array[] {
   return [arc4MethodSelector(ARC4_METHODS.setRuntime), algosdk.decodeAddress(runtimeAddress).publicKey];
 }
 
-/** ARC-4 app args for `configure_agent(string,uint64,uint64)`. */
+/**
+ * ARC-4 app args for `configure_agent(string,uint64,uint64)` — writes the
+ * ON-CHAIN per-call / daily limits that anchor_policy enforces in TEAL.
+ */
 export function buildConfigureAgentArgs(args: {
   agentId: string;
   perCallLimitMicro: bigint;
@@ -182,18 +185,19 @@ export function buildPolicyHash(input: PolicyHashInput): string {
  *   - get_last_policy_hash()byte[32]             → 22a4fb91
  *   - get_agent_policy_hash(string)byte[32]      → 9fba667f
  *   - set_runtime(address)void                   → f691fde4  (creator only)
- *   - configure_agent(string,uint64,uint64)void  → 817a20d3  (creator/runtime)
+ *   - configure_agent(string,uint64,uint64)void  → 817a20d3  (creator/signer)
  *   - set_emergency_stop(bool)void               → 481676f5  (creator only)
  *   - flush()void                                → 7f9acc63  (creator only, inner txn)
  *
  * State: global `total_payments`, `last_policy_hash`, `last_agent_id`,
- * `last_amount_micro`, `emergency_stop`, `runtime`; per-agent boxes
- * `ag:<agent_id>` (policy hash), `lim:<agent_id>` (on-chain spend limits) and
- * `ds:<agent_id><day>` (daily spend accumulator).
+ * `last_amount_micro`, `emergency_stop`; per-agent boxes
+ * `ag:<agent_id>` (policy hash), `lim:<agent_id>` (on-chain spend limits),
+ * `ds:<agent_id><day>` (daily spend accumulator) and per-signer boxes
+ * `as:<address>` (authorized anchor signers registered by the creator).
  *
  * v4 enforcement semantics:
- *   - anchor_policy is callable only by the creator or the registered runtime
- *     signer (`set_runtime`).
+ *   - anchor_policy is callable only by the creator or an authorized runtime
+ *     signer (`set_runtime` registers agent wallets / the KRON runtime).
  *   - It requires GroupSize==2 with tx[1] a pay/axfer from the same sender
  *     whose Amount equals the anchored amount — the anchor and the payment are
  *     inseparable.
@@ -205,12 +209,13 @@ export function buildPolicyHash(input: PolicyHashInput): string {
 export const APPROVAL_TEAL = `#pragma version 10
 // KRON Policy Anchor & Enforcement Contract v4 — ARC-4 method dispatch
 // Globals: total_payments, last_policy_hash, last_agent_id,
-//          last_amount_micro, emergency_stop, runtime
+//          last_amount_micro, emergency_stop
 // Boxes:   ag:<agent_id>          -> byte[32] policy hash
 //          lim:<agent_id>         -> per_call_limit(8) || daily_limit(8)
 //          ds:<agent_id><day(8)>  -> daily spend accumulator
+//          as:<address>           -> 0x01 authorized anchor signer
 //
-// anchor_policy is gated to the creator or the registered runtime signer and
+// anchor_policy is gated to the creator or a registered runtime signer and
 // validates its sibling transaction: GroupSize==2, tx[1] is a pay/axfer from
 // the same sender whose Amount equals the anchored amount, and — for agents
 // configured via configure_agent — enforces per-call and rolling daily limits
@@ -272,15 +277,16 @@ handle_anchor_policy:
   ==
   bz anchor_fail
 anchor_args_ok:
-  // authorization: creator or registered runtime signer only
+  // authorization: creator or a registered runtime signer (as:<addr> box)
   txn Sender
   global CreatorAddress
   ==
   bnz anchor_authorized
+  byte "as:"
   txn Sender
-  byte "runtime"
-  app_global_get
-  ==
+  concat
+  box_len
+  pop
   bnz anchor_authorized
   int 0
   return
@@ -493,7 +499,8 @@ agent_hash_fail:
   int 0
   return
 
-// set_runtime(address runtime)void — creator only; registers the KRON runtime signer
+// set_runtime(address signer)void — creator only; registers an authorized
+// anchor signer (agent wallets / the KRON runtime) via the as:<addr> box.
 handle_set_runtime:
   txn Sender
   global CreatorAddress
@@ -508,9 +515,11 @@ handle_set_runtime:
   int 32
   ==
   bz sr_denied
-  byte "runtime"
+  byte "as:"
   txn ApplicationArgs 1
-  app_global_put
+  concat
+  byte 0x01
+  box_put
   int 1
   return
 sr_denied:
@@ -518,16 +527,17 @@ sr_denied:
   return
 
 // configure_agent(string agent_id, uint64 per_call_limit_micro, uint64 daily_limit_micro)void
-// Creator or runtime only. Writes the lim box consumed by anchor_policy.
+// Creator or authorized signer only. Writes the lim box consumed by anchor_policy.
 handle_configure_agent:
   txn Sender
   global CreatorAddress
   ==
   bnz ca_authorized
+  byte "as:"
   txn Sender
-  byte "runtime"
-  app_global_get
-  ==
+  concat
+  box_len
+  pop
   bnz ca_authorized
   int 0
   return
@@ -641,9 +651,6 @@ handle_create:
   app_global_put
   byte "emergency_stop"
   int 0
-  app_global_put
-  byte "runtime"
-  byte ""
   app_global_put
   int 1
   return
@@ -789,7 +796,7 @@ export async function deployKronContract(args: DeployAppArgs): Promise<DeployedA
     approvalProgram,
     clearProgram,
     numGlobalInts: 3,     // total_payments, last_amount_micro, emergency_stop
-    numGlobalByteSlices: 3, // last_policy_hash, last_agent_id, runtime
+    numGlobalByteSlices: 2, // last_policy_hash, last_agent_id
     numLocalInts: 0,
     numLocalByteSlices: 0,
     onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -852,8 +859,10 @@ export interface AtomicGroupArgs {
 }
 
 export interface AtomicGroupResult {
-  /** Combined signed bytes (base64) for both transactions. */
+  /** Combined signed bytes (base64) for all transactions in the group. */
   signedGroupB64: string;
+  /** Signed bytes of ONLY the payment/asset-transfer transaction (x402 token). */
+  signedPaymentB64: string;
   /** The payment transaction ID. */
   paymentTxId: string;
   /** The app call transaction ID. */
@@ -941,9 +950,9 @@ export const KRON_ARC4_CONTRACT_ABI = {
     },
     {
       name: "set_runtime",
-      desc: "Creator-only registration of the KRON runtime signer authorized to anchor payments",
+      desc: "Creator-only registration of an authorized anchor signer (agent wallet / runtime)",
       args: [
-        { type: "address", name: "runtime", desc: "Runtime signer account" }
+        { type: "address", name: "signer", desc: "Account allowed to submit anchor_policy groups" }
       ],
       returns: { type: "void" }
     },
@@ -976,6 +985,42 @@ export const KRON_ARC4_CONTRACT_ABI = {
   // never hardcoded — omit `networks` so toolchains treat this as unbound.
 };
 
+/* ------------------------------------------------------------------ */
+/* Box references                                                      */
+/* ------------------------------------------------------------------ */
+
+/** A box the KRON contract will access during an app call. */
+export interface KronBoxRef {
+  appIndex: number;
+  name: Uint8Array;
+}
+
+/**
+ * Box references required by an `anchor_policy` app call under contract v4:
+ *   - as:<agent_address>  authorized-signer allowlist
+ *   - lim:<agent_id>      on-chain per-call/daily limits
+ *   - ag:<agent_id>       latest anchored policy hash
+ *   - ds:<agent_id><day>  daily spend accumulator (declared for the current
+ *                         AND next UTC day so groups spanning midnight confirm)
+ */
+export function buildKronAnchorBoxes(
+  appId: number,
+  agentAddress: string,
+  agentId: string,
+): KronBoxRef[] {
+  const ref = (name: Uint8Array): KronBoxRef => ({ appIndex: appId, name });
+  const prefix = (s: string): Buffer => Buffer.from(s, "utf8");
+  const agentKey = algosdk.decodeAddress(agentAddress).publicKey;
+  const daySeconds = Math.floor(Date.now() / 1000 / 86_400);
+  return [
+    ref(Buffer.concat([prefix("as:"), Buffer.from(agentKey)])),
+    ref(Buffer.concat([prefix("lim:"), prefix(agentId)])),
+    ref(Buffer.concat([prefix("ag:"), prefix(agentId)])),
+    ref(Buffer.concat([prefix("ds:"), prefix(agentId), algosdk.encodeUint64(BigInt(daySeconds))])),
+    ref(Buffer.concat([prefix("ds:"), prefix(agentId), algosdk.encodeUint64(BigInt(daySeconds + 1))])),
+  ];
+}
+
 /**
  * Build and sign an atomic group for ASA Asset Payments (e.g. USDC/USDT):
  * [app call (policy anchor), asset transfer (axfer)].
@@ -994,7 +1039,9 @@ export function buildAtomicAssetPaymentGroup(args: AtomicAssetGroupArgs): Atomic
     genesisHash: Uint8Array.from(Buffer.from(args.genesisHash, "base64")),
   };
 
-  // Transaction 1: App call — ARC-4 anchor_policy, records hash + agent + amount
+  // Transaction 1: App call — ARC-4 anchor_policy, records hash + agent + amount.
+  // v4 enforcement reads as:/lim:/ag:/ds: boxes, so they must be declared here
+  // and the fee covers the extra box IO credit.
   const appCallTxn = algosdk.makeApplicationNoOpTxnFromObject({
     sender: account.addr,
     appIndex: args.appId,
@@ -1003,8 +1050,12 @@ export function buildAtomicAssetPaymentGroup(args: AtomicAssetGroupArgs): Atomic
       agentId: args.agentId,
       amountMicro: args.amount,
     }),
+    boxes: buildKronAnchorBoxes(args.appId, account.addr.toString(), args.agentId),
     note: new TextEncoder().encode(args.policyHash),
-    suggestedParams,
+    suggestedParams: {
+      ...suggestedParams,
+      fee: Math.max(fee, 3000),
+    },
   });
 
   // Transaction 2: ASA Asset Transfer — the actual USDC/USDT transfer
@@ -1031,6 +1082,7 @@ export function buildAtomicAssetPaymentGroup(args: AtomicAssetGroupArgs): Atomic
 
   return {
     signedGroupB64: Buffer.from(combined).toString("base64"),
+    signedPaymentB64: Buffer.from(signedAssetTransfer.blob).toString("base64"),
     paymentTxId: signedAssetTransfer.txID,
     appCallTxId: signedAppCall.txID,
     sender: account.addr.toString(),
@@ -1051,7 +1103,9 @@ export function buildAtomicPaymentGroup(args: AtomicGroupArgs): AtomicGroupResul
     genesisHash: Uint8Array.from(Buffer.from(args.genesisHash, "base64")),
   };
 
-  // Transaction 1: App call — ARC-4 anchor_policy, records hash + agent + amount
+  // Transaction 1: App call — ARC-4 anchor_policy, records hash + agent + amount.
+  // v4 enforcement reads as:/lim:/ag:/ds: boxes, so they must be declared here
+  // and the fee covers the extra box IO credit.
   const appCallTxn = algosdk.makeApplicationNoOpTxnFromObject({
     sender: account.addr,
     appIndex: args.appId,
@@ -1060,8 +1114,12 @@ export function buildAtomicPaymentGroup(args: AtomicGroupArgs): AtomicGroupResul
       agentId: args.agentId,
       amountMicro: args.amountMicro,
     }),
+    boxes: buildKronAnchorBoxes(args.appId, account.addr.toString(), args.agentId),
     note: new TextEncoder().encode(args.policyHash),
-    suggestedParams,
+    suggestedParams: {
+      ...suggestedParams,
+      fee: Math.max(fee, 3000),
+    },
   });
 
   // Transaction 2: Payment — the actual ALGO transfer
@@ -1087,6 +1145,7 @@ export function buildAtomicPaymentGroup(args: AtomicGroupArgs): AtomicGroupResul
 
   return {
     signedGroupB64: Buffer.from(combined).toString("base64"),
+    signedPaymentB64: Buffer.from(signedPayment.blob).toString("base64"),
     paymentTxId: signedPayment.txID,
     appCallTxId: signedAppCall.txID,
     sender: account.addr.toString(),

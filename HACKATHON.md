@@ -11,11 +11,12 @@ KRON gives every AI agent a dedicated Algorand wallet and mathematically enforce
 
 ## Key Differentiators
 
-1. **ARC-4 On-Chain Policy Anchor**: Every payment is bundled with a smart contract app call that anchors a SHA-256 policy decision hash + agent + amount in global state. The contract exposes a real ARC-4 ABI (`get_payment_count()`, `get_last_policy_hash()`) callable from any ARC-4 toolchain, and the dashboard reads its live global state via `/api/contract`.
-2. **Policy What-If Simulation**: Backtest candidate spending policies against 25–500 historical transactions before deploying.
-3. **On-Chain Verification**: Paste any transaction ID into `/verify` to prove on the ledger that a payment was authorized under a specific policy version.
-4. **Interactive Playground**: In-browser sandbox for judges to test live SDK calls against Algorand TestNet.
-5. **Fleet-Wide Kill Switch**: One-click global freeze halts all agent spending in real-time.
+1. **On-Chain Policy Enforcement (not just anchoring)**: Every payment is an atomic group `[anchor_policy app call, payment]`. The TEAL v4 contract (a) only accepts anchors from the creator or registered runtime signers (`as:<addr>` boxes), (b) validates its sibling transaction — `GroupSize==2`, tx[1] pay/axfer from the same sender whose amount equals the anchored amount, and (c) enforces per-call + rolling daily limits stored on-chain via `configure_agent`. An out-of-policy payment cannot confirm with its anchor — the chain itself blocks it. Getters return real ARC-4 ABI values via `log` (0x151f prefix), callable with any ARC-4 toolchain.
+2. **Policy What-If Simulation**: Backtest candidate spending policies against historical transactions — session-budget, velocity AND behavioral-anomaly rules all fire during simulation.
+3. **Merchant-Side Anchor Proof**: The paid resource server independently verifies via the indexer that a settlement is grouped with a KRON anchor app call before delivering content — the runtime cannot bypass the contract.
+4. **Behavioral Anomaly Scoring**: Burst detection weighted by amount, recipient novelty, and statistical amount outliers produce a 0–100 risk score with block/escalate thresholds.
+5. **Governed Escalations**: Human approvals expire after a TTL window and re-validate against fresh budgets at approval time — no rubber stamps.
+6. **Interactive Playground & On-Chain Verify**: Judges can test live SDK calls and paste any transaction ID into `/verify` for cryptographic proof.
 
 ## Tech Stack
 
@@ -41,13 +42,11 @@ KRON gives every AI agent a dedicated Algorand wallet and mathematically enforce
 ## How to Run
 
 ```bash
-# Zero Docker required (TestNet)
-pnpm bootstrap
-pnpm dev
+# One command: boot + seed + full multi-agent on-chain demo + explorer links
+pnpm judge
 
-# With Docker (LocalNet)
-docker compose --profile localnet up -d
-pnpm --filter @kron/api bootstrap:chain
+# Or manually (zero Docker required, TestNet)
+pnpm bootstrap
 pnpm dev
 ```
 
@@ -64,10 +63,13 @@ Open **http://localhost:5173** → Login: `admin@kron.dev` / `admin1234`
 ## Tests
 
 ```bash
-pnpm test                          # 60 package tests (shared 4 + policy-engine 21 + x402 21 + sdk 7 + llm-agent 7)
-pnpm --filter @kron/api test       # 11 API integration tests
-pnpm --filter @kron/resource-server test  # 6 resource-server tests
-# Total: 77 passing, typecheck 10/10 workspaces, build 9/9
+pnpm test                          # 76 package tests (shared 4 + policy-engine 32 + x402 26 + sdk 7 + llm-agent 7)
+pnpm --filter @kron/api test       # 15 API integration tests (incl. RBAC + escalation-expiry security suite)
+pnpm --filter @kron/resource-server test  # 10 resource-server tests (incl. anchor-proof verification)
+# Total: 101 passing, typecheck clean across all workspaces
+
+# CI also runs a LocalNet e2e job: deploys the contract on a real dev-mode node,
+# settles a compliant payment, and proves an out-of-policy group is REJECTED on-chain.
 ```
 
 ## Verify It Yourself (Judge Walkthrough)

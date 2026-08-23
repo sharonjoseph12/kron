@@ -19,7 +19,7 @@ $excludes = @(
     ".env", ".env.*", "!*.env.example",
     "node_modules", "dist", "build", "coverage",
     "data", "tmp", ".git", ".pnpm-store", ".github",
-    "*.log", "kron-submission-*.zip"
+    ".judge-logs", "*.log", "kron-submission-*.zip"
 )
 
 $files = Get-ChildItem -Recurse -File -Path $ProjectRoot | Where-Object {
@@ -55,6 +55,23 @@ try {
     }
 } finally {
     $zip.Dispose()
+}
+
+# Final secret-hygiene gate: fail loudly if any secret-looking file slipped in.
+$zipEntries = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+try {
+    $suspicious = $zipEntries.Entries | Where-Object {
+        $_.FullName -match "(^|/)\.env($|\.)" -and $_.FullName -notmatch "\.env\.example$"
+    }
+    if ($suspicious) {
+        Write-Host "SECRET HYGIENE WARNING — the following env files are in the zip:" -ForegroundColor Red
+        $suspicious | ForEach-Object { Write-Host "  $($_.FullName)" -ForegroundColor Red }
+        Write-Host "Delete the zip, fix the excludes, and rebuild before submitting." -ForegroundColor Red
+    } else {
+        Write-Host "Secret scan: no .env files in the package." -ForegroundColor Green
+    }
+} finally {
+    $zipEntries.Dispose()
 }
 
 Write-Host ""

@@ -48,7 +48,13 @@ function run(cmd: string): void {
   }
 }
 
-run(`"${bin("prisma")}" generate`);
+try {
+  // Skippable: when a dev server is running it locks the query-engine DLL
+  // (Windows EPERM). The existing generated client is then already current.
+  run(`"${bin("prisma")}" generate`);
+} catch (err) {
+  console.warn(`[test-setup] prisma generate skipped: ${err instanceof Error ? err.message.split("\n")[0] : err}`);
+}
 run(`"${bin("prisma")}" db push --accept-data-loss --skip-generate`);
 run(`"${bin("tsx")}" prisma/seed.ts`);
 

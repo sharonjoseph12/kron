@@ -1,12 +1,13 @@
 #pragma version 10
 // KRON Policy Anchor & Enforcement Contract v4 — ARC-4 method dispatch
 // Globals: total_payments, last_policy_hash, last_agent_id,
-//          last_amount_micro, emergency_stop, runtime
+//          last_amount_micro, emergency_stop
 // Boxes:   ag:<agent_id>          -> byte[32] policy hash
 //          lim:<agent_id>         -> per_call_limit(8) || daily_limit(8)
 //          ds:<agent_id><day(8)>  -> daily spend accumulator
+//          as:<address>           -> 0x01 authorized anchor signer
 //
-// anchor_policy is gated to the creator or the registered runtime signer and
+// anchor_policy is gated to the creator or a registered runtime signer and
 // validates its sibling transaction: GroupSize==2, tx[1] is a pay/axfer from
 // the same sender whose Amount equals the anchored amount, and — for agents
 // configured via configure_agent — enforces per-call and rolling daily limits
@@ -68,15 +69,16 @@ handle_anchor_policy:
   ==
   bz anchor_fail
 anchor_args_ok:
-  // authorization: creator or registered runtime signer only
+  // authorization: creator or a registered runtime signer (as:<addr> box)
   txn Sender
   global CreatorAddress
   ==
   bnz anchor_authorized
+  byte "as:"
   txn Sender
-  byte "runtime"
-  app_global_get
-  ==
+  concat
+  box_len
+  pop
   bnz anchor_authorized
   int 0
   return
@@ -289,7 +291,8 @@ agent_hash_fail:
   int 0
   return
 
-// set_runtime(address runtime)void — creator only; registers the KRON runtime signer
+// set_runtime(address signer)void — creator only; registers an authorized
+// anchor signer (agent wallets / the KRON runtime) via the as:<addr> box.
 handle_set_runtime:
   txn Sender
   global CreatorAddress
@@ -304,9 +307,11 @@ handle_set_runtime:
   int 32
   ==
   bz sr_denied
-  byte "runtime"
+  byte "as:"
   txn ApplicationArgs 1
-  app_global_put
+  concat
+  byte 0x01
+  box_put
   int 1
   return
 sr_denied:
@@ -314,16 +319,17 @@ sr_denied:
   return
 
 // configure_agent(string agent_id, uint64 per_call_limit_micro, uint64 daily_limit_micro)void
-// Creator or runtime only. Writes the lim box consumed by anchor_policy.
+// Creator or authorized signer only. Writes the lim box consumed by anchor_policy.
 handle_configure_agent:
   txn Sender
   global CreatorAddress
   ==
   bnz ca_authorized
+  byte "as:"
   txn Sender
-  byte "runtime"
-  app_global_get
-  ==
+  concat
+  box_len
+  pop
   bnz ca_authorized
   int 0
   return
@@ -437,9 +443,6 @@ handle_create:
   app_global_put
   byte "emergency_stop"
   int 0
-  app_global_put
-  byte "runtime"
-  byte ""
   app_global_put
   int 1
   return

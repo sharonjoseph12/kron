@@ -26,7 +26,7 @@ export class GeminiProvider implements LLMProvider {
   constructor(config: GeminiConfig) {
     if (!config.apiKey) throw new Error("GeminiProvider requires an apiKey");
     this.apiKey = config.apiKey;
-    this.model = config.model || "gemini-1.5-flash";
+    this.model = config.model || "gemini-2.5-flash";
     this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   }
 
@@ -50,9 +50,9 @@ export class GeminiProvider implements LLMProvider {
       ];
     }
 
-    const res = await fetch(`${this.baseUrl}/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`, {
+    const res = await fetch(`${this.baseUrl}/v1beta/models/${this.model}:generateContent`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-goog-api-key": this.apiKey },
       body: JSON.stringify(body),
       signal: params.signal,
     });

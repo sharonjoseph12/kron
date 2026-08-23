@@ -16,10 +16,16 @@ function optional(name: string, fallback: string): string {
  * `minLength`, generate a fresh cryptographically-random one so the server
  * never boots with a default/weak secret. Generated values are NOT persisted
  * back to .env — set them explicitly for stable sessions across restarts.
+ *
+ * In production, missing secrets are fatal: an ephemeral ENCRYPTION_KEY would
+ * make every stored wallet unrecoverable after a restart.
  */
 function secret(name: string, minLength: number): string {
   const v = process.env[name];
   if (v && v.length >= minLength) return v;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`[kron-config] ${name} missing or too short — refusing to boot in production with an ephemeral secret. Set it explicitly.`);
+  }
   const generated = crypto.randomBytes(Math.ceil(minLength / 2)).toString("hex");
   console.warn(`[kron-config] ${name} missing or too short — generated a random value. Set it in .env for stable restarts.`);
   return generated;
@@ -44,6 +50,8 @@ export interface KronConfig {
   seedAdminPassword: string;
   forceEscalate: boolean;
   demoMode: boolean;
+  /** Minutes an escalation stays actionable before it auto-expires. */
+  escalationTtlMinutes: number;
 }
 
 export const config: KronConfig = {
@@ -76,6 +84,7 @@ export const config: KronConfig = {
   seedAdminPassword: optional("SEED_ADMIN_PASSWORD", "admin1234"),
   forceEscalate: optional("FORCE_ESCALATE", "false") === "true",
   demoMode: optional("DEMO_MODE", "false") === "true",
+  escalationTtlMinutes: Number(optional("ESCALATION_TTL_MINUTES", "15")),
 };
 
 export const IS_DEV = config.nodeEnv !== "production";

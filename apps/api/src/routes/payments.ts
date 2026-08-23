@@ -6,7 +6,8 @@ import { executePaymentFlow, settleEscalatedPayment, toPaymentDTO, type ExecuteP
 import { recordAudit } from "../services/audit.js";
 import { hub } from "../events/hub.js";
 import { badRequest, notFound } from "../lib/http.js";
-import { currentUser, requireAuth } from "../lib/auth.js";
+import { currentUser, requireAuth, requireRole } from "../lib/auth.js";
+import { evaluateForAgent } from "../services/policies.js";
 
 function toPaymentRow(row: any) {
   return toPaymentDTO({
@@ -133,7 +134,7 @@ export async function paymentRoutes(fastify: FastifyInstance) {
     return flow;
   });
 
-  fastify.post("/api/escalations/:id/decide", { preHandler: requireAuth }, async (request, reply) => {
+  fastify.post("/api/escalations/:id/decide", { preHandler: [requireAuth, requireRole("admin")] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as { approve?: boolean };
     const user = currentUser(request);
@@ -141,7 +142,11 @@ export async function paymentRoutes(fastify: FastifyInstance) {
 
     const esc = await prisma.escalation.findUnique({ where: { id }, include: { decision: true } });
     if (!esc) return notFound(reply);
-    if (esc.status !== "pending") return badRequest(reply, "Escalation already decided");
+    if (esc.status !== "pending") return badRequest(reply, `Escalation already ${esc.status}`);
+    if (esc.expiresAt && esc.expiresAt.getTime() < Date.now()) {
+      await prisma.escalation.update({ where: { id }, data: { status: "expired" } });
+      return reply.code(409).send({ error: "escalation_expired", message: `Escalation expired at ${esc.expiresAt.toISOString()} without review` });
+    }
 
     await prisma.escalation.update({
       where: { id },
@@ -155,6 +160,29 @@ export async function paymentRoutes(fastify: FastifyInstance) {
     if (!payment) return notFound(reply);
 
     if (body.approve) {
+      // Approve-time re-validation: budgets/limits may have been consumed since
+      // the original ESCALATED decision. A fresh BLOCKED verdict never settles.
+      const revalidation = await evaluateForAgent(payment.agentId, payment.sessionId, {
+        amountMicro: payment.amountMicro,
+        recipient: payment.recipient,
+        service: payment.service,
+      }).catch(() => null);
+      if (revalidation && revalidation.evaluation.decision === "BLOCKED") {
+        await prisma.paymentRequest.update({ where: { id: payment.id }, data: { status: "blocked" } });
+        await recordAudit({
+          actorId: user.id,
+          actorType: "user",
+          action: "payment.blocked",
+          targetType: "PaymentRequest",
+          targetId: payment.id,
+          summary: `Escalation approved by ${user.email} but re-validation blocked: ${revalidation.evaluation.reasons.join("; ")}`,
+        });
+        return reply.code(409).send({
+          error: "revalidation_failed",
+          reasons: revalidation.evaluation.reasons,
+          message: "Policy re-check failed at approval time — payment not settled",
+        });
+      }
       // Settle directly from the persisted record. Re-running the flow would
       // collide on the deterministic clientRequestId and re-return ESCALATED.
       const flow = await settleEscalatedPayment(payment.id, user.email);

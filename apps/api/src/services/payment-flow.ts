@@ -16,7 +16,7 @@ import { prisma } from "../db.js";
 import { config } from "../config.js";
 import { algorand } from "../algorand/client.js";
 import { getWalletMnemonic } from "../algorand/vault.js";
-import { buildKronPayment } from "../algorand/contract.js";
+import { buildKronPayment, ensureOnChainEnforcement } from "../algorand/contract.js";
 import { algoToMicro, toAlgo } from "../lib/money.js";
 import { evaluateForAgent, createPolicyVersion, type CreatePolicyInput } from "./policies.js";
 import { appendTimeline } from "./timeline.js";
@@ -214,7 +214,12 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
     let escalationId: string | null = null;
     if (decision === "ESCALATED") {
       const esc = await prisma.escalation.create({
-        data: { paymentId: payment.id, decisionId: payment.decision!.id, summary: explanationFor(evaluation.reasons) },
+        data: {
+          paymentId: payment.id,
+          decisionId: payment.decision!.id,
+          summary: explanationFor(evaluation.reasons),
+          expiresAt: new Date(Date.now() + config.escalationTtlMinutes * 60_000),
+        },
       });
       escalationId = esc.id;
     } else {
@@ -271,6 +276,16 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
   await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "SUBMITTED", status: "pending", message: "Submitting atomic group to Algorand…" });
 
   try {
+    // One-time on-chain bootstrap: register this wallet as an authorized
+    // anchor signer and mirror policy limits into the contract (memoized).
+    if (policyVersion) {
+      await ensureOnChainEnforcement(
+        args.agentId,
+        agent.wallet.address,
+        policyVersion.perCallLimitMicro,
+        policyVersion.dailyBudgetMicro,
+      );
+    }
     // Build atomic group: app call (policy anchor) + payment
     const built = await buildKronPayment({
       mnemonic,
@@ -467,7 +482,7 @@ export async function settleEscalatedPayment(
       amountMicro,
       recipient: payment.recipient,
       policyVersion,
-      decision: "AUTO_APPROVED",
+      decision: "ESCALATED",
       reasons: decisionReasons,
       agentId: payment.agentId,
       resourceId: payment.resourceId,

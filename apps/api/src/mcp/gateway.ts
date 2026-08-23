@@ -18,6 +18,7 @@ import { executePaymentFlow, type ExecutePaymentResult } from "../services/payme
 import { recordAudit } from "../services/audit.js";
 import { hub } from "../events/hub.js";
 import { isSafeUrl } from "../lib/ssrf.js";
+import { decryptMnemonic } from "../algorand/vault.js";
 
 interface ServerRecord {
   id: string;
@@ -63,7 +64,14 @@ function transportFor(
 
 function headersFor(server: ServerRecord): Record<string, string> {
   if (!server.authTokenEnc) return {};
-  return { Authorization: `Bearer ${server.authTokenEnc}` };
+  try {
+    // authTokenEnc is AES-256-GCM ciphertext from the vault — decrypt before
+    // sending. Never transmit the stored ciphertext.
+    return { Authorization: `Bearer ${decryptMnemonic(server.authTokenEnc)}` };
+  } catch (err) {
+    console.warn(`[mcp-gateway] failed to decrypt auth token for server ${server.id}: ${err instanceof Error ? err.message : String(err)}`);
+    return {};
+  }
 }
 
 async function withClient<T>(server: ServerRecord, fn: (client: Client) => Promise<T>): Promise<T> {

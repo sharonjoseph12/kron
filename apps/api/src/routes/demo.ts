@@ -1,5 +1,5 @@
-/**
- * Demo reset endpoint — lets judges/one-click reset the offline demo
+﻿/**
+ * Demo reset endpoint â€” lets judges/one-click reset the offline demo
  * without wiping the DB. Clears payments/timeline but keeps agents/wallets/policies.
  */
 import type { FastifyInstance } from "fastify";
@@ -14,7 +14,7 @@ export async function demoRoutes(fastify: FastifyInstance) {
       return reply.code(403).send({ error: "Demo reset only allowed with DEMO_MODE=true" });
     }
 
-    // Keep agents/wallets/policies/mcpServers — only wipe ephemeral economic trace
+    // Keep agents/wallets/policies/mcpServers â€” only wipe ephemeral economic trace
     await prisma.settlement.deleteMany({});
     await prisma.escalation.deleteMany({});
     await prisma.paymentDecision.deleteMany({});
@@ -26,12 +26,12 @@ export async function demoRoutes(fastify: FastifyInstance) {
     await prisma.agentSession.updateMany({ data: { status: "idle" } });
     await prisma.agent.updateMany({ data: { status: "idle" } });
 
-    hub.publish({ type: "audit", entry: { id: `reset-${Date.now()}`, ts: new Date().toISOString(), actorId: null, actorType: "system", action: "demo.reset", targetType: "Demo", targetId: null, summary: "Demo reset — payments/timeline cleared, agents ready", detail: null, policyVersion: null } as unknown as never });
+    hub.publish({ type: "audit", entry: { id: `reset-${Date.now()}`, ts: new Date().toISOString(), actorId: null, actorType: "system", action: "demo.reset", targetType: "Demo", targetId: null, summary: "Demo reset â€” payments/timeline cleared, agents ready", detail: null, policyVersion: null } as unknown as never });
 
-    return { ok: true, message: "Demo reset — agents, wallets and policies preserved; payments and timeline cleared." };
+    return { ok: true, message: "Demo reset â€” agents, wallets and policies preserved; payments and timeline cleared." };
   });
 
-  fastify.get("/api/demo/status", async (_req, _reply) => {
+  fastify.get("/api/demo/status", { preHandler: requireAuth }, async (_req, _reply) => {
     const counts = {
       agents: await prisma.agent.count().catch(() => 0),
       wallets: await prisma.wallet.count().catch(() => 0),

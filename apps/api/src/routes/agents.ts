@@ -11,6 +11,7 @@ import { simulatePolicy, type PolicyRuleSet } from "@kron/policy-engine";
 import { prisma } from "../db.js";
 import { algorand } from "../algorand/client.js";
 import { createWalletKeys, ensureFunded } from "../algorand/vault.js";
+import { registerRuntimeSigner } from "../algorand/contract.js";
 import { executePaymentFlow } from "../services/payment-flow.js";
 import {
   createPolicyVersion,
@@ -76,6 +77,9 @@ export async function agentRoutes(fastify: FastifyInstance) {
     });
 
     await createPolicyVersion(agent.id, {}, user.id);
+    // Register the new wallet as an authorized anchor signer on-chain
+    // (contract set_runtime). Best-effort — never blocks agent creation.
+    void registerRuntimeSigner(keys.address);
 
     void recordAudit({
       actorId: user.id,
@@ -229,22 +233,28 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
   fastify.post("/api/agents/:id/wallet/fund", { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as { amountAlgo?: number };
+    const targetAlgo = body.amountAlgo && body.amountAlgo > 0 ? Math.min(body.amountAlgo, 50) : undefined;
     const agent = await prisma.agent.findUnique({ where: { id }, include: { wallet: true } });
     if (!agent || !agent.wallet) return notFound(reply, "Agent or wallet not found");
-    const balance = await ensureFunded(agent.wallet.address);
-    void recordAudit({
-      actorId: currentUser(request).id,
-      actorType: "user",
-      action: "wallet.funded",
-      targetType: "Wallet",
-      targetId: agent.wallet.id,
-      summary: `Wallet funded; balance ${balance.toFixed(4)} ALGO`,
-    });
-    hub.publish({
-      type: "wallet.updated",
-      wallet: { id: agent.wallet.id, agentId: id, address: agent.wallet.address, network: agent.wallet.network as "localnet" | "testnet" | "mainnet", balanceAlgo: balance, createdAt: agent.wallet.createdAt.toISOString() },
-    });
-    return { address: agent.wallet.address, balanceAlgo: balance };
+    try {
+      const balance = await ensureFunded(agent.wallet.address, targetAlgo);
+      void recordAudit({
+        actorId: currentUser(request).id,
+        actorType: "user",
+        action: "wallet.funded",
+        targetType: "Wallet",
+        targetId: agent.wallet.id,
+        summary: `Wallet funded; balance ${balance.toFixed(4)} ALGO`,
+      });
+      hub.publish({
+        type: "wallet.updated",
+        wallet: { id: agent.wallet.id, agentId: id, address: agent.wallet.address, network: agent.wallet.network as "localnet" | "testnet" | "mainnet", balanceAlgo: balance, createdAt: agent.wallet.createdAt.toISOString() },
+      });
+      return { address: agent.wallet.address, balanceAlgo: balance };
+    } catch (err) {
+      return badRequest(reply, `Funding failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   });
 
   fastify.post("/api/agents/:id/evaluate", { preHandler: requireAuth }, async (request, reply) => {

@@ -1,7 +1,8 @@
-import type { FastifyInstance } from "fastify";
+﻿import type { FastifyInstance } from "fastify";
 import type { DecisionSlice } from "@kron/shared";
 import { prisma } from "../db.js";
 import { algorand } from "../algorand/client.js";
+import { requireAuth } from "../lib/auth.js";
 
 function toAlgo(micro: bigint): number {
   return Number(micro) / 1_000_000;
@@ -10,7 +11,7 @@ function toAlgo(micro: bigint): number {
 const dayStart = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 export async function analyticsRoutes(fastify: FastifyInstance) {
-  fastify.get("/api/analytics/overview", async (_request, reply) => {
+  fastify.get("/api/analytics/overview", { preHandler: requireAuth }, async (_request, reply) => {
     const [agents, servers, payments] = await Promise.all([
       prisma.agent.count(),
       prisma.mcpServer.count({ where: { status: "healthy" } }),
@@ -90,7 +91,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     };
   });
 
-  fastify.get("/api/analytics/spend", async (_request, reply) => {
+  fastify.get("/api/analytics/spend", { preHandler: requireAuth }, async (_request, reply) => {
     const days = 14;
     const payments = await prisma.paymentRequest.findMany({
       where: { status: { in: ["confirmed", "authorized"] } },
@@ -109,7 +110,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     return { points };
   });
 
-  fastify.get("/api/analytics/decisions", async (_request, reply) => {
+  fastify.get("/api/analytics/decisions", { preHandler: requireAuth }, async (_request, reply) => {
     const payments = await prisma.paymentRequest.findMany({
       select: { decision: { select: { decision: true } } },
     });
@@ -124,7 +125,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     return { slices };
   });
 
-  fastify.get("/api/analytics/agents-spend", async (_request, reply) => {
+  fastify.get("/api/analytics/agents-spend", { preHandler: requireAuth }, async (_request, reply) => {
     const confirmed = await prisma.paymentRequest.findMany({
       where: { status: { in: ["confirmed", "authorized"] } },
       select: { agentId: true, amountMicro: true, agent: { select: { name: true } } },
@@ -139,7 +140,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     return { rows: [...map.values()].sort((a, b) => b.spendAlgo - a.spendAlgo) };
   });
 
-  fastify.get("/api/analytics/burn-rate", async (_request, reply) => {
+  fastify.get("/api/analytics/burn-rate", { preHandler: requireAuth }, async (_request, reply) => {
     const confirmed = await prisma.paymentRequest.findMany({
       where: { status: { in: ["confirmed", "authorized"] } },
       select: { amountMicro: true, createdAt: true },
@@ -169,7 +170,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     };
   });
 
-  fastify.get("/api/analytics/timeline/:sessionId", async (request, reply) => {
+  fastify.get("/api/analytics/timeline/:sessionId", { preHandler: requireAuth }, async (request, reply) => {
     const { sessionId } = request.params as { sessionId: string };
     const events = await prisma.timelineEvent.findMany({
       where: { sessionId },

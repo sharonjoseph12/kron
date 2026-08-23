@@ -45,20 +45,33 @@ export function createWalletKeys(): { address: string; encryptedKey: string } {
   return { address: account.addr.toString(), encryptedKey: encryptMnemonic(mnemonic) };
 }
 
-const MIN_FUNDING_ALGO = 20;
+const MIN_FUNDING_ALGO = 4;
 
 /**
- * Top up an agent wallet from the configured funding account (localnet).
- * On testnet/mainnet this is a no-op unless FUNDING_MNEMONIC is provided.
+ * Top up an agent wallet from the configured funding account.
+ * The transfer is clamped to what the funding account can actually spend, so
+ * a small TestNet treasury (dispenser gives 10 ALGO) never triggers an
+ * overspend rejection — it tops up as far as it can and reports the balance.
  */
-export async function ensureFunded(address: string, targetAlgo = MIN_FUNDING_ALGO): Promise<number> {
-  if (!config.fundingMnemonic) {
-    return 0;
-  }
+export async function ensureFunded(address: string, targetAlgo: number = MIN_FUNDING_ALGO): Promise<number> {
   const balance = await algorand.getBalanceAlgo(address);
-  if (balance >= targetAlgo) return balance;
-  const amountAlgo = targetAlgo - balance + 0.1; // cover min balance buffer
-  const sent = await algorand.sendPayment({
+  if (!config.fundingMnemonic || balance >= targetAlgo) {
+    return balance;
+  }
+  const FEE_ALGO = 0.001;
+  const MIN_BALANCE_BUFFER = 0.1;
+  const fundingAccount = algosdk.mnemonicToSecretKey(config.fundingMnemonic);
+  const fundingBalance = await algorand
+    .getBalanceAlgo(fundingAccount.addr.toString())
+    .catch(() => 0);
+  const needed = targetAlgo - balance + MIN_BALANCE_BUFFER;
+  const spendable = Math.max(0, fundingBalance - FEE_ALGO - MIN_BALANCE_BUFFER);
+  const amountAlgo = Math.min(needed, spendable);
+  if (amountAlgo < FEE_ALGO) {
+    // Funding treasury exhausted — report current balance rather than failing.
+    return balance;
+  }
+  await algorand.sendPayment({
     mnemonic: config.fundingMnemonic,
     amountMicro: BigInt(Math.round(amountAlgo * 1_000_000)),
     recipient: address,

@@ -123,7 +123,7 @@ describe("ARC-4 ABI helpers", () => {
     expect(APPROVAL_TEAL).toContain("gtxn 1 TypeEnum");
     expect(APPROVAL_TEAL).toContain("gtxn 1 Sender");
     expect(APPROVAL_TEAL).toContain("gtxn 1 Amount");
-    expect(APPROVAL_TEAL).toContain('byte "runtime"');
+    expect(APPROVAL_TEAL).toContain('byte "as:"');
     expect(APPROVAL_TEAL).toContain("handle_set_runtime");
     expect(APPROVAL_TEAL).toContain("handle_configure_agent");
   });

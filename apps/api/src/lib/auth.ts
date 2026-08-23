@@ -1,6 +1,6 @@
 /**
  * Session auth for the dashboard (FR-AUTH-001..003). A random 256-bit token
- * is stored in an httpOnly cookie; the session row lives in Postgres with an
+ * is stored in an httpOnly cookie; the session row lives in SQLite with an
  * expiry and revoke flag so logouts are immediate and server-side.
  */
 import crypto from "node:crypto";
@@ -44,7 +44,14 @@ export async function getSessionUser(request: FastifyRequest): Promise<User | nu
     }
   }
 
-  // 2. Check session cookie
+  // 2. Check ?token= query param (EventSource cannot send headers)
+  const queryToken = (request.query as Record<string, unknown> | null)?.token;
+  if (typeof queryToken === "string" && queryToken) {
+    const s = await prisma.session.findUnique({ where: { token: queryToken }, include: { user: true } });
+    if (s && !s.revoked && s.expiresAt.getTime() >= Date.now()) return s.user;
+  }
+
+  // 3. Check session cookie
   const token = request.cookies?.[AUTH_COOKIE];
   if (!token) return null;
   const s = await prisma.session.findUnique({ where: { token }, include: { user: true } });
@@ -59,6 +66,25 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
     return reply.code(401).send({ error: "Unauthorized: Missing or invalid API key / session token" });
   }
   (request as FastifyRequest & { user: User }).user = user;
+}
+
+const ROLE_RANK: Record<string, number> = { viewer: 0, operator: 1, admin: 2 };
+
+/**
+ * Fastify preHandler factory enforcing the role hierarchy
+ * (viewer < operator < admin). Must run after requireAuth.
+ */
+export function requireRole(minRole: keyof typeof ROLE_RANK | string) {
+  const min = ROLE_RANK[minRole] ?? 0;
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    const user = (request as FastifyRequest & { user?: User }).user;
+    if (!user) {
+      return reply.code(401).send({ error: "Unauthorized" });
+    }
+    if ((ROLE_RANK[user.role] ?? 0) < min) {
+      return reply.code(403).send({ error: `Forbidden: requires role ${minRole} (you are ${user.role})` });
+    }
+  };
 }
 
 

@@ -67,17 +67,17 @@ export function assessAnomaly(args: {
   // to the agent's autonomous per-call limit.
   const windowStart = request.timestampMs - burstWindowMs;
   const burst = history.filter((h) => h.timestampMs >= windowStart && h.timestampMs <= request.timestampMs);
-  if (burst.length + 1 >= ANOMALY_DEFAULTS.burstMinCount) {
+  if (burst.length >= ANOMALY_DEFAULTS.burstMinCount) {
     const ratio =
       args.perCallLimitMicro && args.perCallLimitMicro > 0n
         ? Number((request.amountMicro * 100n) / args.perCallLimitMicro) / 100
         : 1;
     const amountFactor = 0.5 + 0.5 * clamp(ratio, 0, 1);
-    const weight = Math.round(clamp((burst.length - 1) * 10, 5, 30) * amountFactor);
+    const weight = Math.round(clamp((burst.length - 2) * 10, 5, 30) * amountFactor);
     signals.push({
       code: "BURST",
       weight,
-      detail: `${burst.length + 1} payments within ${Math.round(burstWindowMs / 1000)}s`,
+      detail: `${burst.length} prior payments within ${Math.round(burstWindowMs / 1000)}s`,
     });
   }
 
