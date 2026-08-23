@@ -91,10 +91,11 @@ export async function reportToGoPlausible(args: GoPlausibleReportArgs): Promise<
       scheme: "exact",
       network: caip2Network,
       payTo: args.recipient,
+      amount: args.amountMicro.toString(),
       maxAmountRequired: args.amountMicro.toString(),
       ...(isAsaPayment
         ? { asset: String(assetId) }
-        : { asset: "0" }),
+        : { asset: "10458941" }), // GoPlausible facilitator requires an assetId (USDC default on testnet)
       resource: {
         url: args.resourceUrl,
         method: "GET",
