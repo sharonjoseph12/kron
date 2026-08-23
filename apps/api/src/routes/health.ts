@@ -70,7 +70,14 @@ export async function healthRoutes(fastify: FastifyInstance) {
 
   // Alias for judges who try /health instead of /healthz
   fastify.get("/health", async (_request, reply) => {
-    // Reuse same logic but always 200 for dashboard polling
+    return reply.redirect("/healthz");
+  });
+
+  fastify.get("/api/healthz", async (_request, reply) => {
+    return reply.redirect("/healthz");
+  });
+
+  fastify.get("/api/health", async (_request, reply) => {
     return reply.redirect("/healthz");
   });
 }

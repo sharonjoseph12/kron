@@ -22,6 +22,7 @@ import { evaluateForAgent, createPolicyVersion, type CreatePolicyInput } from ".
 import { appendTimeline } from "./timeline.js";
 import { recordAudit } from "./audit.js";
 import { hub } from "../events/hub.js";
+import { reportToGoPlausible } from "./goplausible.js";
 
 const FEE_MICRO = 2000n;
 const MIN_BALANCE_MICRO = 100_000n;
@@ -348,6 +349,17 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
       summary: `Settled ${microToAlgo(amountMicro).toFixed(4)} ALGO on ${network} (${paymentTxId})${built.appId ? ` — atomic group, app ${built.appId}` : ""}`,
     });
 
+    // Report to GoPlausible facilitator (fire-and-forget)
+    reportToGoPlausible({
+      signedTxnB64: built.signedB64,
+      paymentTxId,
+      appCallTxId: built.appCallTxId,
+      recipient: args.recipient,
+      amountMicro,
+      resourceUrl: args.instructionUrl ?? `kron://${args.service}/${args.resourceId}`,
+      asset: args.asset,
+    }).catch(() => {});
+
     return {
       status: "AUTO_APPROVED",
       payment: toPaymentDTO(settled),
@@ -533,6 +545,16 @@ export async function settleEscalatedPayment(
       policyVersion: payment.decision?.policyVersionNumber ?? undefined,
       summary: `Escalation approved — settled ${microToAlgo(amountMicro).toFixed(4)} ALGO on ${network} (${paymentTxId})${built.appId ? ` — atomic group, app ${built.appId}` : ""}`,
     });
+
+    // Report to GoPlausible facilitator (fire-and-forget)
+    reportToGoPlausible({
+      signedTxnB64: built.signedB64,
+      paymentTxId,
+      appCallTxId: built.appCallTxId,
+      recipient: payment.recipient,
+      amountMicro,
+      resourceUrl: payment.instructionUrl ?? `kron://${payment.service}/${payment.resourceId}`,
+    }).catch(() => {});
 
     return {
       status: "AUTO_APPROVED",
