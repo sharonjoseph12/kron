@@ -11,6 +11,10 @@ export interface Config {
   indexerToken: string;
   fundingMnemonic: string;
   merchantMnemonic: string;
+  /** KRON Policy Anchor app ID. When > 0, settlements must carry a grouped anchor proof. */
+  anchorAppId: number;
+  /** Toggle for the on-chain policy-anchor enforcement (default: on when anchorAppId set). */
+  requirePolicyAnchor: boolean;
 }
 
 function optional(name: string, fallback: string): string {
@@ -28,4 +32,6 @@ export const config: Config = {
   indexerToken: optional("INDEXER_TOKEN", ""),
   fundingMnemonic: optional("FUNDING_MNEMONIC", ""),
   merchantMnemonic: optional("MERCHANT_MNEMONIC", ""),
+  anchorAppId: Number(optional("KRON_ANCHOR_APP_ID", "0")),
+  requirePolicyAnchor: optional("REQUIRE_POLICY_ANCHOR", "true") !== "false",
 };

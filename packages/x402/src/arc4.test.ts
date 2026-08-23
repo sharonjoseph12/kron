@@ -9,6 +9,8 @@ import {
   buildGetAgentPolicyHashArgs,
   buildSetEmergencyStopArgs,
   buildFlushArgs,
+  buildSetRuntimeArgs,
+  buildConfigureAgentArgs,
   buildPolicyHash,
 } from "../src/contract.js";
 
@@ -18,6 +20,8 @@ describe("ARC-4 ABI helpers", () => {
     expect(Buffer.from(arc4MethodSelector(ARC4_METHODS.getPaymentCount)).toString("hex")).toBe("817d3e72");
     expect(Buffer.from(arc4MethodSelector(ARC4_METHODS.getLastPolicyHash)).toString("hex")).toBe("22a4fb91");
     expect(Buffer.from(arc4MethodSelector(ARC4_METHODS.getAgentPolicyHash)).toString("hex")).toBe("9fba667f");
+    expect(Buffer.from(arc4MethodSelector(ARC4_METHODS.setRuntime)).toString("hex")).toBe("f691fde4");
+    expect(Buffer.from(arc4MethodSelector(ARC4_METHODS.configureAgent)).toString("hex")).toBe("817a20d3");
     expect(Buffer.from(arc4MethodSelector(ARC4_METHODS.setEmergencyStop)).toString("hex")).toBe("481676f5");
     expect(Buffer.from(arc4MethodSelector(ARC4_METHODS.flush)).toString("hex")).toBe("7f9acc63");
   });
@@ -79,12 +83,27 @@ describe("ARC-4 ABI helpers", () => {
     expect(Buffer.from(flush[0]!).toString("hex")).toBe("7f9acc63");
   });
 
+  it("builds set_runtime / configure_agent app args", () => {
+    const addr = "M4GODAWKTANDGRGDQMUPO5I7X4KAICRQ2B7HCS2ZGZ2EPVEHHM7MXAQ4YI";
+    const rt = buildSetRuntimeArgs(addr);
+    expect(Buffer.from(rt[0]!).toString("hex")).toBe("f691fde4");
+    expect(rt[1]!.length).toBe(32);
+
+    const ca = buildConfigureAgentArgs({ agentId: "researcher-01", perCallLimitMicro: 50_000n, dailyLimitMicro: 2_000_000n });
+    expect(Buffer.from(ca[0]!).toString("hex")).toBe("817a20d3");
+    expect(new TextDecoder().decode(ca[1]!.slice(2))).toBe("researcher-01");
+    expect(new DataView(ca[2]!.buffer).getBigUint64(0, false)).toBe(50_000n);
+    expect(new DataView(ca[3]!.buffer).getBigUint64(0, false)).toBe(2_000_000n);
+  });
+
   it("the TEAL source embeds the exact selectors it dispatches on", async () => {
     const { APPROVAL_TEAL } = await import("../src/contract.js");
     expect(APPROVAL_TEAL).toContain("0xec5e4747");
     expect(APPROVAL_TEAL).toContain("0x817d3e72");
     expect(APPROVAL_TEAL).toContain("0x22a4fb91");
     expect(APPROVAL_TEAL).toContain("0x9fba667f");
+    expect(APPROVAL_TEAL).toContain("0xf691fde4");
+    expect(APPROVAL_TEAL).toContain("0x817a20d3");
     expect(APPROVAL_TEAL).toContain("0x481676f5");
     expect(APPROVAL_TEAL).toContain("0x7f9acc63");
   });
@@ -96,5 +115,40 @@ describe("ARC-4 ABI helpers", () => {
     expect(APPROVAL_TEAL).toContain("emergency_stop");
     expect(APPROVAL_TEAL).toContain("itxn_begin");
     expect(APPROVAL_TEAL).toContain("itxn_submit");
+  });
+
+  it("anchor_policy enforces the atomic group, caller allowlist and amount linkage on-chain", async () => {
+    const { APPROVAL_TEAL } = await import("../src/contract.js");
+    expect(APPROVAL_TEAL).toContain("global GroupSize");
+    expect(APPROVAL_TEAL).toContain("gtxn 1 TypeEnum");
+    expect(APPROVAL_TEAL).toContain("gtxn 1 Sender");
+    expect(APPROVAL_TEAL).toContain("gtxn 1 Amount");
+    expect(APPROVAL_TEAL).toContain('byte "runtime"');
+    expect(APPROVAL_TEAL).toContain("handle_set_runtime");
+    expect(APPROVAL_TEAL).toContain("handle_configure_agent");
+  });
+
+  it("getters return ARC-4 ABI values via log with the 0x151f prefix", async () => {
+    const { APPROVAL_TEAL } = await import("../src/contract.js");
+    const logCount = APPROVAL_TEAL.split("\n").filter((l) => l.trim() === "log").length;
+    expect(logCount).toBe(4);
+    expect(APPROVAL_TEAL).toContain("byte 0x151f");
+  });
+
+  it("on-chain limits: configure_agent writes lim boxes, anchor enforces per-call + daily", async () => {
+    const { APPROVAL_TEAL } = await import("../src/contract.js");
+    expect(APPROVAL_TEAL).toContain('byte "lim:"');
+    expect(APPROVAL_TEAL).toContain('byte "ds:"');
+    expect(APPROVAL_TEAL).toContain("int 86400");
+    expect(APPROVAL_TEAL).toContain("anchor_limit_exceeded");
+    expect(APPROVAL_TEAL).toContain("anchor_daily_exceeded");
+  });
+
+  it("embedded APPROVAL_TEAL stays in sync with teal/approval.teal", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const file = fs.readFileSync(path.join(__dirname, "..", "teal", "approval.teal"), "utf8").replace(/\r\n/g, "\n");
+    const { APPROVAL_TEAL } = await import("../src/contract.js");
+    expect(APPROVAL_TEAL.replace(/\r\n/g, "\n")).toBe(file);
   });
 });

@@ -79,7 +79,7 @@ export interface AgentLoopOptions {
 }
 
 export interface LLMProvider {
-  readonly name: "anthropic" | "openai";
+  readonly name: "anthropic" | "openai" | "gemini";
   readonly model: string;
   complete(params: CompleteParams): Promise<AssistantMessage>;
 }

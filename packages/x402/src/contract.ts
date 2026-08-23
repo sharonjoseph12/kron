@@ -26,6 +26,8 @@ export const ARC4_METHODS = {
   getPaymentCount: "get_payment_count()uint64",
   getLastPolicyHash: "get_last_policy_hash()byte[32]",
   getAgentPolicyHash: "get_agent_policy_hash(string)byte[32]",
+  setRuntime: "set_runtime(address)void",
+  configureAgent: "configure_agent(string,uint64,uint64)void",
   setEmergencyStop: "set_emergency_stop(bool)void",
   flush: "flush()void",
 } as const;
@@ -87,6 +89,25 @@ export function buildGetAgentPolicyHashArgs(agentId: string): Uint8Array[] {
 /** ARC-4 app args for `flush()void`: [selector]. */
 export function buildFlushArgs(): Uint8Array[] {
   return [arc4MethodSelector(ARC4_METHODS.flush)];
+}
+
+/** ARC-4 app args for `set_runtime(address)`: [selector, address]. */
+export function buildSetRuntimeArgs(runtimeAddress: string): Uint8Array[] {
+  return [arc4MethodSelector(ARC4_METHODS.setRuntime), algosdk.decodeAddress(runtimeAddress).publicKey];
+}
+
+/** ARC-4 app args for `configure_agent(string,uint64,uint64)`. */
+export function buildConfigureAgentArgs(args: {
+  agentId: string;
+  perCallLimitMicro: bigint;
+  dailyLimitMicro: bigint;
+}): Uint8Array[] {
+  return [
+    arc4MethodSelector(ARC4_METHODS.configureAgent),
+    arc4EncodeString(args.agentId),
+    arc4EncodeUint64(args.perCallLimitMicro),
+    arc4EncodeUint64(args.dailyLimitMicro),
+  ];
 }
 
 /* ------------------------------------------------------------------ */
@@ -160,20 +181,40 @@ export function buildPolicyHash(input: PolicyHashInput): string {
  *   - get_payment_count()uint64                  → 817d3e72
  *   - get_last_policy_hash()byte[32]             → 22a4fb91
  *   - get_agent_policy_hash(string)byte[32]      → 9fba667f
+ *   - set_runtime(address)void                   → f691fde4  (creator only)
+ *   - configure_agent(string,uint64,uint64)void  → 817a20d3  (creator/runtime)
  *   - set_emergency_stop(bool)void               → 481676f5  (creator only)
  *   - flush()void                                → 7f9acc63  (creator only, inner txn)
  *
  * State: global `total_payments`, `last_policy_hash`, `last_agent_id`,
- * `last_amount_micro`, `emergency_stop`; per-agent box `ag:<agent_id>` holding
- * the agent's most recent policy hash (byte[32]).
+ * `last_amount_micro`, `emergency_stop`, `runtime`; per-agent boxes
+ * `ag:<agent_id>` (policy hash), `lim:<agent_id>` (on-chain spend limits) and
+ * `ds:<agent_id><day>` (daily spend accumulator).
  *
- * Return values follow the ARC-4 convention (scratch slot 0 before `int 1`).
+ * v4 enforcement semantics:
+ *   - anchor_policy is callable only by the creator or the registered runtime
+ *     signer (`set_runtime`).
+ *   - It requires GroupSize==2 with tx[1] a pay/axfer from the same sender
+ *     whose Amount equals the anchored amount — the anchor and the payment are
+ *     inseparable.
+ *   - For configured agents it enforces per-call and rolling daily limits in
+ *     TEAL: an out-of-policy payment cannot confirm alongside its anchor.
+ *
+ * Getter methods return ARC-4 ABI values via `log` with the 0x151f prefix.
  */
 export const APPROVAL_TEAL = `#pragma version 10
-// KRON Policy Anchor Contract v3 — ARC-4 method dispatch
+// KRON Policy Anchor & Enforcement Contract v4 — ARC-4 method dispatch
 // Globals: total_payments, last_policy_hash, last_agent_id,
-//          last_amount_micro, emergency_stop
-// Boxes:   ag:<agent_id> -> byte[32] policy hash
+//          last_amount_micro, emergency_stop, runtime
+// Boxes:   ag:<agent_id>          -> byte[32] policy hash
+//          lim:<agent_id>         -> per_call_limit(8) || daily_limit(8)
+//          ds:<agent_id><day(8)>  -> daily spend accumulator
+//
+// anchor_policy is gated to the creator or the registered runtime signer and
+// validates its sibling transaction: GroupSize==2, tx[1] is a pay/axfer from
+// the same sender whose Amount equals the anchored amount, and — for agents
+// configured via configure_agent — enforces per-call and rolling daily limits
+// ON-CHAIN. A payment outside policy cannot confirm with its anchor.
 
 txn ApplicationID
 int 0
@@ -202,6 +243,16 @@ byte 0x9fba667f
 bnz handle_get_agent_policy_hash
 
 txn ApplicationArgs 0
+byte 0xf691fde4
+==
+bnz handle_set_runtime
+
+txn ApplicationArgs 0
+byte 0x817a20d3
+==
+bnz handle_configure_agent
+
+txn ApplicationArgs 0
 byte 0x481676f5
 ==
 bnz handle_set_emergency_stop
@@ -219,15 +270,124 @@ handle_anchor_policy:
   txn NumAppArgs
   int 4
   ==
-  bnz anchor_args_ok
+  bz anchor_fail
+anchor_args_ok:
+  // authorization: creator or registered runtime signer only
+  txn Sender
+  global CreatorAddress
+  ==
+  bnz anchor_authorized
+  txn Sender
+  byte "runtime"
+  app_global_get
+  ==
+  bnz anchor_authorized
   int 0
   return
-anchor_args_ok:
+anchor_authorized:
   // reject while emergency stop is engaged
   byte "emergency_stop"
   app_global_get
   bnz anchor_blocked
 
+  // --- atomic-group enforcement: sibling payment must match this anchor ---
+  global GroupSize
+  int 2
+  ==
+  bz anchor_blocked
+  gtxn 1 TypeEnum
+  int pay
+  ==
+  bnz anchor_group_sender_ok
+  gtxn 1 TypeEnum
+  int axfer
+  ==
+  bz anchor_blocked
+anchor_group_sender_ok:
+  txn Sender
+  gtxn 1 Sender
+  ==
+  bz anchor_blocked
+
+  txn ApplicationArgs 3
+  btoi
+  store 5
+  load 5
+  int 0
+  >
+  bz anchor_blocked
+  load 5
+  gtxn 1 Amount
+  ==
+  bz anchor_blocked
+
+  // --- on-chain spending limits (agents configured via configure_agent) ---
+  byte "lim:"
+  txn ApplicationArgs 2
+  extract 2 0
+  concat
+  box_get
+  bz anchor_lim_missing
+  store 6
+  load 6
+  extract 0 8
+  btoi
+  store 7
+  load 6
+  extract 8 8
+  btoi
+  store 8
+  b anchor_limits_loaded
+anchor_lim_missing:
+  pop
+  b anchor_no_limits
+anchor_limits_loaded:
+  // per-call limit: amount <= lim.per_call
+  load 5
+  load 7
+  <=
+  bz anchor_limit_exceeded
+
+  // rolling daily budget: ds:<agent><day> accumulator + amount <= lim.daily
+  byte "ds:"
+  txn ApplicationArgs 2
+  extract 2 0
+  concat
+  global LatestTimestamp
+  int 86400
+  /
+  itob
+  concat
+  box_get
+  bz anchor_daily_empty
+  btoi
+  load 5
+  +
+  store 9
+  b anchor_daily_check
+anchor_daily_empty:
+  pop
+  load 5
+  store 9
+anchor_daily_check:
+  load 9
+  load 8
+  <=
+  bz anchor_daily_exceeded
+
+  byte "ds:"
+  txn ApplicationArgs 2
+  extract 2 0
+  concat
+  global LatestTimestamp
+  int 86400
+  /
+  itob
+  concat
+  load 9
+  box_put
+
+anchor_no_limits:
   byte "total_payments"
   app_global_get
   int 1
@@ -246,11 +406,10 @@ anchor_args_ok:
   app_global_put
 
   byte "last_amount_micro"
-  txn ApplicationArgs 3
-  btoi
+  load 5
   app_global_put
 
-  // per-agent box: "ag:" + agent_id -> policy_hash
+  // per-agent box: "ag:" + agent_id -> policy hash
   byte "ag:"
   txn ApplicationArgs 2
   extract 2 0
@@ -260,23 +419,30 @@ anchor_args_ok:
 
   int 1
   return
+anchor_limit_exceeded:
+anchor_daily_exceeded:
 anchor_blocked:
+anchor_fail:
   int 0
   return
 
-// get_payment_count()uint64
+// get_payment_count()uint64 — ARC-4 return via log (0x151f prefix)
 handle_get_payment_count:
   txn NumAppArgs
   int 1
   ==
-  bnz count_args_ok
-  int 0
-  return
+  bz count_fail
 count_args_ok:
+  byte 0x151f
   byte "total_payments"
   app_global_get
-  store 0
+  itob
+  concat
+  log
   int 1
+  return
+count_fail:
+  int 0
   return
 
 // get_last_policy_hash()byte[32]
@@ -284,14 +450,17 @@ handle_get_last_policy_hash:
   txn NumAppArgs
   int 1
   ==
-  bnz hash_args_ok
-  int 0
-  return
+  bz hash_fail
 hash_args_ok:
+  byte 0x151f
   byte "last_policy_hash"
   app_global_get
-  store 0
+  concat
+  log
   int 1
+  return
+hash_fail:
+  int 0
   return
 
 // get_agent_policy_hash(string agent_id)byte[32]
@@ -299,25 +468,96 @@ handle_get_agent_policy_hash:
   txn NumAppArgs
   int 2
   ==
-  bnz agent_hash_args_ok
-  int 0
-  return
+  bz agent_hash_fail
 agent_hash_args_ok:
   byte "ag:"
   txn ApplicationArgs 1
   extract 2 0
   concat
   box_get
-  // stack: [value, exists]
-  bnz agent_hash_found
-  pop
-  byte 0x0000000000000000000000000000000000000000000000000000000000000000
-  store 0
+  bz agent_hash_missing
+  byte 0x151f
+  concat
+  log
   int 1
   return
-agent_hash_found:
-  store 0
+agent_hash_missing:
+  pop
+  byte 0x151f
+  byte 0x0000000000000000000000000000000000000000000000000000000000000000
+  concat
+  log
   int 1
+  return
+agent_hash_fail:
+  int 0
+  return
+
+// set_runtime(address runtime)void — creator only; registers the KRON runtime signer
+handle_set_runtime:
+  txn Sender
+  global CreatorAddress
+  ==
+  bz sr_denied
+  txn NumAppArgs
+  int 2
+  ==
+  bz sr_denied
+  txn ApplicationArgs 1
+  len
+  int 32
+  ==
+  bz sr_denied
+  byte "runtime"
+  txn ApplicationArgs 1
+  app_global_put
+  int 1
+  return
+sr_denied:
+  int 0
+  return
+
+// configure_agent(string agent_id, uint64 per_call_limit_micro, uint64 daily_limit_micro)void
+// Creator or runtime only. Writes the lim box consumed by anchor_policy.
+handle_configure_agent:
+  txn Sender
+  global CreatorAddress
+  ==
+  bnz ca_authorized
+  txn Sender
+  byte "runtime"
+  app_global_get
+  ==
+  bnz ca_authorized
+  int 0
+  return
+ca_authorized:
+  txn NumAppArgs
+  int 4
+  ==
+  bz ca_denied
+  txn ApplicationArgs 2
+  len
+  int 8
+  ==
+  bz ca_denied
+  txn ApplicationArgs 3
+  len
+  int 8
+  ==
+  bz ca_denied
+  byte "lim:"
+  txn ApplicationArgs 1
+  extract 2 0
+  concat
+  txn ApplicationArgs 2
+  txn ApplicationArgs 3
+  concat
+  box_put
+  int 1
+  return
+ca_denied:
+  int 0
   return
 
 // set_emergency_stop(bool stopped)void — creator only
@@ -401,6 +641,9 @@ handle_create:
   app_global_put
   byte "emergency_stop"
   int 0
+  app_global_put
+  byte "runtime"
+  byte ""
   app_global_put
   int 1
   return
@@ -546,7 +789,7 @@ export async function deployKronContract(args: DeployAppArgs): Promise<DeployedA
     approvalProgram,
     clearProgram,
     numGlobalInts: 3,     // total_payments, last_amount_micro, emergency_stop
-    numGlobalByteSlices: 2, // last_policy_hash, last_agent_id
+    numGlobalByteSlices: 3, // last_policy_hash, last_agent_id, runtime
     numLocalInts: 0,
     numLocalByteSlices: 0,
     onComplete: algosdk.OnApplicationComplete.NoOpOC,
@@ -695,6 +938,24 @@ export const KRON_ARC4_CONTRACT_ABI = {
         { type: "string", name: "agent_id", desc: "Autonomous agent identifier" }
       ],
       returns: { type: "byte[32]" }
+    },
+    {
+      name: "set_runtime",
+      desc: "Creator-only registration of the KRON runtime signer authorized to anchor payments",
+      args: [
+        { type: "address", name: "runtime", desc: "Runtime signer account" }
+      ],
+      returns: { type: "void" }
+    },
+    {
+      name: "configure_agent",
+      desc: "Sets ON-CHAIN per-call and daily spending limits enforced by anchor_policy",
+      args: [
+        { type: "string", name: "agent_id", desc: "Autonomous agent identifier" },
+        { type: "uint64", name: "per_call_limit_micro", desc: "Maximum microAlgo per single payment" },
+        { type: "uint64", name: "daily_limit_micro", desc: "Maximum microAlgo per rolling UTC day" }
+      ],
+      returns: { type: "void" }
     },
     {
       name: "set_emergency_stop",

@@ -2,6 +2,7 @@ import "dotenv/config";
 import {
   AnthropicProvider,
   OpenAIProvider,
+  GeminiProvider,
   connectKronTools,
   runAgentLoop,
   type AgentStep,
@@ -28,6 +29,8 @@ const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", "");
 const ANTHROPIC_MODEL = env("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929");
 const OPENAI_API_KEY = env("OPENAI_API_KEY", "");
 const OPENAI_MODEL = env("OPENAI_MODEL", "gpt-4o");
+const GEMINI_API_KEY = env("GEMINI_API_KEY", "");
+const GEMINI_MODEL = env("GEMINI_MODEL", "gemini-1.5-flash");
 const MAX_ITERATIONS = toNumber(env("KRON_MAX_ITERATIONS", "10"), 10);
 const DEFAULT_PROMPT = env(
   "KRON_PROMPT",
@@ -89,6 +92,10 @@ function createProvider(override?: string): LLMProvider {
   if (providerName === "openai") {
     if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set (KRON_LLM_PROVIDER=openai)");
     return new OpenAIProvider({ apiKey: OPENAI_API_KEY, model: OPENAI_MODEL });
+  }
+  if (providerName === "gemini") {
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not set (KRON_LLM_PROVIDER=gemini)");
+    return new GeminiProvider({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL });
   }
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set (KRON_LLM_PROVIDER=anthropic)");
   return new AnthropicProvider({ apiKey: ANTHROPIC_API_KEY, model: ANTHROPIC_MODEL });

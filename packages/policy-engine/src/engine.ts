@@ -10,6 +10,7 @@
  *   BLOCKED        -> violates a hard constraint, never paid
  */
 import type { PolicyEvaluation, PolicyDecision, RuleHit } from "@kron/shared";
+import { assessAnomaly, ANOMALY_DEFAULTS, type AnomalyHistoryItem } from "./anomaly.js";
 
 /** Policy fields the engine needs. Amounts are exact microAlgo integers. */
 export interface PolicyRuleSet {
@@ -33,12 +34,18 @@ export interface PolicyRuleSet {
   velocityWindowSeconds?: number;
   /** Action on velocity spike (default: "block"). */
   velocityAction?: "block" | "escalate";
+  /** Anomaly score at/above which a payment is blocked (default: 85). */
+  anomalyBlockThreshold?: number;
+  /** Anomaly score at/above which a payment escalates (default: 60). */
+  anomalyEscalateThreshold?: number;
 }
 
 export interface EvaluateRequest {
   amountMicro: bigint;
   recipient: string;
   service: string;
+  /** Request time (epoch ms) — passed explicitly for deterministic simulation. */
+  timestampMs?: number;
 }
 
 /** Spend / trust facts known at evaluation time. */
@@ -48,6 +55,8 @@ export interface EvaluateContext {
   dailyPaymentCount: number;
   /** Count of payments by this agent within the rolling velocity window. */
   recentPaymentCountInWindow?: number;
+  /** Recent payment history for anomaly scoring (e.g., trailing 24h). */
+  recentPayments?: ReadonlyArray<AnomalyHistoryItem>;
   /** Addresses the agent (or org) has paid before. */
   knownRecipients: ReadonlySet<string>;
   /** Services the agent has used before. */
@@ -225,6 +234,36 @@ export function evaluatePayment(
         `Velocity spike: ${(ctx.recentPaymentCountInWindow ?? 0) + 1} payments in ${windowSec}s requires review.`,
       );
       push(hit("velocity_spike", "Spending velocity warning", "warn"));
+    }
+  }
+
+  // 14. Behavioral anomaly score — burst weighting, recipient novelty, amount outliers
+  if (ctx.recentPayments) {
+    const assessment = assessAnomaly({
+      request: {
+        amountMicro,
+        recipient,
+        timestampMs: request.timestampMs ?? Date.now(),
+      },
+      history: ctx.recentPayments,
+      perCallLimitMicro: policy.perCallLimitMicro,
+    });
+    const blockThreshold = policy.anomalyBlockThreshold ?? ANOMALY_DEFAULTS.blockThreshold;
+    const escalateThreshold = policy.anomalyEscalateThreshold ?? ANOMALY_DEFAULTS.escalateThreshold;
+    const topCodes = assessment.signals.map((s) => s.code).join("+");
+    if (assessment.score >= blockThreshold) {
+      hardBlock(
+        `Anomaly score ${assessment.score} (>= block threshold ${blockThreshold}): ${topCodes || "composite risk"}.`,
+      );
+      push(hit("anomaly_score", `Behavioral anomaly blocked (${topCodes})`, "block"));
+    } else if (assessment.score >= escalateThreshold) {
+      escalate(
+        `Anomaly score ${assessment.score} (>= escalation threshold ${escalateThreshold}): ${topCodes || "composite risk"}.`,
+      );
+      push(hit("anomaly_score", `Behavioral anomaly flagged (${topCodes})`, "warn"));
+    } else if (assessment.signals.length > 0) {
+      note(`Anomaly score ${assessment.score}: ${topCodes}.`);
+      push(hit("anomaly_score", `Low-level anomaly signals (${topCodes})`, "info"));
     }
   }
 

@@ -16,6 +16,8 @@ export interface SimTransaction {
   recipient: string;
   service: string;
   ts: string; // ISO timestamp, used for daily bucketing
+  /** Optional session grouping — enables the session-budget rule in simulation. */
+  sessionId?: string;
 }
 
 export interface SimulateArgs {
@@ -45,6 +47,12 @@ export function simulatePolicy(args: SimulateArgs): SimulationResult {
   const buckets = new Map<string, Bucket>();
   const seenRecipients = new Set<string>();
   const seenServices = new Set<string>();
+  const sessionSpend = new Map<string, bigint>();
+  /** Timestamps (epoch ms) of payments auto-approved under the draft, for velocity replay. */
+  const approvedTimestamps: number[] = [];
+  /** Draft-approved payment trail feeding behavioral anomaly scoring. */
+  const approvedHistory: { amountMicro: bigint; recipient: string; timestampMs: number }[] = [];
+  const velocityWindowMs = (draft.velocityWindowSeconds ?? 60) * 1000;
 
   const current: SimulationTally = { autoApproved: 0, escalated: 0, blocked: 0, spendAlgo: 0 };
   const simulated: SimulationTally = { autoApproved: 0, escalated: 0, blocked: 0, spendAlgo: 0 };
@@ -79,19 +87,40 @@ export function simulatePolicy(args: SimulateArgs): SimulationResult {
       if (!(isUnknownService && s === t.service)) knownServices.add(s);
     }
 
-    const evaluation = evaluatePayment(draft, { amountMicro: t.amountMicro, recipient: t.recipient, service: t.service }, {
-      sessionSpendMicro: 0n,
-      dailySpendMicro: bucket.spendMicro,
-      dailyPaymentCount: bucket.count,
-      knownRecipients,
-      knownServices,
-    });
+    // Velocity replay: count draft-approved payments within the rolling window
+    // before this transaction (mirrors the runtime's confirmed-payments query).
+    const tsMs = Date.parse(t.ts);
+    const windowStart = tsMs - velocityWindowMs;
+    let recentPaymentCountInWindow = 0;
+    for (const approved of approvedTimestamps) {
+      if (approved >= windowStart && approved <= tsMs) recentPaymentCountInWindow += 1;
+    }
+
+    const sessionKey = t.sessionId ?? "";
+    const evaluation = evaluatePayment(
+      draft,
+      { amountMicro: t.amountMicro, recipient: t.recipient, service: t.service, timestampMs: tsMs },
+      {
+        sessionSpendMicro: sessionSpend.get(sessionKey) ?? 0n,
+        dailySpendMicro: bucket.spendMicro,
+        dailyPaymentCount: bucket.count,
+        recentPaymentCountInWindow,
+        knownRecipients,
+        knownServices,
+        recentPayments: approvedHistory,
+      },
+    );
 
     if (evaluation.decision === "AUTO_APPROVED") {
       simulated.autoApproved += 1;
       simulated.spendAlgo += Number(t.amountMicro) / 1_000_000;
       bucket.spendMicro += t.amountMicro;
       bucket.count += 1;
+      if (sessionKey) {
+        sessionSpend.set(sessionKey, (sessionSpend.get(sessionKey) ?? 0n) + t.amountMicro);
+      }
+      approvedTimestamps.push(tsMs);
+      approvedHistory.push({ amountMicro: t.amountMicro, recipient: t.recipient, timestampMs: tsMs });
     } else if (evaluation.decision === "ESCALATED") {
       simulated.escalated += 1;
       // Escalated payments do NOT auto-spend.
