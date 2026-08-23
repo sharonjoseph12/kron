@@ -161,6 +161,8 @@ export default function Dashboard() {
         resourceName: "Real-Time Market Intel Report",
         recipient: agent.walletAddress ?? "RECIPIENT_ADDRESS",
         amountAlgo: 0.018,
+        network: "testnet",
+        clientRequestId: `golden_${Date.now()}`,
       });
       log(`   → Decision: ${result.decision ?? result.status}`);
       if (result.txId) {

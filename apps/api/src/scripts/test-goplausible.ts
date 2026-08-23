@@ -23,11 +23,10 @@ async function main() {
   const acc = algosdk.generateAccount();
   const receiverAcc = algosdk.generateAccount();
   const receiver = receiverAcc.addr.toString();
-  const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+  const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     sender: acc.addr,
     receiver: receiver,
     amount: 10000n,
-    assetIndex: 10458941n, // Testnet USDC
     suggestedParams: sp,
   });
   const signed = algosdk.signTransaction(txn, acc.sk);
@@ -50,7 +49,7 @@ async function main() {
     amount: "10000",
     maxAmountRequired: "10000",
     price: "0.01",
-    asset: "10458941",
+    asset: "0",
     resource: {
       url: "http://localhost:9100/pay/premium-market-sentiment",
       method: "GET",

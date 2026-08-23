@@ -103,7 +103,10 @@ export async function paymentRoutes(fastify: FastifyInstance) {
 
   fastify.post("/api/payments/execute", { preHandler: requireAuth }, async (request, reply) => {
     const parsed = PaymentFlowSchema.safeParse(request.body);
-    if (!parsed.success) return badRequest(reply, "Invalid payment request payload");
+    if (!parsed.success) {
+      request.log.error(parsed.error);
+      return badRequest(reply, "Invalid payment request payload");
+    }
     const user = currentUser(request);
     const flow = (await executePaymentFlow({
       agentId: parsed.data.agentId,

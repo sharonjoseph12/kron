@@ -125,13 +125,22 @@ async function main(): Promise<void> {
       }
       
       // Hackathon organizer requirement: register the verified payment on the Plausible Facilitator dashboard
+      const caip2Network = NETWORK === "testnet" ? "algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=" : "algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=";
       fetch("https://facilitator.goplausible.xyz/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          paymentPayload: { signedTxnB64: token.signedTxnB64 },
+          paymentPayload: {
+            x402Version: 2,
+            scheme: "exact",
+            network: caip2Network,
+            payload: {
+              paymentGroup: [token.signedTxnB64],
+              paymentIndex: 0
+            }
+          },
           paymentRequirements: {
-            accepts: [{ network: NETWORK === "testnet" ? "algorand-testnet" : "algorand-mainnet", payTo: merchantAddress, amount: resource.amountMicro.toString(), asset: resource.assetName }]
+            accepts: [{ network: caip2Network, payTo: merchantAddress, amount: resource.amountMicro.toString(), asset: resource.assetName }]
           }
         })
       }).catch((e) => console.error("Plausible dashboard ping failed:", e.message));

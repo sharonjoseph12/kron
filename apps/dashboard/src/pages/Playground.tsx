@@ -77,6 +77,7 @@ console.log("Content:", result.content);`,
           recipient: activeAgent.walletAddress ?? "RECIPIENT_ALGORAND_ADDRESS",
           amountAlgo: 0.010,
           network: "testnet",
+          clientRequestId: `play_${Date.now()}`,
         });
         log(`Policy evaluated: ${res.decision ?? res.status}`);
         if (res.reasons && res.reasons.length > 0) {
