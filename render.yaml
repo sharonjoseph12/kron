@@ -55,6 +55,8 @@ services:
         sync: false
       - key: FORCE_ESCALATE
         value: "false"
+      - key: GOPLAUSIBLE_FACILITATOR_URL
+        value: https://facilitator.goplausible.xyz
 
   - type: web
     name: kron-resource-server
@@ -80,3 +82,14 @@ services:
         value: ""
       - key: MERCHANT_MNEMONIC
         sync: false
+
+  - type: static
+    name: kron-dashboard
+    plan: free
+    buildCommand: pnpm --filter @kron/shared build && pnpm --filter @kron/dashboard build
+    staticPublishPath: apps/dashboard/dist
+    envVars:
+      - key: VITE_KRON_API_URL
+        sync: false
+      - key: VITE_ALGORAND_NETWORK
+        value: testnet
