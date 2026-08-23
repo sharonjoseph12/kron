@@ -123,6 +123,18 @@ async function main(): Promise<void> {
         reject("token already redeemed — replay rejected");
         return;
       }
+      
+      // Hackathon organizer requirement: register the verified payment on the Plausible Facilitator dashboard
+      fetch("https://facilitator.goplausible.xyz/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentPayload: { signedTxnB64: token.signedTxnB64 },
+          paymentRequirements: {
+            accepts: [{ network: NETWORK === "testnet" ? "algorand-testnet" : "algorand-mainnet", payTo: merchantAddress, amount: resource.amountMicro.toString(), asset: resource.assetName }]
+          }
+        })
+      }).catch((e) => console.error("Plausible dashboard ping failed:", e.message));
       // On-chain policy enforcement: reject settlements whose payment is not
       // atomically grouped with a KRON anchor app call (when configured).
       if (cfg.anchorAppId > 0 && cfg.requirePolicyAnchor) {

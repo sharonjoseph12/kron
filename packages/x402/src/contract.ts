@@ -381,19 +381,20 @@ anchor_daily_check:
   <=
   bz anchor_daily_exceeded
 
-  byte "ds:"
-  txn ApplicationArgs 2
-  extract 2 0
-  concat
-  global LatestTimestamp
-  int 86400
-  /
-  itob
-  concat
-  load 9
-  box_put
+   byte "ds:"
+   txn ApplicationArgs 2
+   extract 2 0
+   concat
+   global LatestTimestamp
+   int 86400
+   /
+   itob
+   concat
+   load 9
+   itob
+   box_put
 
-anchor_no_limits:
+ anchor_no_limits:
   byte "total_payments"
   app_global_get
   int 1

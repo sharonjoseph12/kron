@@ -47,6 +47,8 @@ export function createWalletKeys(): { address: string; encryptedKey: string } {
 
 const MIN_FUNDING_ALGO = 0.1;
 
+let lowTreasuryWarned = false;
+
 /**
  * Top up an agent wallet from the configured funding account.
  * The transfer is clamped to what the funding account can actually spend, so
@@ -61,9 +63,12 @@ export async function ensureFunded(address: string, targetAlgo: number = MIN_FUN
   const FEE_ALGO = 0.001;
   const MIN_BALANCE_BUFFER = 0.1;
   const fundingAccount = algosdk.mnemonicToSecretKey(config.fundingMnemonic);
-  const fundingBalance = await algorand
-    .getBalanceAlgo(fundingAccount.addr.toString())
-    .catch(() => 0);
+  const fundingAddress = fundingAccount.addr.toString();
+  const fundingBalance = await algorand.getBalanceAlgo(fundingAddress).catch(() => 0);
+  if (!lowTreasuryWarned && fundingBalance < 1) {
+    console.warn(`[kron-vault] Funding treasury ${fundingAddress} is nearly empty (${fundingBalance.toFixed(3)} ALGO). Top up at https://bank.testnet.algorand.foundation`);
+    lowTreasuryWarned = true;
+  }
   const needed = targetAlgo - balance + MIN_BALANCE_BUFFER;
   const spendable = Math.max(0, fundingBalance - FEE_ALGO - MIN_BALANCE_BUFFER);
   const amountAlgo = Math.min(needed, spendable);

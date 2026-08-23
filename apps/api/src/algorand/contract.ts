@@ -22,7 +22,7 @@ import {
   type AtomicGroupResult,
 } from "@kron/x402";
 import algosdk from "algosdk";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -33,6 +33,34 @@ const PRECOMPILED_APPROVAL = path.join(__dirname, "..", "..", "..", "..", "packa
 const PRECOMPILED_CLEAR = path.join(__dirname, "..", "..", "..", "..", "packages", "x402", "dist", "teal", "clear.b64");
 
 let cachedAppId: number | null = null;
+
+/**
+ * Persist a freshly-deployed app ID back into apps/api/.env so restarts reuse
+ * the same contract instead of redeploying (each deploy costs ~0.1 ALGO in
+ * app funding and clutters TestNet).
+ */
+function persistAppId(appId: number): void {
+  process.env.KRON_APP_ID = String(appId);
+  try {
+    const envPath = path.join(__dirname, "..", "..", ".env");
+    let content = "";
+    try {
+      content = readFileSync(envPath, "utf8");
+    } catch {
+      /* no .env yet */
+    }
+    const line = `KRON_APP_ID=${appId}`;
+    if (/^KRON_APP_ID=.*$/m.test(content)) {
+      content = content.replace(/^KRON_APP_ID=.*$/m, line);
+    } else {
+      content = `${content.replace(/\n*$/, "\n")}${line}\n`;
+    }
+    writeFileSync(envPath, content);
+    console.log(`[kron-contract] Persisted KRON_APP_ID=${appId} — future restarts will REUSE this contract.`);
+  } catch (err) {
+    console.warn(`[kron-contract] Could not persist KRON_APP_ID: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
 
 /**
  * Deploy the KRON policy-anchor contract if not already deployed.
@@ -121,13 +149,14 @@ export async function ensureKronApp(): Promise<number | null> {
       if (appIndex) {
         cachedAppId = Number(appIndex);
         console.log(`[kron-contract] Deployed KRON app ID: ${cachedAppId} (round ${conf.confirmedRound})`);
+        persistAppId(cachedAppId);
         // Fund the app so the inner-transaction `flush()` has a balance to return.
         try {
           const fundParams = await algorand.getChainParams();
           const fund = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
             sender: account.addr,
             receiver: algosdk.getApplicationAddress(cachedAppId),
-            amount: 100_000n, // 0.1 ALGO
+            amount: 5_000_000n, // 5 ALGO (covers box MBR for many agents)
             suggestedParams: {
               fee: Math.max(fundParams.minFee, 1000),
               minFee: 1000,
@@ -287,6 +316,9 @@ export async function buildKronPayment(args: {
   /** When present, pays in an ASA (e.g. USDC) instead of ALGO. */
   asset?: { type: "asa"; assetId: number; decimals?: number };
 }): Promise<{
+  /** Full signed atomic group — submit THIS to the chain. */
+  groupB64: string;
+  /** Signed payment txn alone — the x402 token handed to merchants. */
   signedB64: string;
   paymentTxId: string;
   appCallTxId: string | null;
@@ -355,6 +387,7 @@ export async function buildKronPayment(args: {
         });
 
     return {
+      groupB64: result.signedGroupB64,
       // x402 token = the signed PAYMENT transaction alone (not the group), so
       // merchants decode a single pay/axfer whose on-chain amount matches.
       signedB64: result.signedPaymentB64,
@@ -380,6 +413,7 @@ export async function buildKronPayment(args: {
   });
 
   return {
+    groupB64: result.signedTxnB64,
     signedB64: result.signedTxnB64,
     paymentTxId: result.txId,
     appCallTxId: null,

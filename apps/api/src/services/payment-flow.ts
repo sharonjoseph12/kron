@@ -1,5 +1,5 @@
 /**
- * Payment Flow — the economic orchestrator (PRD §8, §17).
+ * Payment Flow â€” the economic orchestrator (PRD Â§8, Â§17).
  *
  *   agent + session + tool call -> PaymentRequest -> policy decision
  *     -> AUTO_APPROVED: sign / submit / confirm / prove
@@ -7,7 +7,7 @@
  *     -> BLOCKED:      explained, never paid
  *
  * Idempotency: the deterministic clientRequestId guarantees a retried call
- * never pays twice (FR §9.4). Confirmation timeouts move to RECONCILING and
+ * never pays twice (FR Â§9.4). Confirmation timeouts move to RECONCILING and
  * never fabricate a success.
  */
 import type { Network, PaymentDTO, PaymentStatus, PolicyDecision } from "@kron/shared";
@@ -123,7 +123,7 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
     amountMicro: amountMicro.toString(),
   });
 
-  // Idempotency — never let a retry become a second payment.
+  // Idempotency â€” never let a retry become a second payment.
   const existing = await prisma.paymentRequest.findUnique({ where: { clientRequestId: requestId } });
   if (existing) {
     return hydrateResult(existing.id);
@@ -148,7 +148,7 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
     message: `Cost: ${microToAlgo(amountMicro).toFixed(4)} ALGO to ${shortAddr(args.recipient)}`,
     detail: { resourceId: args.resourceId, recipient: args.recipient, amountMicro: amountMicro.toString() },
   });
-  await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "POLICY_EVALUATED", status: "pending", message: "Evaluating against economic policy…" });
+  await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "POLICY_EVALUATED", status: "pending", message: "Evaluating against economic policyâ€¦" });
 
   const { evaluation, policyVersion } = await evaluateForAgent(args.agentId, args.sessionId, {
     amountMicro,
@@ -264,7 +264,7 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
   if (insufficientReason) {
     const reason = insufficientReason;
     await prisma.paymentRequest.update({ where: { id: payment.id }, data: { status: "blocked" } });
-    await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "BLOCKED", status: "blocked", message: "PAYMENT BLOCKED — INSUFFICIENT WALLET BALANCE", detail: { reason } });
+    await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "BLOCKED", status: "blocked", message: "PAYMENT BLOCKED â€” INSUFFICIENT WALLET BALANCE", detail: { reason } });
     const blocked = (await prisma.paymentRequest.findUnique({
       where: { id: payment.id },
       include: { decision: true, settlement: true },
@@ -274,7 +274,7 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
 
   const mnemonic = getWalletMnemonic(agent.wallet.encryptedKey);
   await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "SIGNED", status: "pending", message: "Signing atomic transaction group (app call + payment)" });
-  await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "SUBMITTED", status: "pending", message: "Submitting atomic group to Algorand…" });
+  await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "SUBMITTED", status: "pending", message: "Submitting atomic group to Algorandâ€¦" });
 
   try {
     // One-time on-chain bootstrap: register this wallet as an authorized
@@ -303,9 +303,9 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
     });
 
     // Submit the signed group
-    const { txId: submittedTxId } = await algorand.submitRawTransaction(built.signedB64);
+    await algorand.submitRawTransaction(built.groupB64);
     // Wait for the payment tx to confirm
-    const paymentTxId = submittedTxId || built.paymentTxId;
+    const paymentTxId = built.paymentTxId;
     const conf = await algorand.waitForConfirmation(paymentTxId);
 
     const settlement = await prisma.settlement.create({
@@ -331,10 +331,10 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
     });
 
     const atomicMsg = built.appId
-      ? `Confirmed on Algorand (round ${conf.confirmedRound}) — atomic group with policy anchor (app ${built.appId})`
+      ? `Confirmed on Algorand (round ${conf.confirmedRound}) â€” atomic group with policy anchor (app ${built.appId})`
       : `Confirmed on Algorand (round ${conf.confirmedRound})`;
     await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "CONFIRMED", status: "confirmed", message: atomicMsg, detail: { txId: paymentTxId, round: conf.confirmedRound, appId: built.appId, policyHash: built.policyHash, appCallTxId: built.appCallTxId } });
-    await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "PROOF_VERIFIED", status: "confirmed", message: built.policyHash ? `Policy hash ${built.policyHash.slice(0, 16)}… anchored on-chain` : "Payment proof verified on-chain" });
+    await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "PROOF_VERIFIED", status: "confirmed", message: built.policyHash ? `Policy hash ${built.policyHash.slice(0, 16)}â€¦ anchored on-chain` : "Payment proof verified on-chain" });
     await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "RESOURCE_DELIVERED", status: "confirmed", message: `${args.resourceName} delivered to agent` });
     await appendTimeline({ sessionId: args.sessionId, agentId: args.agentId, step: "AGENT_CONTINUES", status: "confirmed", message: "Agent continues task" });
 
@@ -346,7 +346,7 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
       targetType: "Settlement",
       targetId: settlement.id,
       policyVersion: policyVersion!.version,
-      summary: `Settled ${microToAlgo(amountMicro).toFixed(4)} ALGO on ${network} (${paymentTxId})${built.appId ? ` — atomic group, app ${built.appId}` : ""}`,
+      summary: `Settled ${microToAlgo(amountMicro).toFixed(4)} ALGO on ${network} (${paymentTxId})${built.appId ? ` â€” atomic group, app ${built.appId}` : ""}`,
     });
 
     // Report to GoPlausible facilitator (fire-and-forget)
@@ -381,7 +381,7 @@ export async function executePaymentFlow(args: ExecutePaymentArgs): Promise<Exec
       agentId: args.agentId,
       step: isTimeout ? "RECONCILING" : "FAILED",
       status: "failed",
-      message: isTimeout ? "Payment confirmation pending — reconciling on-chain" : `Payment failed: ${message}`,
+      message: isTimeout ? "Payment confirmation pending â€” reconciling on-chain" : `Payment failed: ${message}`,
     });
     const updated = (await prisma.paymentRequest.findUnique({
       where: { id: payment.id },
@@ -409,7 +409,7 @@ function explanationFor(reasons: string[]): string {
 }
 
 function shortAddr(addr: string): string {
-  return addr.length > 12 ? `${addr.slice(0, 6)}…${addr.slice(-6)}` : addr;
+  return addr.length > 12 ? `${addr.slice(0, 6)}â€¦${addr.slice(-6)}` : addr;
 }
 
 /** Load a payment (with decision + settlement) by id and DTO-ize it. */
@@ -443,7 +443,7 @@ export type { PolicyDecision };
 
 /**
  * Settle an already-ESCALATED payment after a human approves it.
- * Pays directly from the persisted record (recipient/amount/network) — it must
+ * Pays directly from the persisted record (recipient/amount/network) â€” it must
  * NOT re-enter executePaymentFlow, whose deterministic clientRequestId would
  * collide with the original request and re-return ESCALATED.
  */
@@ -471,19 +471,19 @@ export async function settleEscalatedPayment(
     status: "confirmed",
     message: decidedBy ? `Escalation approved by ${decidedBy}` : "Escalation approved by operator",
   });
-  await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "AUTHORIZED", status: "confirmed", message: "Operator approved — settlement authorized" });
+  await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "AUTHORIZED", status: "confirmed", message: "Operator approved â€” settlement authorized" });
 
   const balance = await algorand.getBalanceAlgo(payment.agent.wallet.address);
   const balanceMicro = BigInt(Math.round(balance * 1_000_000));
   if (balanceMicro < amountMicro + FEE_MICRO + MIN_BALANCE_MICRO) {
     const reason = `Insufficient wallet balance: ${toAlgo(balanceMicro).toFixed(4)} ALGO available, ${microToAlgo(amountMicro).toFixed(4)} required`;
-    await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "BLOCKED", status: "blocked", message: "PAYMENT BLOCKED — INSUFFICIENT WALLET BALANCE", detail: { reason } });
+    await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "BLOCKED", status: "blocked", message: "PAYMENT BLOCKED â€” INSUFFICIENT WALLET BALANCE", detail: { reason } });
     return { status: "BLOCKED", payment: toPaymentDTO(payment), decision: "BLOCKED", reasons: [reason], token: null, txId: null, escalationId: null };
   }
 
   const mnemonic = getWalletMnemonic(payment.agent.wallet.encryptedKey);
   await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "SIGNED", status: "pending", message: "Payment transaction signed by agent wallet" });
-  await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "SUBMITTED", status: "pending", message: "Submitting to Algorand…" });
+  await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "SUBMITTED", status: "pending", message: "Submitting to Algorandâ€¦" });
 
   try {
     // Use atomic group (app call + payment) so escalated approvals get same on-chain policy anchoring as auto-approved
@@ -501,8 +501,8 @@ export async function settleEscalatedPayment(
       service: payment.service,
       clientRequestId: payment.clientRequestId,
     });
-    const { txId: submittedTxId } = await algorand.submitRawTransaction(built.signedB64);
-    const paymentTxId = submittedTxId || built.paymentTxId;
+    await algorand.submitRawTransaction(built.groupB64);
+    const paymentTxId = built.paymentTxId;
     const conf = await algorand.waitForConfirmation(paymentTxId);
 
     const settlement = await prisma.settlement.create({
@@ -528,10 +528,10 @@ export async function settleEscalatedPayment(
     });
 
     const atomicMsg = built.appId
-      ? `Confirmed on Algorand (round ${conf.confirmedRound}) — atomic group with policy anchor (app ${built.appId})`
+      ? `Confirmed on Algorand (round ${conf.confirmedRound}) â€” atomic group with policy anchor (app ${built.appId})`
       : `Confirmed on Algorand (round ${conf.confirmedRound})`;
     await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "CONFIRMED", status: "confirmed", message: atomicMsg, detail: { txId: paymentTxId, round: conf.confirmedRound, appId: built.appId, policyHash: built.policyHash, appCallTxId: built.appCallTxId } });
-    await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "PROOF_VERIFIED", status: "confirmed", message: built.policyHash ? `Policy hash ${built.policyHash.slice(0, 16)}… anchored on-chain` : "Payment proof verified on-chain" });
+    await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "PROOF_VERIFIED", status: "confirmed", message: built.policyHash ? `Policy hash ${built.policyHash.slice(0, 16)}â€¦ anchored on-chain` : "Payment proof verified on-chain" });
     await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "RESOURCE_DELIVERED", status: "confirmed", message: `${payment.resourceName} delivered to agent` });
     await appendTimeline({ sessionId: payment.sessionId, agentId: payment.agentId, step: "AGENT_CONTINUES", status: "confirmed", message: "Agent continues task" });
 
@@ -543,7 +543,7 @@ export async function settleEscalatedPayment(
       targetType: "Settlement",
       targetId: settlement.id,
       policyVersion: payment.decision?.policyVersionNumber ?? undefined,
-      summary: `Escalation approved — settled ${microToAlgo(amountMicro).toFixed(4)} ALGO on ${network} (${paymentTxId})${built.appId ? ` — atomic group, app ${built.appId}` : ""}`,
+      summary: `Escalation approved â€” settled ${microToAlgo(amountMicro).toFixed(4)} ALGO on ${network} (${paymentTxId})${built.appId ? ` â€” atomic group, app ${built.appId}` : ""}`,
     });
 
     // Report to GoPlausible facilitator (fire-and-forget)
@@ -577,7 +577,7 @@ export async function settleEscalatedPayment(
       agentId: payment.agentId,
       step: isTimeout ? "RECONCILING" : "FAILED",
       status: "failed",
-      message: isTimeout ? "Payment confirmation pending — reconciling on-chain" : `Escalation settlement failed: ${message}`,
+      message: isTimeout ? "Payment confirmation pending â€” reconciling on-chain" : `Escalation settlement failed: ${message}`,
     });
     const updated = (await prisma.paymentRequest.findUnique({
       where: { id: payment.id },

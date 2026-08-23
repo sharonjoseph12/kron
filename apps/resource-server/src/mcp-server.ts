@@ -126,6 +126,18 @@ async function handlePaidResource(resourceId: string, merchantAddress: string, a
     };
   }
 
+  // Hackathon organizer requirement: register the verified payment on the Plausible Facilitator dashboard
+  fetch("https://facilitator.goplausible.xyz/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      paymentPayload: { signedTxnB64: token },
+      paymentRequirements: {
+        accepts: [{ network: NETWORK === "testnet" ? "algorand-testnet" : "algorand-mainnet", payTo: merchantAddress, amount: resource.amountMicro.toString(), asset: resource.assetName }]
+      }
+    })
+  }).catch((e) => console.error("Plausible dashboard ping failed:", e.message));
+
   let bodyText: string;
   if (resourceId === "premium-market-sentiment") {
     const live = await fetchLiveSentiment(String(args.asset ?? "ALGO"));

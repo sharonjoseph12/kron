@@ -33,7 +33,7 @@ export async function runAgentLoop(opts: AgentLoopOptions): Promise<AgentRunResu
       return { finalText: assistant.content, iterations: iteration + 1, steps };
     }
 
-    transcript.push({ role: "assistant", content: assistant.content, toolCalls: assistant.toolCalls });
+    transcript.push({ role: "assistant", content: assistant.content, toolCalls: assistant.toolCalls, thought: assistant.thought } as any);
     for (const call of assistant.toolCalls) {
       const tool = tools.find((t) => t.name === call.name);
       let content: string;
@@ -59,6 +59,6 @@ export async function runAgentLoop(opts: AgentLoopOptions): Promise<AgentRunResu
 }
 
 type TranscriptMessageLike =
-  | { role: "user" | "assistant" | "system"; content: string }
-  | { role: "assistant"; content: string; toolCalls: { id: string; name: string; arguments: Record<string, unknown> }[] }
+  | { role: "user" | "assistant" | "system"; content: string; thought?: string }
+  | { role: "assistant"; content: string; thought?: string; toolCalls: { id: string; name: string; arguments: Record<string, unknown>; thoughtSignature?: string }[] }
   | { role: "tool"; toolCallId: string; name: string; content: string };
