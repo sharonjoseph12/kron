@@ -33,6 +33,11 @@ for (const [key, value] of Object.entries(TEST_ENV)) {
 }
 
 const binDir = path.join(apiRoot, "node_modules", ".bin");
+const binExt = process.platform === "win32" ? ".cmd" : "";
+
+function bin(name: string): string {
+  return path.join(binDir, `${name}${binExt}`);
+}
 
 function run(cmd: string): void {
   try {
@@ -43,9 +48,9 @@ function run(cmd: string): void {
   }
 }
 
-run(`"${path.join(binDir, "prisma.cmd")}" generate`);
-run(`"${path.join(binDir, "prisma.cmd")}" db push --accept-data-loss --skip-generate`);
-run(`"${path.join(binDir, "tsx.cmd")}" prisma/seed.ts`);
+run(`"${bin("prisma")}" generate`);
+run(`"${bin("prisma")}" db push --accept-data-loss --skip-generate`);
+run(`"${bin("tsx")}" prisma/seed.ts`);
 
 afterAll(async () => {
   await prisma.$disconnect();
