@@ -27,6 +27,8 @@ export interface ToolCall {
   id: string;
   name: string;
   arguments: Record<string, unknown>;
+  /** Gemini 3.x thought_signature required when thinking is enabled. */
+  thoughtSignature?: string;
 }
 
 /** The model's reply: free-text plus any tool calls it wants executed. */
@@ -34,6 +36,8 @@ export interface AssistantMessage {
   /** Text portion of the reply (may be empty when tool calls are requested). */
   content: string;
   toolCalls: ToolCall[];
+  /** Thinking trace for Gemini 3.x — echoed back verbatim when present. */
+  thought?: string;
 }
 
 /**
@@ -41,8 +45,8 @@ export interface AssistantMessage {
  * so the loop never leaks provider-specific framing.
  */
 export type TranscriptMessage =
-  | { role: "user" | "assistant" | "system"; content: string }
-  | { role: "assistant"; content: string; toolCalls: ToolCall[] }
+  | { role: "user" | "assistant" | "system"; content: string; thought?: string }
+  | { role: "assistant"; content: string; toolCalls: ToolCall[]; thought?: string }
   | { role: "tool"; toolCallId: string; name: string; content: string };
 
 /** One step of the agent loop, surfaced via `onStep`. */

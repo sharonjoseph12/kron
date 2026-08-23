@@ -36,6 +36,10 @@ const OPENAI_API_KEY = env("OPENAI_API_KEY", "");
 const OPENAI_MODEL = env("OPENAI_MODEL", "gpt-4o");
 const GEMINI_API_KEY = env("GEMINI_API_KEY", "");
 const GEMINI_MODEL = env("GEMINI_MODEL", "gemini-2.5-flash");
+const GEMINI_FALLBACK_MODELS = env("GEMINI_FALLBACK_MODELS", "gemini-2.5-flash-lite,gemini-3.1-flash-lite")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const MAX_ITERATIONS = toNumber(env("KRON_MAX_ITERATIONS", "10"), 10);
 const DEFAULT_PROMPT = env(
   "KRON_PROMPT",
@@ -100,7 +104,7 @@ function createProvider(override?: string): LLMProvider {
   }
   if (providerName === "gemini") {
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not set (KRON_LLM_PROVIDER=gemini)");
-    return new GeminiProvider({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL });
+    return new GeminiProvider({ apiKey: GEMINI_API_KEY, model: GEMINI_MODEL, fallbackModels: GEMINI_FALLBACK_MODELS });
   }
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not set (KRON_LLM_PROVIDER=anthropic)");
   return new AnthropicProvider({ apiKey: ANTHROPIC_API_KEY, model: ANTHROPIC_MODEL });
@@ -224,6 +228,9 @@ async function main(): Promise<void> {
     kv("LLM model", overrideModel);
   } else {
     kv("LLM model", activeModel);
+  }
+  if (LLM_PROVIDER === "gemini" && GEMINI_FALLBACK_MODELS.length > 0) {
+    kv("LLM fallback models", GEMINI_FALLBACK_MODELS.join(", "));
   }
   kv("Max iterations", MAX_ITERATIONS);
   if (flags.createAgent) say("flag --create-agent: always create a fresh agent");
