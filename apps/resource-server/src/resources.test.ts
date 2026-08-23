@@ -5,8 +5,8 @@ import { parseRssItems } from "./data-providers.js";
 describe("loadPaidResources", () => {
   it("loads the bundled resources.json catalog", () => {
     const resources = loadPaidResources();
-    expect(resources["premium-market-report"]?.amountMicro).toBe("18000");
-    expect(resources["premium-market-sentiment"]?.amountMicro).toBe("450000");
+    expect(resources["premium-market-report"]?.amountMicro).toBe("10000");
+    expect(resources["premium-market-sentiment"]?.amountMicro).toBe("15000");
     expect(resources["premium-market-report"]?.note).toBe("kron:premium-market-report");
   });
 });

@@ -4,7 +4,7 @@
     "tool": "market/report",
     "name": "Premium Market Research Report",
     "description": "Deep-dive market intelligence: live sector momentum, liquidity flows and asset-level pricing for the last 24 hours.",
-    "amountMicro": "18000",
+    "amountMicro": "10000",
     "note": "kron:premium-market-report"
   },
   "premium-market-sentiment": {
@@ -12,7 +12,7 @@
     "tool": "market/sentiment",
     "name": "Real-Time Institutional Sentiment Indicators",
     "description": "Live orderbook imbalance, 24h exchange flow and Fear & Greed across major venues (high-frequency alpha).",
-    "amountMicro": "450000",
+    "amountMicro": "15000",
     "note": "kron:premium-market-sentiment"
   },
   "premium-defi-yield": {
@@ -20,7 +20,7 @@
     "tool": "market/defi-yield",
     "name": "DeFi Yield & TVL Dashboard",
     "description": "Real-time stablecoin yield curves, protocol TVL and liquidity pool APRs across Algorand DeFi.",
-    "amountMicro": "2500000",
+    "amountMicro": "20000",
     "assetName": "USDC",
     "note": "kron:premium-defi-yield"
   }

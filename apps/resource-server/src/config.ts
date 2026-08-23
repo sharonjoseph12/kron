@@ -1,5 +1,10 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import { resolve } from "node:path";
 import type { Network } from "@kron/shared";
+
+dotenv.config();
+dotenv.config({ path: resolve(process.cwd(), "../../.env") });
+dotenv.config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 export interface Config {
   port: number;

@@ -1,4 +1,9 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import { resolve } from "node:path";
+
+dotenv.config();
+dotenv.config({ path: resolve(process.cwd(), "../../.env") });
+dotenv.config({ path: resolve(import.meta.dirname, "../../../.env") });
 import {
   AnthropicProvider,
   OpenAIProvider,
@@ -21,7 +26,7 @@ const KRON_AGENT_NAME = env("KRON_AGENT_NAME", "llm-agent-01");
 const RESOURCE_SERVER_URL = env("KRON_RESOURCE_URL", "http://localhost:9100");
 const RESOURCE_SERVER_NAME = env("KRON_RESOURCE_SERVER_NAME", "demo-resource");
 const RESOURCE_TRANSPORT = "streamable-http";
-const FUND_AMOUNT_ALGO = toNumber(env("KRON_FUND_AMOUNT_ALGO", "2"), 2);
+const FUND_AMOUNT_ALGO = toNumber(env("KRON_FUND_AMOUNT_ALGO", "0.05"), 0.05);
 
 // LLM provider selection (gemini is the default: free tier, native tool calling)
 const LLM_PROVIDER = env("KRON_LLM_PROVIDER", "gemini").toLowerCase(); // gemini | anthropic | openai
@@ -161,7 +166,7 @@ async function ensureSpendingPolicy(api: KronApi, agentId: string): Promise<void
   }
   const needsUpdate =
     current === null ||
-    (current.perCallLimitAlgo ?? 0) < 1 ||
+    (current.perCallLimitAlgo ?? 0) < 0.01 ||
     current.unknownRecipient !== "allow" ||
     current.firstTimeService !== "allow";
   if (!needsUpdate) {
@@ -169,17 +174,17 @@ async function ensureSpendingPolicy(api: KronApi, agentId: string): Promise<void
     return;
   }
   const updated = await api.updatePolicy(agentId, {
-    perCallLimitAlgo: 5,
-    hardCeilingAlgo: 20,
-    sessionBudgetAlgo: 10,
-    dailyBudgetAlgo: 20,
+    perCallLimitAlgo: 0.05,
+    hardCeilingAlgo: 0.2,
+    sessionBudgetAlgo: 0.1,
+    dailyBudgetAlgo: 0.2,
     maxDailyPayments: 200,
     unknownRecipient: "allow",
     firstTimeService: "allow",
     recipientAllowlist: [],
     serviceAllowlist: [],
   });
-  say(`Policy updated to v${updated.version} — autonomous spend allowed (cap ${updated.perCallLimitAlgo ?? 5} ALGO/call).`);
+  say(`Policy updated to v${updated.version} — autonomous spend allowed (cap ${updated.perCallLimitAlgo ?? 0.05} ALGO/call).`);
 }
 
 /* ------------------------------------------------------------------ */

@@ -86,10 +86,10 @@ async function main() {
       researcher.id,
       {
         name: "conservative-research",
-        perCallLimitAlgo: 0.05,
-        hardCeilingAlgo: 10.0,
-        sessionBudgetAlgo: 1.0,
-        dailyBudgetAlgo: 2.0,
+        perCallLimitAlgo: 0.02,
+        hardCeilingAlgo: 0.1,
+        sessionBudgetAlgo: 0.05,
+        dailyBudgetAlgo: 0.1,
         maxDailyPayments: 50,
         unknownRecipient: "allow",
         firstTimeService: "allow",
@@ -97,7 +97,7 @@ async function main() {
       },
       admin.id,
     );
-    console.log(`  ✓ Provisioned Conservative Policy (0.05 ALGO limit) for researcher-01`);
+    console.log(`  ✓ Provisioned Conservative Policy (0.02 ALGO limit) for researcher-01`);
   }
 
   // 4. Multi-Agent 2: Trader (Aggressive / Higher Limit Policy)
@@ -127,10 +127,10 @@ async function main() {
       trader.id,
       {
         name: "high-limit-trader",
-        perCallLimitAlgo: 0.50,
-        hardCeilingAlgo: 50.0,
-        sessionBudgetAlgo: 10.0,
-        dailyBudgetAlgo: 20.0,
+        perCallLimitAlgo: 0.05,
+        hardCeilingAlgo: 0.2,
+        sessionBudgetAlgo: 0.1,
+        dailyBudgetAlgo: 0.2,
         maxDailyPayments: 200,
         unknownRecipient: "allow",
         firstTimeService: "allow",
@@ -138,7 +138,7 @@ async function main() {
       },
       admin.id,
     );
-    console.log(`  ✓ Provisioned High-Limit Policy (0.50 ALGO limit) for trader-01`);
+    console.log(`  ✓ Provisioned High-Limit Policy (0.05 ALGO limit) for trader-01`);
   }
 
   console.log("✨ Seeding completed successfully.");
@@ -155,8 +155,8 @@ interface DemoResourceDto {
 
 /** Classic demo tools used when the resource server isn't reachable yet. */
 const FALLBACK_DEMO_TOOLS: Array<{ name: string; description: string; cost: number }> = [
-  { name: "market/report", description: "Premium market research report (costs 0.018 ALGO)", cost: 0.018 },
-  { name: "market/sentiment", description: "Real-time institutional sentiment indicators (costs 0.450 ALGO)", cost: 0.450 },
+  { name: "market/report", description: "Premium market research report (costs 0.010 ALGO)", cost: 0.010 },
+  { name: "market/sentiment", description: "Real-time institutional sentiment indicators (costs 0.015 ALGO)", cost: 0.015 },
 ];
 
 /**

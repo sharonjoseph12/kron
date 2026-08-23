@@ -26,15 +26,13 @@ interface PeraChallenge {
 }
 
 /** Must mirror apps/api/src/lib/siwa.ts buildSiwaMessage exactly. */
-function buildSiwaMessage(origin: string, address: string, challenge: PeraChallenge): string {
+function buildSiwaMessage(origin: string, address: string, challenge: { nonce: string }): string {
   return [
     "KRON Operator Login",
     "",
     `Origin: ${origin}`,
     `Address: ${address}`,
     `Nonce: ${challenge.nonce}`,
-    `Issued At: ${challenge.issuedAt}`,
-    `Expires At: ${challenge.expiresAt}`,
   ].join("\n");
 }
 
@@ -69,6 +67,11 @@ export default function Login() {
     setPeraPending(true);
     try {
       const peraWallet = await getPeraWallet();
+      try {
+        if (peraWallet.isConnected) {
+          await peraWallet.disconnect();
+        }
+      } catch {}
       const accounts = await peraWallet.connect();
       const address = accounts[0];
       if (!address) throw new Error("No account returned from Pera Wallet");

@@ -87,8 +87,8 @@ export const PaymentFlowSchema = z.object({
   resourceName: z.string().min(1),
   recipient: z.string().min(1),
   amountAlgo: z.number().positive(),
-  network: NETWORK,
-  clientRequestId: z.string().min(1),
+  network: NETWORK.optional().default("testnet"),
+  clientRequestId: z.string().min(1).optional(),
   instructionUrl: z.string().url().optional(),
   note: z.string().optional(),
 });

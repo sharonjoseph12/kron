@@ -6,10 +6,10 @@ export const DEFAULT_POLICY: Omit<
   "id" | "version" | "createdAt" | "active"
 > = {
   name: "Default agent policy",
-  perCallLimitAlgo: 0.05,
-  hardCeilingAlgo: 1.0,
-  sessionBudgetAlgo: 1.0,
-  dailyBudgetAlgo: 5.0,
+  perCallLimitAlgo: 0.02,
+  hardCeilingAlgo: 0.05,
+  sessionBudgetAlgo: 0.05,
+  dailyBudgetAlgo: 0.1,
   maxDailyPayments: 50,
   unknownRecipient: "block",
   firstTimeService: "escalate",

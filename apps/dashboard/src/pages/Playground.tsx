@@ -49,7 +49,7 @@ export default function Playground() {
 
 const kron = new KronClient({ apiUrl: "${window.location.origin}" });
 
-// Agent calls paid resource tool: "market/report" (0.018 ALGO)
+// Agent calls paid resource tool: "market/report" (0.010 ALGO)
 const result = await kron.callPaidTool({
   agentId: "${activeAgent?.id ?? "agent-id"}",
   sessionId: "session-${Date.now().toString(36)}",
@@ -69,15 +69,19 @@ console.log("Content:", result.content);`,
           agentId: activeAgent.id,
           sessionId: session.session.id,
           toolCallId: `play_${Date.now()}`,
-          mcpServerId: "playground_server",
+          mcpServerId: "demo-resource",
           toolName: "market/report",
           service: "market",
-          resourceId: "market/report",
-          resourceName: "Real-Time Market Intel Report",
+          resourceId: "premium-market-report",
+          resourceName: "Premium Market Research Report",
           recipient: activeAgent.walletAddress ?? "RECIPIENT_ALGORAND_ADDRESS",
-          amountAlgo: 0.018,
+          amountAlgo: 0.010,
+          network: "testnet",
         });
-        log(`Policy evaluated: ${res.status}`);
+        log(`Policy evaluated: ${res.decision ?? res.status}`);
+        if (res.reasons && res.reasons.length > 0) {
+          for (const r of res.reasons) log(`  • ${r}`);
+        }
         if (res.txId) log(`Settled on Algorand: ${res.txId}`);
         return res;
       },
@@ -91,12 +95,12 @@ console.log("Content:", result.content);`,
 
 const kron = new KronClient({ apiUrl: "${window.location.origin}" });
 
-// Researcher hires Trader for sentiment subtask (0.035 ALGO)
+// Researcher hires Trader for sentiment subtask (0.015 ALGO)
 const hireResult = await kron.hireAgent({
   agentId: "${activeAgent?.id ?? "researcher-id"}",
   targetAgentId: "${agents.find((a) => a.id !== activeAgent?.id)?.id ?? "trader-id"}",
   task: "Calculate 24h Orderbook Volatility & Liquidity Delta",
-  amountAlgo: 0.035,
+  amountAlgo: 0.015,
 });
 
 console.log("Hired:", hireResult.hiredAgent?.name);
@@ -104,7 +108,7 @@ console.log("Outcome:", hireResult.taskResult);`,
       execute: async () => {
         if (!activeAgent) throw new Error("No agent selected");
         const target = agents.find((a) => a.id !== activeAgent.id) ?? activeAgent;
-        log(`Hiring Agent: ${activeAgent.name} -> Contractor: ${target.name} for 0.035 ALGO...`);
+        log(`Hiring Agent: ${activeAgent.name} -> Contractor: ${target.name} for 0.015 ALGO...`);
         const res = await fetch(`/api/agents/${encodeURIComponent(activeAgent.id)}/hire`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -112,7 +116,7 @@ console.log("Outcome:", hireResult.taskResult);`,
           body: JSON.stringify({
             targetAgentId: target.id,
             task: "Calculate 24h Orderbook Volatility & Liquidity Delta",
-            amountAlgo: 0.035,
+            amountAlgo: 0.015,
           }),
         });
         const json = await res.json();
@@ -129,9 +133,9 @@ console.log("Outcome:", hireResult.taskResult);`,
 
 const kron = new KronClient({ apiUrl: "${window.location.origin}" });
 
-// Dry-run evaluate 0.450 ALGO against agent policy
+// Dry-run evaluate 0.050 ALGO against agent policy
 const evaluation = await kron.evaluatePayment("${activeAgent?.id ?? "agent-id"}", {
-  amountAlgo: 0.450,
+  amountAlgo: 0.050,
   recipient: "${activeAgent?.walletAddress ?? "RECEIVER_ADDRESS"}",
   service: "market",
 });
@@ -140,9 +144,9 @@ console.log("Decision:", evaluation.evaluation.decision);
 console.log("Reasons:", evaluation.evaluation.reasons);`,
       execute: async () => {
         if (!activeAgent) throw new Error("No agent selected");
-        log(`Evaluating 0.450 ALGO against policy for agent ${activeAgent.name}...`);
+        log(`Evaluating 0.050 ALGO against policy for agent ${activeAgent.name}...`);
         const res = await api.evaluate(activeAgent.id, {
-          amountAlgo: 0.450,
+          amountAlgo: 0.050,
           recipient: activeAgent.walletAddress ?? "UNKNOWN_ADDR",
           service: "market",
         });
@@ -306,9 +310,12 @@ console.log("Reasons:", evaluation.evaluation.reasons);`,
               <GlassCard accent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs uppercase tracking-wider font-semibold text-[var(--color-ink-3)]">Result Payload</span>
-                  <Badge tone={executionResult.ok !== false && executionResult.status !== "BLOCKED" ? "ok" : "err"}>
-                    {executionResult.status ?? (executionResult.ok ? "SUCCESS" : "ERROR")}
-                  </Badge>
+                  {(() => {
+                    const decision = executionResult.evaluation?.decision ?? executionResult.decision;
+                    const status = executionResult.status ?? decision ?? (executionResult.error ? "ERROR" : "SUCCESS");
+                    const tone = status === "AUTO_APPROVED" || status === "SUCCESS" || status === "confirmed" ? "ok" : status === "ESCALATED" ? "warn" : "err";
+                    return <Badge tone={tone}>{status}</Badge>;
+                  })()}
                 </div>
 
                 {executionResult.txId && (

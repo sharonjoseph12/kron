@@ -45,7 +45,7 @@ export function createWalletKeys(): { address: string; encryptedKey: string } {
   return { address: account.addr.toString(), encryptedKey: encryptMnemonic(mnemonic) };
 }
 
-const MIN_FUNDING_ALGO = 4;
+const MIN_FUNDING_ALGO = 0.1;
 
 /**
  * Top up an agent wallet from the configured funding account.

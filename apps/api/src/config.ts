@@ -1,5 +1,10 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import { resolve } from "node:path";
 import crypto from "node:crypto";
+
+dotenv.config();
+dotenv.config({ path: resolve(process.cwd(), "../../.env") });
+dotenv.config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 function required(name: string): string {
   const v = process.env[name];
