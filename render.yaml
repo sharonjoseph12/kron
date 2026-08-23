@@ -16,9 +16,10 @@
 services:
   - type: web
     name: kron-api
-    runtime: docker
-    dockerfilePath: apps/api/Dockerfile
+    runtime: node
     plan: free
+    buildCommand: corepack enable && corepack prepare pnpm@10.33.2 --activate && pnpm install --frozen-lockfile && pnpm --filter @kron/shared build && pnpm --filter @kron/x402 build && pnpm --filter @kron/policy-engine build && pnpm --filter @kron/api prisma:generate && pnpm --filter @kron/api build
+    startCommand: pnpm --filter @kron/api prisma:deploy && pnpm --filter @kron/api prisma:seed && node apps/api/dist/server.js
     healthCheckPath: /healthz
     envVars:
       - key: NODE_ENV
@@ -60,9 +61,10 @@ services:
 
   - type: web
     name: kron-resource-server
-    runtime: docker
-    dockerfilePath: apps/resource-server/Dockerfile
+    runtime: node
     plan: free
+    buildCommand: corepack enable && corepack prepare pnpm@10.33.2 --activate && pnpm install --frozen-lockfile && pnpm --filter @kron/shared build && pnpm --filter @kron/x402 build && pnpm --filter @kron/resource-server build
+    startCommand: node apps/resource-server/dist/server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -86,7 +88,7 @@ services:
   - type: static
     name: kron-dashboard
     plan: free
-    buildCommand: pnpm --filter @kron/shared build && pnpm --filter @kron/dashboard build
+    buildCommand: corepack enable && corepack prepare pnpm@10.33.2 --activate && pnpm install --frozen-lockfile && pnpm --filter @kron/shared build && pnpm --filter @kron/dashboard build
     staticPublishPath: apps/dashboard/dist
     envVars:
       - key: VITE_KRON_API_URL
