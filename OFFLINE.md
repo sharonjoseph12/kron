@@ -47,10 +47,14 @@ pnpm --filter @kron/api prisma:seed
 docker compose --profile localnet up -d
 ```
 
-Wait ~60 seconds for algod to be ready. Verify:
+Wait ~60 seconds for algod to be ready. Verify (PowerShell):
 
+```powershell
+Invoke-RestMethod -Uri http://localhost:4001/v2/status -Headers @{ "X-Algo-API-Token"="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } | Format-List last-round, genesis-id
+```
+Or with curl (Git Bash):
 ```bash
-curl -s http://localhost:4001/v2/status -H "X-Algo-API-Token: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" | Select-Object -First 5
+curl -s http://localhost:4001/v2/status -H "X-Algo-API-Token: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 ```
 
 ### 4. Fund Agent Wallets

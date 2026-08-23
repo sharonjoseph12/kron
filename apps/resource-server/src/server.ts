@@ -13,6 +13,8 @@ import { instructionFor, NETWORK, PAID_RESOURCES, paidResourceBody, type PaidRes
 import { parseAuthorizationHeader, X402_AUTH_HEADER } from "@kron/shared";
 import { verifyPaymentToken, STABLECOIN_ASSETS } from "@kron/x402";
 import { tryConsumePayment } from "./replay.js";
+import { verifyGroupedPolicyAnchor } from "./anchor-proof.js";
+import { config as cfg } from "./config.js";
 
 const transports = new Map<string, Transport>();
 
@@ -120,6 +122,27 @@ async function main(): Promise<void> {
       if (!tryConsumePayment(verification.txId ?? "")) {
         reject("token already redeemed — replay rejected");
         return;
+      }
+      // On-chain policy enforcement: reject settlements whose payment is not
+      // atomically grouped with a KRON anchor app call (when configured).
+      if (cfg.anchorAppId > 0 && cfg.requirePolicyAnchor) {
+        try {
+          const proof = await verifyGroupedPolicyAnchor({
+            paymentTxId: verification.txId ?? "",
+            algodUrl: config.algodUrl,
+            algodToken: config.algodToken,
+            indexerUrl: config.indexerUrl,
+            indexerToken: config.indexerToken,
+            anchorAppId: cfg.anchorAppId,
+          });
+          if (!proof.ok) {
+            reject(`policy anchor proof rejected: ${proof.reason}`);
+            return;
+          }
+        } catch (proofErr) {
+          reject(`anchor proof lookup failed: ${proofErr instanceof Error ? proofErr.message : String(proofErr)}`);
+          return;
+        }
       }
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       res.send(await paidResourceBody(resource, verification.txId));

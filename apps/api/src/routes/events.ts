@@ -2,9 +2,10 @@ import type { FastifyInstance } from "fastify";
 import type { StreamEvent } from "@kron/shared";
 import { SSE_KEEPALIVE_MS } from "@kron/shared";
 import { hub, toSSE } from "../events/hub.js";
+import { requireAuth } from "../lib/auth.js";
 
 export async function eventsRoutes(fastify: FastifyInstance) {
-  fastify.get("/api/events", async (_request, reply) => {
+  fastify.get("/api/events", { preHandler: requireAuth }, async (_request, reply) => {
     reply.hijack();
     const res = reply.raw;
     res.writeHead(200, {

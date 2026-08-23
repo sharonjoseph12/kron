@@ -25,8 +25,9 @@ function decodeGlobalState(entries: GlobalStateEntry[] | undefined): Record<stri
       continue;
     }
     const v = entry.value;
-    if (v?.type === 1) out[key] = v.uint ?? 0;
-    else if (v?.type === 2 && v.bytes) out[key] = Buffer.from(v.bytes, "base64").toString("hex");
+    // Algorand indexer global-state: type 1 = bytes, 2 = uint
+    if (v?.type === 2) out[key] = v.uint ?? 0;
+    else if (v?.type === 1 && v.bytes) out[key] = Buffer.from(v.bytes, "base64").toString("hex");
     else out[key] = null;
   }
   return out;

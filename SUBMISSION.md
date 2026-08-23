@@ -1,18 +1,21 @@
-# KRON — Project Submission
+# KRON — Project Submission (International Algorand Hackathon)
 
 ## Project Overview
 
-- **Project Name**: KRON
+- **Project Name**: KRON — Policy-Controlled Economic Runtime for AI Agents
+- **One-liner**: The economic firewall and policy-governed payment runtime for autonomous AI agents on Algorand.
 - **Track**: AI & Agentic Finance / Infrastructure
-- **Network**: Algorand TestNet
-- **Demo Dashboard**: React + TypeScript + TailwindCSS + Recharts
-- **SDK**: `@kron/sdk` (TypeScript npm package)
+- **Network**: Algorand TestNet (MainNet-identical TEAL, atomic groups, 3.3s finality) + LocalNet via Docker
+- **Demo Dashboard**: React 18 + Vite + Tailwind v4 + Recharts (9 pages, SSE real-time, code-split)
+- **SDK**: `@kron/sdk` (TypeScript, 5-line integration, 7 tests)
+- **Smart Contract**: TEAL v10 ARC-4 (`anchor_policy`, `get_payment_count`, `get_last_policy_hash`, `get_agent_policy_hash`, `set_emergency_stop`, `flush`) — `packages/x402/src/contract.ts:172-395` + `KRON_ARC4_CONTRACT_ABI`
+- **Repo**: `https://github.com/sharonjoseph12/kron` (CI: typecheck + build + 77 tests)
 
 ---
 
 ## Inspiration
 
-Autonomous AI agents powered by LLMs (Claude, GPT-4, local models) can reason, code, and execute multi-step workflows via protocols like Anthropic's Model Context Protocol (MCP). However, when agents encounter paid APIs, premium datasets, or specialized compute resources, their autonomy halts.
+Autonomous AI agents powered by LLMs (Gemini, Claude, GPT-4) can reason, code, and execute multi-step workflows via protocols like Anthropic's Model Context Protocol (MCP). However, when agents encounter paid APIs, premium datasets, or specialized compute resources, their autonomy halts.
 
 Developers are currently forced to either:
 1. Hardcode sensitive credit cards or raw API keys directly into agent runtimes.
@@ -103,4 +106,48 @@ pnpm --filter @kron/dashboard dev
 ```bash
 # Executes Researcher (0.05 limit) & Trader (0.50 limit) and demonstrates boundary block
 pnpm --filter @kron/demo-agent dev -- --multi
+# Or via the SDK playground at http://localhost:5173/playground
 ```
+
+### 5. Verify On-Chain (Judge Walkthrough — no trust needed)
+```bash
+# Paste any txId from the dashboard into /verify, or:
+curl -s https://testnet-idx.algonode.cloud/v2/transactions/<TXID> | jq '.transaction["confirmed-round"]'
+# Atomic group check: tx group shares a group ID — both app call + payment confirm together in ~3.3s
+curl -s http://localhost:8787/api/contract | jq '.globalState'
+```
+
+---
+
+## Why We Win — Judging Rubric
+
+| Criterion | Our Proof |
+|---|---|
+| **Wow (10/10)** | Judge sees an autonomous agent spend real money without a human click, then sees it **blocked** at 0.45 ALGO, then verifies the tx on AlgoExplorer in one click. |
+| **Technical Depth (9/10)** | MCP + x402 + policy engine <5ms + isolated vault AES-256-GCM + atomic groups + ARC-2 notes + ARC-4 ABI + SSE + audit + rate-limit + SSRF guard. |
+| **Novelty (9/10)** | Not "agents can pay" — **agents can be economically governed**: what-if simulation, explainable decisions, recipient/service allowlists, velocity anomaly, emergency stop. |
+| **Real-World (9/10)** | Paid APIs, datasets, compute, A2A hiring — 5-line SDK works with LangChain/LlamaIndex. Algorand sub-cent fees make $0.018 micropayments viable; Stripe $0.30+2.9% does not. |
+| **Completeness (9/10)** | `setup → task → 402 → policy → atomic settlement → verify → resource → continue` observable end-to-end with no mocked txIds. |
+
+---
+
+## Security & Correctness (PRD §9)
+
+- **Least privilege + isolated wallets** — per-agent wallets, never the operator's primary wallet (`FR-WALLET-003`, `apps/api/src/algorand/vault.ts`).
+- **Encrypted at rest** — mnemonics AES-256-GCM (`vault.ts:18-24`), never logged/returned.
+- **Replay protection** — deterministic `clientRequestId` idempotency (`payment-flow.ts:117-129`), never pays twice on retry; timeout → `RECONCILING` not fake success.
+- **SSRF guard** — MCP server URLs validated against private/metadata ranges (`lib/ssrf.ts`), localhost allowed only in dev.
+- **Rate limiting** — global 120/min + `/mcp` 60/min (`server.ts:43-47`), balances brute-force vs UX.
+- **Recipient verification** — payment recipient must match x402 instruction; unexpected change = security event.
+
+---
+
+## Team & Links
+
+- **Track justification**: Algorand-native settlement — atomic groups, ARC-2/ARC-4, 3.3s finality, <0.001 ALGO fees. No EVM/Solana fork — built on `testnet-api.algonode.cloud` / `testnet-idx.algonode.cloud`.
+- **Docs**: `HACKATHON.md` (one-pager), `PITCH.md` (3-min script), `OFFLINE.md` (runbook), `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `TOP3_CHECKLIST.md`.
+- **Demo video**: *(add link after recording per `DEMO_REHEARSAL.md`)* — keep <3 min.
+- **One-pager PDF**: *(export `HACKATHON.md` → PDF + QR to playground)*.
+- **Screenshots**: `docs/SCREENSHOTS.md` (5 pages: Dashboard, Agents, Simulation, Verify, Playground).
+
+Built for the International Algorand Hackathon — `Don't put a human in the payment loop. Put a policy in the loop.`

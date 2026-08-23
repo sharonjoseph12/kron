@@ -15,6 +15,8 @@ import {
   buildAtomicPaymentGroup,
   buildAtomicAssetPaymentGroup,
   buildStandalonePayment,
+  buildSetRuntimeArgs,
+  buildConfigureAgentArgs,
   type Arc2NotePayload,
   type PolicyHashInput,
   type AtomicGroupResult,
@@ -158,6 +160,115 @@ export async function ensureKronApp(): Promise<number | null> {
 }
 
 /**
+ * Submit a creator-signed no-op app call and wait for confirmation.
+ */
+async function submitCreatorAppCall(
+  appArgs: Uint8Array[],
+  boxNames: Uint8Array[] = [],
+): Promise<{ txId: string; confirmedRound: number } | null> {
+  if (!config.fundingMnemonic) return null;
+  const appId = await ensureKronApp();
+  if (appId == null) return null;
+  try {
+    const account = algosdk.mnemonicToSecretKey(config.fundingMnemonic);
+    const params = await algorand.getChainParams();
+    const txn = algosdk.makeApplicationNoOpTxnFromObject({
+      sender: account.addr,
+      appIndex: appId,
+      appArgs,
+      boxes: boxNames.map((name) => ({ appIndex: appId, name })),
+      suggestedParams: {
+        fee: Math.max(params.minFee, 3000),
+        minFee: 1000,
+        flatFee: true,
+        firstValid: params.firstValid,
+        lastValid: params.lastValid,
+        genesisID: params.genesisID,
+        genesisHash: Uint8Array.from(Buffer.from(params.genesisHash, "base64")),
+      },
+    });
+    const signed = algosdk.signTransaction(txn, account.sk);
+    const { txId } = await algorand.submitRawTransaction(Buffer.from(signed.blob).toString("base64"));
+    const conf = await algorand.waitForConfirmation(txId);
+    return { txId, confirmedRound: conf.confirmedRound };
+  } catch (err) {
+    console.warn(`[kron-contract] app call failed: ${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  }
+}
+
+/**
+ * Register an agent wallet / runtime signer as an authorized anchor caller
+ * (contract method `set_runtime`). Best-effort: returns false when the chain
+ * or the KRON app is unavailable so demos never break on it.
+ */
+export async function registerRuntimeSigner(address: string): Promise<boolean> {
+  const appId = await ensureKronApp();
+  if (appId == null) return false;
+  const signerBox = Buffer.concat([
+    Buffer.from("as:", "utf8"),
+    Buffer.from(algosdk.decodeAddress(address).publicKey),
+  ]);
+  const result = await submitCreatorAppCall(buildSetRuntimeArgs(address), [signerBox]);
+  if (result) {
+    console.log(`[kron-contract] Authorized anchor signer ${address} (round ${result.confirmedRound})`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Mirror an agent's policy limits into ON-CHAIN enforcement
+ * (contract method `configure_agent`): anchor_policy will reject any grouped
+ * payment above the per-call limit or the rolling daily budget. Best-effort.
+ */
+export async function configureAgentOnChain(
+  agentId: string,
+  perCallLimitMicro: bigint,
+  dailyLimitMicro: bigint,
+): Promise<boolean> {
+  const appId = await ensureKronApp();
+  if (appId == null) return false;
+  const limBox = Buffer.concat([Buffer.from("lim:", "utf8"), Buffer.from(agentId, "utf8")]);
+  const result = await submitCreatorAppCall(
+    buildConfigureAgentArgs({ agentId, perCallLimitMicro, dailyLimitMicro }),
+    [limBox],
+  );
+  if (result) {
+    console.log(
+      `[kron-contract] On-chain limits for ${agentId}: per-call ${(Number(perCallLimitMicro) / 1e6).toFixed(4)} ALGO, daily ${(Number(dailyLimitMicro) / 1e6).toFixed(4)} ALGO`,
+    );
+    return true;
+  }
+  return false;
+}
+
+/** Agent keys already bootstrapped on-chain in this process (signer + limits). */
+const onChainReady = new Set<string>();
+
+/**
+ * One-time-per-process bootstrap so ANY agent (including ones created before
+ * the v4 enforcing contract existed) can pass anchor_policy's on-chain gate:
+ * registers the agent wallet as an authorized signer and mirrors the current
+ * policy limits into the contract. Memoized — zero extra transactions after
+ * the first successful settlement setup.
+ */
+export async function ensureOnChainEnforcement(
+  agentId: string,
+  agentAddress: string,
+  perCallLimitMicro: bigint,
+  dailyLimitMicro: bigint,
+): Promise<void> {
+  const key = `${agentId}:${agentAddress}`;
+  if (onChainReady.has(key)) return;
+  const okSigner = await registerRuntimeSigner(agentAddress);
+  const okLimits = await configureAgentOnChain(agentId, perCallLimitMicro, dailyLimitMicro);
+  if (okSigner && okLimits) {
+    onChainReady.add(key);
+  }
+}
+
+/**
  * Build the signed transaction(s) for a KRON payment.
  * If the KRON app is deployed, returns an atomic group (app call + payment).
  * Otherwise, falls back to a standalone payment with ARC-2 note.
@@ -244,7 +355,9 @@ export async function buildKronPayment(args: {
         });
 
     return {
-      signedB64: result.signedGroupB64,
+      // x402 token = the signed PAYMENT transaction alone (not the group), so
+      // merchants decode a single pay/axfer whose on-chain amount matches.
+      signedB64: result.signedPaymentB64,
       paymentTxId: result.paymentTxId,
       appCallTxId: result.appCallTxId,
       policyHash,

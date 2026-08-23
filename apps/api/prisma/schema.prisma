@@ -201,6 +201,10 @@ model PolicyVersion {
   createdBy          String?
   createdAt          DateTime         @default(now())
   decisions          PaymentDecision[]
+  // Velocity anomaly guard (PRD §6.5) — null means use engine defaults
+  velocityLimitCount     Int?
+  velocityWindowSeconds  Int?
+  velocityAction         String? // block | escalate
   @@unique([policyId, version])
 }
 
@@ -269,8 +273,9 @@ model Escalation {
   payment    PaymentRequest  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   decisionId String     @unique
   decision   PaymentDecision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  status     String     @default("pending") // pending | approved | denied
+  status     String     @default("pending") // pending | approved | denied | expired
   summary    String
+  expiresAt  DateTime? // actionable window; null = never expires (legacy rows)
   decidedBy  String?
   decidedAt  DateTime?
   createdAt  DateTime   @default(now())

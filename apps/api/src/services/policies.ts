@@ -1,7 +1,7 @@
 /**
  * Policy service — persistence + evaluation glue.
  * Converts stored PolicyVersion rows into the engine's PolicyRuleSet and
- * computes spend/trust context from Postgres before calling the engine.
+ * computes spend/trust context from SQLite before calling the engine.
  */
 import type {
   PolicyConfig,
@@ -12,6 +12,7 @@ import { DEFAULT_POLICY } from "@kron/shared";
 import { evaluatePayment, type PolicyRuleSet } from "@kron/policy-engine";
 import { prisma } from "../db.js";
 import { algoToMicro, toAlgo } from "../lib/money.js";
+import { configureAgentOnChain } from "../algorand/contract.js";
 import type { PolicyVersion } from "@prisma/client";
 
 export function policyVersionToRuleSet(v: PolicyVersion): PolicyRuleSet {
@@ -30,6 +31,9 @@ export function policyVersionToRuleSet(v: PolicyVersion): PolicyRuleSet {
     serviceAllowlist: (v.serviceAllowlist as string[]) ?? [],
     serviceBlocklist: (v.serviceBlocklist as string[]) ?? [],
     emergencyStop: v.emergencyStop,
+    velocityLimitCount: (v as unknown as { velocityLimitCount?: number | null }).velocityLimitCount ?? 5,
+    velocityWindowSeconds: (v as unknown as { velocityWindowSeconds?: number | null }).velocityWindowSeconds ?? 60,
+    velocityAction: ((v as unknown as { velocityAction?: string | null }).velocityAction as "block" | "escalate" | undefined) ?? "block",
   };
 }
 
@@ -86,12 +90,29 @@ export async function buildContext(agentId: string, sessionId?: string) {
     }
   }
 
+  // Velocity anomaly: count of agent payments in the rolling 60s window
+  const activePolicy = await getActivePolicyVersion(agentId);
+  const winSec = (activePolicy as unknown as { velocityWindowSeconds?: number | null })?.velocityWindowSeconds ?? 60;
+  const sinceWindow = new Date(Date.now() - winSec * 1000);
+  const recentInWindow = await prisma.paymentRequest.count({
+    where: { agentId, status: { in: ["confirmed", "authorized", "submitted"] }, createdAt: { gte: sinceWindow } },
+  });
+
+  // Behavioral anomaly scoring: trailing payment trail (most recent last)
+  const anomalyTrail = confirmed
+    .filter((p) => p.createdAt >= since24h)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .slice(-50)
+    .map((p) => ({ amountMicro: p.amountMicro, recipient: p.recipient, timestampMs: p.createdAt.getTime() }));
+
   return {
     sessionSpendMicro,
     dailySpendMicro,
     dailyPaymentCount,
     knownRecipients,
     knownServices,
+    recentPaymentCountInWindow: recentInWindow,
+    recentPayments: anomalyTrail,
   };
 }
 
@@ -144,7 +165,10 @@ export async function createPolicyVersion(
         serviceAllowlist: DEFAULT_POLICY.serviceAllowlist,
         serviceBlocklist: DEFAULT_POLICY.serviceBlocklist,
         emergencyStop: DEFAULT_POLICY.emergencyStop,
-      };
+        velocityLimitCount: (DEFAULT_POLICY as unknown as { velocityLimitCount?: number }).velocityLimitCount ?? 5,
+        velocityWindowSeconds: (DEFAULT_POLICY as unknown as { velocityWindowSeconds?: number }).velocityWindowSeconds ?? 60,
+        velocityAction: (DEFAULT_POLICY as unknown as { velocityAction?: string }).velocityAction ?? "block",
+      } as PolicyRuleSet;
 
   const next = {
     version: prev.version + 1,
@@ -161,6 +185,9 @@ export async function createPolicyVersion(
     serviceAllowlist: input.serviceAllowlist ?? prev.serviceAllowlist,
     serviceBlocklist: input.serviceBlocklist ?? prev.serviceBlocklist,
     emergencyStop: input.emergencyStop ?? prev.emergencyStop,
+    velocityLimitCount: input.velocityLimitCount ?? (prev as unknown as { velocityLimitCount?: number | null }).velocityLimitCount ?? 5,
+    velocityWindowSeconds: input.velocityWindowSeconds ?? (prev as unknown as { velocityWindowSeconds?: number | null }).velocityWindowSeconds ?? 60,
+    velocityAction: input.velocityAction ?? (prev as unknown as { velocityAction?: string | null }).velocityAction ?? "block",
     createdBy: byUserId ?? null,
     active: true,
   };
@@ -172,6 +199,11 @@ export async function createPolicyVersion(
     }),
     prisma.policyVersion.create({ data: { policyId: policy.id, ...next } }),
   ]);
+
+  // Mirror the new limits into ON-CHAIN enforcement: anchor_policy will reject
+  // any grouped payment above these ceilings (contract configure_agent).
+  // Best-effort and non-blocking — the off-chain engine remains authoritative.
+  void configureAgentOnChain(agentId, next.perCallLimitMicro, next.dailyBudgetMicro);
 
   return prisma.policyVersion.findFirst({
     where: { policyId: policy.id, version: next.version },
@@ -196,6 +228,9 @@ export function toPolicyConfig(v: PolicyVersion): PolicyConfig {
     serviceAllowlist: (v.serviceAllowlist as string[]) ?? [],
     serviceBlocklist: (v.serviceBlocklist as string[]) ?? [],
     emergencyStop: v.emergencyStop,
+    velocityLimitCount: (v as unknown as { velocityLimitCount?: number | null }).velocityLimitCount ?? 5,
+    velocityWindowSeconds: (v as unknown as { velocityWindowSeconds?: number | null }).velocityWindowSeconds ?? 60,
+    velocityAction: ((v as unknown as { velocityAction?: string | null }).velocityAction as PolicyConfig["velocityAction"]) ?? "block",
     active: v.active,
     createdAt: v.createdAt.toISOString(),
   };

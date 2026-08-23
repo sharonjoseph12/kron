@@ -50,6 +50,18 @@ export type {
   StreamEventHandler,
 } from "./types.js";
 
+// Framework adapters — LangChain, OpenAI, Vercel AI SDK
+export {
+  asLangChainTools,
+  asOpenAIFunctions,
+  executeOpenAIFunction,
+  asVercelAITools,
+  type AdapterOptions,
+  type LangChainTool,
+  type OpenAIFunction,
+  type VercelAITool,
+} from "./adapters.js";
+
 // Re-export shared types that SDK consumers need
 export type {
   PolicyDecision,

@@ -81,7 +81,7 @@ describe("KRON API integration", () => {
     const body = res.json();
     expect(body.ok).toBe(true);
     expect(body.service).toBe("kron-api");
-    expect(body.postgres).toBe("ok");
+    expect(body.database).toBe("ok");
   });
 
   it("POST /api/auth/login authenticates the seeded admin", async () => {
@@ -210,5 +210,178 @@ describe("KRON API integration", () => {
       headers: { cookie: adminCookie },
     });
     expect(res.statusCode).toBe(404);
+  });
+});
+
+describe("KRON API security hardening", () => {
+  let secApp: FastifyInstance;
+  const seededIds: string[] = [];
+
+  /** Seed agent→session→policy→payment→decision→escalation and return ids. */
+  async function seedEscalation(opts: { expired: boolean }) {
+    const { prisma } = await import("./db.js");
+    const agent = await prisma.agent.create({
+      data: { name: `sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, description: "security suite", status: "idle" },
+    });
+    const sessionRow = await prisma.agentSession.create({ data: { agentId: agent.id, status: "running" } });
+    const policy = await prisma.policy.create({ data: { id: agent.id, agentId: agent.id } });
+    const pv = await prisma.policyVersion.create({
+      data: {
+        policyId: policy.id,
+        version: 1,
+        name: "sec-policy",
+        perCallLimitMicro: 50_000n,
+        hardCeilingMicro: 1_000_000n,
+        sessionBudgetMicro: 500_000n,
+        dailyBudgetMicro: 5_000_000n,
+        maxDailyPayments: 10,
+        unknownRecipient: "allow",
+        firstTimeService: "allow",
+        recipientAllowlist: [],
+        recipientBlocklist: [],
+        serviceAllowlist: [],
+        serviceBlocklist: [],
+        active: true,
+      },
+    });
+    const payment = await prisma.paymentRequest.create({
+      data: {
+        clientRequestId: `sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        agentId: agent.id,
+        sessionId: sessionRow.id,
+        toolCallId: "tc-sec",
+        service: "market",
+        resourceId: "res-sec",
+        resourceName: "Security Test Resource",
+        recipient: "RRZ5UEO2XGYIGEYSKXWQJJ4LJSBBXNXC6TAGD4U3FBN4TXO3Q6JZ2VQTOI",
+        amountMicro: 10_000n,
+        network: "testnet",
+        status: "escalated",
+      },
+    });
+    const decision = await prisma.paymentDecision.create({
+      data: {
+        paymentId: payment.id,
+        decision: "ESCALATED",
+        reasons: ["over per-call limit"],
+        rulesTriggered: [],
+        policyVersionId: pv.id,
+        policyVersionNumber: pv.version,
+      },
+    });
+    const esc = await prisma.escalation.create({
+      data: {
+        paymentId: payment.id,
+        decisionId: decision.id,
+        summary: "security suite escalation",
+        status: "pending",
+        expiresAt: opts.expired ? new Date(Date.now() - 60_000) : new Date(Date.now() + 15 * 60_000),
+      },
+    });
+    seededIds.push(agent.id, sessionRow.id, policy.id, pv.id, payment.id, decision.id, esc.id);
+    return { agent, sessionRow, payment, esc };
+  }
+
+  async function cleanupSeed(): Promise<void> {
+    const { prisma } = await import("./db.js");
+    for (const id of seededIds.splice(0)) {
+      await prisma.escalation.deleteMany({ where: { OR: [{ id }, { paymentId: id }] } }).catch(() => {});
+      await prisma.paymentDecision.deleteMany({ where: { OR: [{ id }, { paymentId: id }] } }).catch(() => {});
+      await prisma.settlement.deleteMany({ where: { paymentId: id } }).catch(() => {});
+      await prisma.paymentRequest.deleteMany({ where: { id } }).catch(() => {});
+      await prisma.policyVersion.deleteMany({ where: { id } }).catch(() => {});
+      await prisma.policy.deleteMany({ where: { id } }).catch(() => {});
+      await prisma.agentSession.deleteMany({ where: { id } }).catch(() => {});
+      await prisma.alert.deleteMany({ where: { agentId: id } }).catch(() => {});
+      await prisma.toolCall.deleteMany({ where: { sessionId: id } }).catch(() => {});
+      await prisma.timelineEvent.deleteMany({ where: { sessionId: id } }).catch(() => {});
+      await prisma.agent.deleteMany({ where: { id } }).catch(() => {});
+    }
+  }
+
+  beforeAll(async () => {
+    secApp = await buildServer();
+    const res = await secApp.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+    });
+    expect(res.statusCode).toBe(200);
+    adminCookie = extractSessionCookie(res);
+  });
+
+  afterAll(async () => {
+    await cleanupSeed();
+    if (secApp && secApp !== app) await secApp.close();
+  });
+
+  it("GET /api/analytics/overview requires authentication", async () => {
+    const anon = await secApp.inject({ method: "GET", url: "/api/analytics/overview" });
+    expect(anon.statusCode).toBe(401);
+    const authed = await secApp.inject({
+      method: "GET",
+      url: "/api/analytics/overview",
+      headers: { cookie: adminCookie },
+    });
+    expect(authed.statusCode).toBe(200);
+  });
+
+  it("GET /api/events rejects anonymous access; ?token= authenticates", async () => {
+    const anon = await secApp.inject({ method: "GET", url: "/api/events" });
+    expect(anon.statusCode).toBe(401);
+
+    // EventSource cannot send headers — the query token must authenticate.
+    // (A full SSE inject would hang: the hijacked stream never ends.)
+    const login = await secApp.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+    });
+    const sid = login.cookies?.find((c) => c.name === "kron.sid")!.value;
+    const { getSessionUser } = await import("./lib/auth.js");
+    const user = await getSessionUser({
+      headers: {},
+      query: { token: sid },
+      cookies: {},
+    } as unknown as Parameters<typeof getSessionUser>[0]);
+    expect(user?.email).toBe(ADMIN_EMAIL);
+  });
+
+  it("non-admin roles cannot decide escalations", async () => {
+    const { prisma } = await import("./db.js");
+    const { createSession } = await import("./lib/auth.js");
+    const { esc } = await seedEscalation({ expired: false });
+    const operator = await prisma.user.create({
+      data: { email: `op-${Date.now()}@kron.test`, passwordHash: "x", role: "operator" },
+    });
+    const session = await createSession(operator.id);
+    const res = await secApp.inject({
+      method: "POST",
+      url: `/api/escalations/${esc.id}/decide`,
+      headers: { authorization: `Bearer ${session.token}` },
+      payload: { approve: true },
+    });
+    expect(res.statusCode).toBe(403);
+    await prisma.user.delete({ where: { id: operator.id } }).catch(() => {});
+    await prisma.session.deleteMany({ where: { userId: operator.id } }).catch(() => {});
+  });
+
+  it("expired escalations return 409 and are marked expired", async () => {
+    const { prisma } = await import("./db.js");
+    const { payment, esc } = await seedEscalation({ expired: true });
+
+    const res = await secApp.inject({
+      method: "POST",
+      url: `/api/escalations/${esc.id}/decide`,
+      headers: { cookie: adminCookie },
+      payload: { approve: true },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toBe("escalation_expired");
+
+    const after = await prisma.escalation.findUnique({ where: { id: esc.id } });
+    expect(after?.status).toBe("expired");
+    const untouched = await prisma.paymentRequest.findUnique({ where: { id: payment.id } });
+    expect(untouched?.status).toBe("escalated");
   });
 });

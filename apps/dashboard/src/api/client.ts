@@ -216,6 +216,13 @@ export const api = {
       `/api/mcp/servers/${encodeURIComponent(id)}/health`,
     ),
 
+  // ---- demo ----
+  resetDemo: () => post<{ ok: boolean; message: string }>("/api/demo/reset", {}),
+  demoStatus: () =>
+    get<{ demoMode: boolean; network: string; agents: number; wallets: number; policies: number; payments: number; settlements: number }>(
+      "/api/demo/status",
+    ),
+
   // ---- audit ----
   listAudit: (params?: { limit?: string }) => {
     const q = new URLSearchParams();

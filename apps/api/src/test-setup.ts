@@ -33,6 +33,11 @@ for (const [key, value] of Object.entries(TEST_ENV)) {
 }
 
 const binDir = path.join(apiRoot, "node_modules", ".bin");
+const binExt = process.platform === "win32" ? ".cmd" : "";
+
+function bin(name: string): string {
+  return path.join(binDir, `${name}${binExt}`);
+}
 
 function run(cmd: string): void {
   try {
@@ -43,9 +48,15 @@ function run(cmd: string): void {
   }
 }
 
-run(`"${path.join(binDir, "prisma.cmd")}" generate`);
-run(`"${path.join(binDir, "prisma.cmd")}" db push --accept-data-loss --skip-generate`);
-run(`"${path.join(binDir, "tsx.cmd")}" prisma/seed.ts`);
+try {
+  // Skippable: when a dev server is running it locks the query-engine DLL
+  // (Windows EPERM). The existing generated client is then already current.
+  run(`"${bin("prisma")}" generate`);
+} catch (err) {
+  console.warn(`[test-setup] prisma generate skipped: ${err instanceof Error ? err.message.split("\n")[0] : err}`);
+}
+run(`"${bin("prisma")}" db push --accept-data-loss --skip-generate`);
+run(`"${bin("tsx")}" prisma/seed.ts`);
 
 afterAll(async () => {
   await prisma.$disconnect();

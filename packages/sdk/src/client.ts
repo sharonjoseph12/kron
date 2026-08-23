@@ -87,7 +87,7 @@ export class KronClient {
     }
   }
 
-  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  private async request<T>(path: string, init: RequestInit = {}, attempt = 0): Promise<T> {
     const headers = new Headers(init.headers);
     if (this.apiKey) {
       headers.set("authorization", `Bearer ${this.apiKey}`);
@@ -108,6 +108,13 @@ export class KronClient {
     }
 
     if (res.status === 204) return undefined as T;
+
+    // Retry on transient 429/502/503/504 with exponential backoff (per plan)
+    if ([429, 502, 503, 504].includes(res.status) && attempt < 2) {
+      const delay = 250 * Math.pow(2, attempt) + Math.random() * 100;
+      await new Promise((r) => setTimeout(r, delay));
+      return this.request<T>(path, init, attempt + 1);
+    }
 
     const text = await res.text();
     let data: unknown = null;
