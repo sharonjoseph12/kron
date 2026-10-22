@@ -394,7 +394,7 @@ anchor_daily_check:
    itob
    box_put
 
- anchor_no_limits:
+anchor_no_limits:
   byte "total_payments"
   app_global_get
   int 1

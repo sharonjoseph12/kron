@@ -168,6 +168,7 @@ export const api = {
     recipient: string;
     amountAlgo: number;
     network?: string;
+    clientRequestId?: string;
   }) => post<any>("/api/payments/execute", input),
   listPayments: (params?: { agentId?: string; status?: string; limit?: string }) => {
     const q = new URLSearchParams();
