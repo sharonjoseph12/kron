@@ -268,7 +268,9 @@ pnpm demo:proof                   # 30/30 repeated runs
 ## 🏆 Hackathon Documents
 
 - [`VIDEO_SCRIPT.md`](./VIDEO_SCRIPT.md) — 2:45 demo recording script with exact numbers
-- [`PPT_OUTLINE.md`](./PPT_OUTLINE.md) — 12-slide deck outline + speaker notes
+- [`KRON_PS21_Deck.pptx`](./KRON_PS21_Deck.pptx) — final 14-slide deck (editable)
+- [`KRON_PS21_Deck.pdf`](./KRON_PS21_Deck.pdf) — submission PDF export
+- [`PPT_OUTLINE.md`](./PPT_OUTLINE.md) — slide copy + speaker notes
 - [`PITCH.md`](./PITCH.md) — 3-Minute Pitch Script & Judge Q&A Cheat Sheet
 - [`SUBMISSION.md`](./SUBMISSION.md) — Full Hackathon Project Submission Document
 - [`TOP3_CHECKLIST.md`](./TOP3_CHECKLIST.md) — submission checklist and verified metrics

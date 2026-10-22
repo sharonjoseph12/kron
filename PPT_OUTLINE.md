@@ -1,5 +1,6 @@
-# KRON — PPT Outline (12 slides)
+# KRON — PPT Outline (12 slides + 2 appendix)
 
+> **Generated deck:** [`KRON_PS21_Deck.pptx`](./KRON_PS21_Deck.pptx) · [`KRON_PS21_Deck.pdf`](./KRON_PS21_Deck.pdf)
 > **Deck title:** KRON — The Capability Firewall for AI Agents
 > **Subtitle:** Preview the blast radius. Bind the approval. Prove the enforcement.
 > **Track:** PS 2.1 — AI-agent safety & control

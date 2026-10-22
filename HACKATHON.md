@@ -84,8 +84,8 @@ pnpm build
 
 ## Links
 
+- `KRON_PS21_Deck.pptx` / `KRON_PS21_Deck.pdf` — final 14-slide deck
 - `VIDEO_SCRIPT.md` — 2:45 video script
-- `PPT_OUTLINE.md` — 12-slide deck
 - `PITCH.md` — 3-minute pitch + Q&A
 - `SUBMISSION.md` — full write-up
 - `JUDGE_PREP.md` — judge Q&A

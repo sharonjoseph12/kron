@@ -45,17 +45,17 @@
 ## 2. Submission Assets — Remaining
 
 - [x] `VIDEO_SCRIPT.md` — 2:45 script with exact numbers
-- [x] `PPT_OUTLINE.md` — 12 slides + speaker notes
+- [x] `KRON_PS21_Deck.pptx` / `KRON_PS21_Deck.pdf` — 14-slide generated deck
+- [x] `PPT_OUTLINE.md` — slide copy + speaker notes
 - [x] `PITCH.md` — 3-minute pitch + Q&A
 - [x] `SUBMISSION.md` — submission write-up
 - [x] `JUDGE_PREP.md` — judge Q&A
 - [x] `DEMO_REHEARSAL.md` — setup, clicks, fallbacks
 - [ ] Record the screen + voiceover (follow `VIDEO_SCRIPT.md`)
-- [ ] Export the PPT from `PPT_OUTLINE.md` (12 slides, 16:9)
 - [ ] Watch the recording once with sound off; every number must be legible
 - [ ] Confirm no `.env`, credentials file, or secret appears on screen
 - [ ] Upload the video and paste the link into the submission form
-- [ ] Submit `PPT.pdf` + video link
+- [ ] Submit `KRON_PS21_Deck.pdf` + video link
 
 ---
 
@@ -110,7 +110,8 @@ pnpm build
 
 ```
 kron-submission/
-├── KRON_PS21_Deck.pdf          # exported from PPT_OUTLINE.md
+├── KRON_PS21_Deck.pptx         # editable deck
+├── KRON_PS21_Deck.pdf          # submission export
 ├── VIDEO_SCRIPT.md             # reference / narration
 ├── video-link.txt              # uploaded link
 ├── SUBMISSION.md

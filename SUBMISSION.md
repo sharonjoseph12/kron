@@ -114,7 +114,7 @@ hash-chained audit + enforcement receipts
 
 ## Demo Script (2:45)
 
-Full script: `VIDEO_SCRIPT.md`. Slide deck outline: `PPT_OUTLINE.md`.
+Full script: `VIDEO_SCRIPT.md`. Deck: `KRON_PS21_Deck.pptx` / `KRON_PS21_Deck.pdf` (outline: `PPT_OUTLINE.md`).
 
 | Time | Beat | Real number |
 |---|---|---|
