@@ -35,34 +35,8 @@ const queryClient = new QueryClient({
   },
 });
 
-function initCursorInteraction() {
-  const installRipple = (e: MouseEvent) => {
-    const target = (e.target as HTMLElement)?.closest?.("a, button, [data-ripple]");
-    if (!target) return;
-    const ring = document.createElement("span");
-    ring.className = "ripple-ring";
-    const rect = target.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height) * 1.6;
-    ring.style.width = ring.style.height = `${size}px`;
-    ring.style.left = `${e.clientX - rect.left - size / 2}px`;
-    ring.style.top = `${e.clientY - rect.top - size / 2}px`;
-    target.appendChild(ring);
-    setTimeout(() => ring.remove(), 650);
-  };
-
-  const trackSpotlight = (e: MouseEvent) => {
-    (document.querySelectorAll<HTMLElement>(".spotlight")).forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      el.style.setProperty("--spot-x", `${e.clientX - rect.left}px`);
-      el.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
-    });
-  };
-
-  document.addEventListener("pointerdown", installRipple);
-  document.addEventListener("pointermove", trackSpotlight);
-}
-
-if (typeof window !== "undefined") initCursorInteraction();
+// The interface intentionally avoids cursor ripples and spotlight tracking.
+// A control plane should feel still and deterministic, not decorative.
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

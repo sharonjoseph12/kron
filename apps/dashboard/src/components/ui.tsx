@@ -1,14 +1,12 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { badgeClass, type BadgeTone } from "../lib/format.js";
+import { badgeClass, badgeDot, type BadgeTone } from "../lib/format.js";
 
 /* ------------------------------------------------------------------ */
-/* Card variants (warm cream, charcoal edges, cursor spotlight)        */
+/* Card variants (warm paper, hairline edges)                          */
 /* ------------------------------------------------------------------ */
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={`card card-hover spotlight anim-blur-fade-in ${className}`}>{children}</div>
-  );
+  return <div className={`card anim-fade-in ${className}`}>{children}</div>;
 }
 
 export function GlassCard({
@@ -20,8 +18,7 @@ export function GlassCard({
   className?: string;
   accent?: boolean;
 }) {
-  const cls = `${accent ? "accent-card" : "card card-hover"} spotlight anim-blur-fade-in`;
-  return <div className={`${cls} ${className}`}>{children}</div>;
+  return <div className={`${accent ? "accent-card" : "card"} anim-fade-in ${className}`}>{children}</div>;
 }
 
 export function CardHeader({
@@ -36,12 +33,12 @@ export function CardHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--color-line)] bg-[var(--color-surface-3)]/60 px-5 py-4">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--color-line)] px-5 py-4">
       <div className="min-w-0">
-        <h2 className="display-serif text-[15px] font-semibold tracking-tight text-[var(--color-ink)]">
+        <h2 className="display-serif text-[15px] font-semibold leading-5 tracking-tight text-[var(--color-ink)]">
           {title}
         </h2>
-        {subtitle ? <p className="mt-0.5 text-xs text-[var(--color-ink-3)]">{subtitle}</p> : null}
+        {subtitle ? <p className="mt-1 text-[11px] leading-5 text-[var(--color-ink-3)]">{subtitle}</p> : null}
       </div>
       {right}
       {actions}
@@ -57,15 +54,20 @@ export function Badge({
   tone = "muted",
   children,
   pulse = false,
+  dot = false,
 }: {
   tone?: BadgeTone;
   children: ReactNode;
   pulse?: boolean;
+  dot?: boolean;
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset transition-shadow ${badgeClass[tone]} ${pulse ? "anim-soft-pulse" : ""}`}
+      className={`inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${badgeClass[tone]}`}
     >
+      {dot ? (
+        <span className={`h-1.5 w-1.5 rounded-full ${badgeDot[tone]} ${pulse ? "anim-soft-pulse" : ""}`} />
+      ) : null}
       {children}
     </span>
   );
@@ -146,14 +148,14 @@ export function SkeletonRow() {
 
 export function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-[#e5b0a6] bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]">
+    <div className="border-l-2 border-[var(--color-danger)] bg-[var(--color-danger-soft)]/50 px-4 py-2.5 text-[12px] text-[var(--color-danger)]">
       {message}
     </div>
   );
 }
 
 export function Mono({ children }: { children: ReactNode }) {
-  return <span className="font-mono text-[11px] text-[var(--color-ink-2)]">{children}</span>;
+  return <span className="font-mono text-[11px] tracking-tight text-[var(--color-ink-2)]">{children}</span>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -161,21 +163,24 @@ export function Mono({ children }: { children: ReactNode }) {
 /* ------------------------------------------------------------------ */
 
 export const inputClass =
-  "w-full rounded-lg border border-[var(--color-line-strong)] bg-[var(--color-surface-3)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder-[var(--color-ink-3)] outline-none transition focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[rgba(224,95,60,0.18)]";
+  "w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface-3)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder-[var(--color-ink-3)] outline-none transition focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[rgba(224,95,60,0.14)]";
 
-export const labelClass = "mb-1 block text-xs font-semibold tracking-wide text-[var(--color-ink-2)]";
+export const labelClass = "mb-1 block text-[11px] font-semibold tracking-wide text-[var(--color-ink-2)]";
 
 export const btnPrimary =
-  "btn-indus px-3.5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-indus px-3.5 py-2 text-[13px] disabled:cursor-not-allowed disabled:opacity-50";
 
 export const btnAccent =
-  "btn-indus px-3.5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-indus px-3.5 py-2 text-[13px] disabled:cursor-not-allowed disabled:opacity-50";
 
 export const btnGhost =
-  "btn-cream px-3.5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-cream px-3.5 py-2 text-[13px] disabled:cursor-not-allowed disabled:opacity-50";
+
+export const btnQuiet =
+  "inline-flex items-center justify-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium text-[var(--color-ink-3)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-50";
 
 export const btnDanger =
-  "btn-cream px-3.5 py-2 text-sm text-[var(--color-danger)] border-[#e5b0a6] bg-[var(--color-danger-soft)] disabled:cursor-not-allowed disabled:opacity-50 hover:bg-[#f5cdc4] hover:text-[#a03220]";
+  "btn-cream px-3.5 py-2 text-[13px] text-[var(--color-danger)] border-[#e5b0a6] bg-[var(--color-danger-soft)] disabled:cursor-not-allowed disabled:opacity-50 hover:bg-[#f5cdc4] hover:text-[#a03220]";
 
 /* ------------------------------------------------------------------ */
 /* Animated Counter & Stat                                             */
@@ -216,13 +221,13 @@ export function Stat({
   icon?: ReactNode;
 }) {
   return (
-    <GlassCard accent className="px-4 py-4 group">
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-3)]">
+    <GlassCard accent className="px-4 py-4">
+      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-3)]">
         {icon}
         <span>{label}</span>
       </div>
-      <div className={`mt-1.5 font-mono text-2xl font-semibold tabular-nums anim-fade-up ${accent}`}>{value}</div>
-      {sub ? <div className="mt-1 text-xs text-[var(--color-ink-3)]">{sub}</div> : null}
+      <div className={`mt-2 font-mono text-[24px] font-medium leading-none tabular-nums ${accent}`}>{value}</div>
+      {sub ? <div className="mt-1.5 text-[11px] text-[var(--color-ink-3)]">{sub}</div> : null}
     </GlassCard>
   );
 }
@@ -281,9 +286,9 @@ export function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(51,51,51,0.4)] backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(36,35,31,0.42)] p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-lg border border-[var(--color-line-strong)] bg-[var(--color-surface-3)] p-6 shadow-2xl anim-scale-in"
+        className="w-full max-w-lg rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-3)] p-6 shadow-2xl anim-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-[var(--color-line)]">

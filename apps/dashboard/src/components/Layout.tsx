@@ -98,35 +98,34 @@ export default function Layout() {
   return (
     <div className={`flex min-h-screen bg-[var(--color-canvas)] ${anyEmergencyStop ? "emergency-active" : ""}`}>
       <aside className="fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-[var(--color-line)] bg-[var(--color-canvas)]">
-        <div className="flex items-center gap-3 px-5 py-5">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a1a1a] font-mono text-sm font-bold text-[#fffcf6] shadow-sm">
+        <div className="flex items-center gap-3 px-5 py-6">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#262521] font-mono text-[13px] font-bold text-[#fffcf6]">
             K
-            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--color-accent)] anim-live-ping" />
           </div>
           <div>
-            <div className="display-serif text-[15px] font-semibold tracking-[0.16em] text-[var(--color-ink)]">
+            <div className="display-serif text-[15px] font-semibold tracking-[0.18em] text-[var(--color-ink)]">
               KRON
             </div>
-            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-ink-3)]">
-              Operator Console
+            <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-3)]">
+              Agent control plane
             </div>
           </div>
         </div>
-        <div className="px-5 pb-3">
+        <div className="px-5 pb-4">
           <NetworkBadge network={import.meta.env.VITE_ALGORAND_NETWORK ?? "testnet"} />
         </div>
 
-        <nav className="mt-2 flex flex-col gap-1 px-3">
+        <nav className="mt-1 flex flex-col gap-0.5 px-3">
           {NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
-                `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                `group flex items-center gap-3 rounded-md px-3 py-2 text-[12px] font-medium transition-colors duration-150 ${
                   isActive
-                    ? "bg-[#1a1a1a] text-[#fffcf6] shadow-sm"
-                    : "text-[var(--color-ink-2)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)]"
+                    ? "bg-[var(--color-surface-2)] text-[var(--color-ink)]"
+                    : "text-[var(--color-ink-2)] hover:bg-[var(--color-surface-2)]/60 hover:text-[var(--color-ink)]"
                 }`
               }
             >
@@ -134,47 +133,45 @@ export default function Layout() {
               {item.label}
               {item.to === "/payments" ? (
                 <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
-              ) : (
-                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-current opacity-0 transition-opacity group-hover:opacity-30" />
-              )}
+              ) : null}
             </NavLink>
           ))}
         </nav>
 
-        <div className="px-3 mt-5 flex flex-col gap-2">
+        <div className="mt-6 flex flex-col gap-2 px-3">
           <button
             onClick={() => setShowKillModal(true)}
-            className="btn-cream w-full items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold tracking-wide text-[var(--color-danger)] border-[#e5b0a6] bg-[var(--color-danger-soft)] hover:bg-[#f5cdc4] hover:text-[#a03220]"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-[#e5b0a6] bg-transparent px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-soft)]"
           >
-            <span className="h-2 w-2 rounded-full bg-[var(--color-danger)] anim-live-ping" />
-            EMERGENCY STOP
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-danger)]" />
+            Emergency stop
           </button>
           <button
             onClick={() => setShowResetModal(true)}
-            className="btn-cream w-full items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold tracking-wide text-[var(--color-ink-2)] hover:text-[var(--color-ink)]"
+            className="w-full rounded-md px-3 py-2 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-ink-3)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)]"
             title="Clear payments & timeline for next demo run (keeps agents/wallets)"
           >
-            ↺ RESET DEMO
+            Reset demo
           </button>
         </div>
 
         <div className="mt-auto border-t border-[var(--color-line)] p-3">
-          <div className="mb-3 px-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--color-ink-3)]">
-            Powered by Algorand
+          <div className="mb-3 px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-3)]">
+            Algorand testnet
           </div>
           <div className="flex items-center gap-2.5 px-1 py-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-xs font-semibold text-[var(--color-ink-2)] ring-1 ring-[var(--color-line)]">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-[11px] font-semibold text-[var(--color-ink-2)]">
               {data?.user?.email?.[0]?.toUpperCase() ?? "?"}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-xs font-semibold text-[var(--color-ink)]">{data?.user?.email}</div>
-              <div className="text-[10px] uppercase tracking-wider text-[var(--color-ink-3)]">{data?.user?.role}</div>
+              <div className="truncate text-[11px] font-medium text-[var(--color-ink)]">{data?.user?.email}</div>
+              <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--color-ink-3)]">{data?.user?.role}</div>
             </div>
           </div>
           <button
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
-            className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink-3)] transition hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)] disabled:opacity-50"
+            className="mt-2 flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-[11px] font-medium text-[var(--color-ink-3)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)] disabled:opacity-50"
           >
             <LogoutIcon />
             {logout.isPending ? "Signing out…" : "Sign out"}
@@ -182,7 +179,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="ml-60 flex-1 px-8 py-7">
+      <main className="ml-60 flex-1 px-8 py-8 lg:px-10">
         {anyEmergencyStop && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-[#c0392b] bg-[var(--color-danger-soft)] px-5 py-3 anim-fade-up">
             <div className="flex items-center gap-3">

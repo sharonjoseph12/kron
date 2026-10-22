@@ -32,12 +32,21 @@ export function fmtTs(iso: string | null | undefined): string {
 export type BadgeTone = "ok" | "warn" | "err" | "info" | "muted" | "accent";
 
 export const badgeClass: Record<BadgeTone, string> = {
-  ok: "bg-[var(--color-success-soft)] text-[var(--color-success)] ring-[#a8cfb8]",
-  warn: "bg-[var(--color-warning-soft)] text-[var(--color-warning)] ring-[#d9c48f]",
-  err: "bg-[var(--color-danger-soft)] text-[var(--color-danger)] ring-[#e5b0a6]",
-  info: "bg-[#e3eef6] text-[var(--color-info)] ring-[#a9c6da]",
-  muted: "bg-[var(--color-surface-2)] text-[var(--color-ink-3)] ring-[var(--color-line)]",
-  accent: "bg-[var(--color-accent-soft)] text-[#b8451f] ring-[#e0a185]",
+  ok: "bg-[var(--color-success-soft)] text-[var(--color-success)]",
+  warn: "bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
+  err: "bg-[var(--color-danger-soft)] text-[var(--color-danger)]",
+  info: "bg-[#e3eef6] text-[var(--color-info)]",
+  muted: "bg-[var(--color-surface-2)] text-[var(--color-ink-3)]",
+  accent: "bg-[var(--color-accent-soft)] text-[#a84322]",
+};
+
+export const badgeDot: Record<BadgeTone, string> = {
+  ok: "bg-[var(--color-success)]",
+  warn: "bg-[var(--color-warning)]",
+  err: "bg-[var(--color-danger)]",
+  info: "bg-[var(--color-info)]",
+  muted: "bg-[var(--color-ink-3)]",
+  accent: "bg-[var(--color-accent)]",
 };
 
 export function decisionTone(d: PolicyDecision | string | null | undefined): BadgeTone {
@@ -48,10 +57,10 @@ export function decisionTone(d: PolicyDecision | string | null | undefined): Bad
 }
 
 export function decisionColor(d: PolicyDecision | string | null | undefined): string {
-  if (d === "AUTO_APPROVED") return "#059669";
-  if (d === "ESCALATED") return "#d97706";
-  if (d === "BLOCKED") return "#dc2626";
-  return "#a8a29e";
+  if (d === "AUTO_APPROVED") return "#2f7d5e";
+  if (d === "ESCALATED") return "#9a6b12";
+  if (d === "BLOCKED") return "#c0392b";
+  return "#968b75";
 }
 
 const paymentStatusToneMap: Record<string, BadgeTone> = {

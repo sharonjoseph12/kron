@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { StreamEvent } from "@kron/shared";
 import { API_BASE } from "../api/client.js";
-import { fmtTs, badgeClass, type BadgeTone } from "../lib/format.js";
+import { badgeDot, type BadgeTone } from "../lib/format.js";
 
 interface FeedEntry {
   id: string;
@@ -150,7 +150,13 @@ function describe(ev: StreamEvent): FeedEntry | null {
   }
 }
 
-export default function LiveFeed({ limit = 200 }: { limit?: number }) {
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+export default function LiveFeed({ limit = 200, plain = false }: { limit?: number; plain?: boolean }) {
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [connected, setConnected] = useState(true);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -180,26 +186,38 @@ export default function LiveFeed({ limit = 200 }: { limit?: number }) {
   }, [entries]);
 
   return (
-    <div ref={boxRef} className="terminal h-[420px] overflow-y-auto overscroll-contain rounded-lg">
-      <div className="terminal-scanline" />
+    <div
+      ref={boxRef}
+      className={`h-[420px] overflow-y-auto overscroll-contain ${plain ? "" : "terminal"}`}
+    >
       {!connected && (
-        <div className="sticky top-0 z-30 flex items-center gap-2 bg-amber-50 px-3 py-1.5 text-xs text-amber-800 border-b border-amber-200">
-          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" /> Reconnecting to live feed…
+        <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-[#e5d5a8] bg-[var(--color-warning-soft)] px-3 py-1.5 text-[10px] text-[var(--color-warning)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-warning)] anim-soft-pulse" /> Reconnecting to live feed…
         </div>
       )}
       {entries.length === 0 ? (
-        <div className="flex h-full items-center justify-center font-mono text-xs text-[var(--color-ink-3)]">
-          <span className="anim-soft-pulse">&gt; WAITING FOR EVENTS…</span>
+        <div className="flex h-full items-center justify-center font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-3)]">
+          Waiting for events
         </div>
       ) : (
-        <ul className="relative z-20 flex flex-col gap-1.5 p-2">
+        <ul className="relative z-20">
           {entries.map((e) => (
-            <li key={e.id} className="flex items-start gap-2.5 rounded-md px-2 py-1.5 hover:bg-[var(--color-surface-2)] transition-colors anim-slide-in-right">
-              <span className="mt-0.5 shrink-0 font-mono text-[10px] tabular-nums text-[var(--color-ink-3)]">{fmtTs(e.ts)}</span>
-              <span className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest ring-1 ring-inset ${badgeClass[e.badge]}`}>
-                {e.kind}
+            <li
+              key={e.id}
+              className="flex items-start gap-3 border-b border-[var(--color-line)]/60 px-3 py-2 last:border-0 hover:bg-[var(--color-surface-2)]/40"
+            >
+              <span className="mt-1.5 shrink-0">
+                <span className={`block h-1.5 w-1.5 rounded-full ${badgeDot[e.badge]}`} />
               </span>
-              <span className="min-w-0 text-xs leading-relaxed text-[var(--color-ink-2)]">{e.summary}</span>
+              <div className="min-w-0 flex-1">
+                <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-3)]">
+                  {e.kind}
+                </div>
+                <div className="mt-0.5 text-[11px] leading-relaxed text-[var(--color-ink-2)]">{e.summary}</div>
+              </div>
+              <span className="shrink-0 font-mono text-[9px] tabular-nums text-[var(--color-ink-3)]">
+                {fmtTime(e.ts)}
+              </span>
             </li>
           ))}
         </ul>

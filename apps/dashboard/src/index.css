@@ -127,19 +127,7 @@ body {
   animation: tatva-live-ping 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
-.stagger-children > * { animation: tatva-blur-fade-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.stagger-children > *:nth-child(1)  { animation-delay: 40ms; }
-.stagger-children > *:nth-child(2)  { animation-delay: 100ms; }
-.stagger-children > *:nth-child(3)  { animation-delay: 160ms; }
-.stagger-children > *:nth-child(4)  { animation-delay: 220ms; }
-.stagger-children > *:nth-child(5)  { animation-delay: 280ms; }
-.stagger-children > *:nth-child(6)  { animation-delay: 340ms; }
-.stagger-children > *:nth-child(7)  { animation-delay: 400ms; }
-.stagger-children > *:nth-child(8)  { animation-delay: 460ms; }
-.stagger-children > *:nth-child(9)  { animation-delay: 520ms; }
-.stagger-children > *:nth-child(10) { animation-delay: 580ms; }
-.stagger-children > *:nth-child(11) { animation-delay: 640ms; }
-.stagger-children > *:nth-child(12) { animation-delay: 700ms; }
+.stagger-children > * { animation: tatva-fade-in 0.22s ease both; }
 
 /* ------------------------------------------------------------------ */
 /* Typing dots (AI composing indicator)                                */
@@ -168,79 +156,33 @@ body {
   z-index: 60;
 }
 
-/* Mouse-follow spotlight on cards/rows: a warm radial glow that tracks
-   the cursor. main.tsx sets --spot-x / --spot-y on .spotlight elements. */
-.spotlight { position: relative; overflow: hidden; }
-.spotlight::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    420px circle at var(--spot-x, 50%) var(--spot-y, 50%),
-    rgba(224, 95, 60, 0.09),
-    transparent 60%
-  );
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  border-radius: inherit;
-}
-.spotlight:hover::before { opacity: 1; }
+/* Spotlight is deliberately inert. The old cursor-tracking glow read as
+   decoration rather than product surface. Keep the class so existing markup
+   stays compatible while the interface stays quiet. */
+.spotlight { position: relative; }
+.spotlight::before { display: none; }
 
 /* ------------------------------------------------------------------ */
-/* Surface primitives — warm cream cards, charcoal edges               */
+/* Surface primitives — warm paper, hairline edges                     */
 /* ------------------------------------------------------------------ */
 
-.card {
-  position: relative;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line-strong);
-  border-radius: 0.5rem;
-  transition:
-    background 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease,
-    transform 0.35s ease;
-}
-.card-hover:hover {
-  background: var(--color-surface-2);
-  box-shadow: 0 14px 40px -18px rgba(51, 51, 51, 0.28);
-  transform: translateY(-2px);
-}
-.card-hover:active { transform: translateY(0); }
-
+.card,
 .accent-card {
   position: relative;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 0.5rem;
-  background:
-    linear-gradient(135deg, rgba(224, 95, 60, 0.07), rgba(255, 255, 255, 0) 45%),
-    var(--color-surface);
-  transition: background 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  transition: border-color 0.25s ease, background 0.25s ease;
 }
+.card-hover:hover,
 .accent-card:hover {
-  background:
-    linear-gradient(135deg, rgba(224, 95, 60, 0.13), rgba(255, 255, 255, 0) 55%),
-    var(--color-surface);
-  box-shadow: 0 14px 40px -18px rgba(51, 51, 51, 0.25);
-  transform: translateY(-2px);
+  background: #faf7ef;
+  border-color: #c9bfa8;
 }
-.accent-card::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(224, 95, 60, 0.5), rgba(51, 51, 51, 0.15) 60%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
+.accent-card::before { display: none; }
 
 /* ------------------------------------------------------------------ */
-/* Buttons — near-black Indus gradient, shifts on hover                */
+/* Buttons — near-black flat, quiet secondary                          */
 /* ------------------------------------------------------------------ */
 
 .btn-indus {
@@ -251,19 +193,18 @@ body {
   border-radius: 0.5rem;
   font-weight: 600;
   color: #fffcf6;
-  background: linear-gradient(180deg, hsl(0 0% 20%), hsl(0 0% 10%));
-  border: 1px solid #1a1a1a;
+  background: #262521;
+  border: 1px solid #262521;
   transition:
-    background 0.3s ease,
-    box-shadow 0.3s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
     transform 0.15s ease;
-  box-shadow: 0 1px 2px rgba(51, 51, 51, 0.3);
 }
 .btn-indus:hover {
-  background: linear-gradient(180deg, hsl(0 0% 15%), hsl(0 0% 25%));
-  box-shadow: 0 6px 18px -8px rgba(51, 51, 51, 0.5);
+  background: #11110f;
+  border-color: #11110f;
 }
-.btn-indus:active { transform: scale(0.97); }
+.btn-indus:active { transform: translateY(1px); }
 .btn-indus:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-cream {
@@ -273,13 +214,17 @@ body {
   gap: 0.5rem;
   border-radius: 0.5rem;
   font-weight: 500;
-  color: var(--color-ink);
-  background: var(--color-surface-3);
-  border: 1px solid var(--color-line-strong);
-  transition: background 0.3s ease, transform 0.15s ease, color 0.3s ease;
+  color: var(--color-ink-2);
+  background: transparent;
+  border: 1px solid var(--color-line);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
-.btn-cream:hover { background: var(--color-surface-2); color: #1a1a1a; }
-.btn-cream:active { transform: scale(0.97); }
+.btn-cream:hover {
+  background: var(--color-surface-2);
+  border-color: #c9bfa8;
+  color: var(--color-ink);
+}
+.btn-cream:active { transform: translateY(1px); }
 .btn-cream:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ------------------------------------------------------------------ */
@@ -387,29 +332,12 @@ a:hover .badge-onchain { transform: scale(1.04); }
 .terminal {
   position: relative;
   overflow: hidden;
-  background: #faf7ef;
-  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 0.5rem;
 }
-.terminal::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, transparent 50%, rgba(51, 51, 51, 0.02) 51%, transparent 100%);
-  background-size: 100% 4px;
-  pointer-events: none;
-  z-index: 10;
-}
-.terminal-scanline {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 24%;
-  background: linear-gradient(to bottom, transparent, rgba(224, 95, 60, 0.08), transparent);
-  animation: scanline 5s linear infinite;
-  pointer-events: none;
-  z-index: 11;
-}
+.terminal::after { display: none; }
+.terminal-scanline { display: none; }
 
 /* ------------------------------------------------------------------ */
 /* Table row entrance (Indus staggered reveal)                         */
@@ -418,7 +346,22 @@ a:hover .badge-onchain { transform: scale(1.04); }
 .trow-in { animation: tatva-table-row-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* Serif editorial display — echoes Indus' heritage typography */
-.display-serif { font-family: var(--font-serif); font-weight: 600; letter-spacing: -0.02em; }
+.display-serif { font-family: var(--font-serif); font-weight: 600; letter-spacing: -0.025em; }
+
+/* Quiet section label — used instead of another badge. */
+.eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+}
+
+/* Keyboard focus that matches the paper/ink system. */
+:where(button, a, [role="button"], summary):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
 
 /* ------------------------------------------------------------------ */
 /* Emergency Stop — full-UI red tint when fleet is frozen              */
@@ -460,11 +403,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(at 20% 80%, rgba(224, 95, 60, 0.04) 0%, transparent 50%),
-    radial-gradient(at 80% 20%, rgba(43, 154, 139, 0.04) 0%, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(227, 195, 97, 0.03) 0%, transparent 50%);
-  background-size: 200% 200%;
-  animation: mesh-shift 30s ease-in-out infinite;
+    radial-gradient(at 20% 80%, rgba(224, 95, 60, 0.025) 0%, transparent 50%),
+    radial-gradient(at 80% 20%, rgba(43, 154, 139, 0.025) 0%, transparent 50%);
   pointer-events: none;
   z-index: -1;
 }
@@ -493,4 +433,16 @@ body::before {
   content: "Ⱥ";
   font-weight: 700;
   opacity: 0.7;
+}
+
+/* Honour reduced-motion without changing the layout or hierarchy. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

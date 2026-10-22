@@ -109,11 +109,11 @@ export default function Login() {
           </div>
           <div className="text-center">
             <h1 className="display-serif text-3xl font-bold tracking-tight text-[var(--color-ink)]">KRON</h1>
-            <p className="mt-1 text-sm text-[var(--color-ink-3)]">Policy-Controlled Economic Runtime</p>
+            <p className="mt-1 text-sm text-[var(--color-ink-3)]">Capability firewall for autonomous agents</p>
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="anim-blur-fade-in stagger-children rounded-2xl border border-[var(--color-line-strong)] bg-[var(--color-surface-3)] p-6 shadow-sm">
+        <form onSubmit={onSubmit} className="anim-blur-fade-in stagger-children rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
           <h2 className="mb-5 display-serif text-base font-semibold tracking-tight text-[var(--color-ink)]">Operator sign in</h2>
 
           <div className="mb-4">

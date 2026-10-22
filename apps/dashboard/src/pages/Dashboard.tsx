@@ -26,18 +26,18 @@ import {
   paymentStatusTone,
   shortId,
 } from "../lib/format.js";
-import { Badge, Card, GlassCard, CardHeader, Mono, Spinner, Stat, ExplorerLink, OnChainBadge, AtomicGroupBadge } from "../components/ui.js";
+import { Badge, Card, GlassCard, CardHeader, Mono, Spinner, Stat, ExplorerLink, OnChainBadge, AtomicGroupBadge, btnAccent } from "../components/ui.js";
 import LiveFeed from "../components/LiveFeed.js";
 
 const tooltipStyle = {
-  background: "#ffffff",
-  border: "1px solid #e8e6e1",
-  borderRadius: 10,
+  background: "#fbf8f0",
+  border: "1px solid #ddd3ba",
+  borderRadius: 8,
   fontSize: 12,
-  color: "#1c1917",
-  boxShadow: "0 8px 30px -12px rgba(28,25,23,0.15)",
+  color: "#333333",
+  boxShadow: "0 10px 30px -18px rgba(51,51,51,0.35)",
 };
-const axisTick = { fontSize: 11, fill: "#a8a29e" };
+const axisTick = { fontSize: 11, fill: "#968b75" };
 
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
@@ -185,25 +185,28 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4 pb-2">
-        <div className="anim-fade-up">
-          <h1 className="display-serif text-2xl font-semibold tracking-tight text-[var(--color-ink)]">Economic Dashboard</h1>
-          <p className="mt-1 text-sm text-[var(--color-ink-3)]">
+      <header className="flex flex-wrap items-end justify-between gap-4 pb-4">
+        <div>
+          <div className="eyebrow text-[var(--color-accent)]">PS 2.1 · Payment runtime</div>
+          <h1 className="display-serif mt-2 text-[30px] font-semibold leading-none tracking-[-0.03em] text-[var(--color-ink)]">
+            Economic dashboard
+          </h1>
+          <p className="mt-3 max-w-2xl text-[13px] leading-6 text-[var(--color-ink-2)]">
             Policy evaluation, x402 micropayments, and Algorand atomic settlement in real time.
           </p>
         </div>
-        <div className="flex items-center gap-2 anim-fade-up" style={{ animationDelay: "80ms" }}>
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-success)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)] anim-soft-pulse" />
+            Live Algorand
+          </span>
           <button
             onClick={() => goldenPath.mutate()}
             disabled={goldenPath.isPending}
-            className="rounded-lg border border-[var(--color-accent)] bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#b8451f] disabled:opacity-50"
+            className={btnAccent}
           >
-            {goldenPath.isPending ? "Running Golden Path…" : "▶ Run Golden Path"}
+            {goldenPath.isPending ? "Running golden path…" : "Run golden path"}
           </button>
-          <span className="flex items-center gap-2 rounded-full border border-[#a8cfb8] bg-[var(--color-success-soft)] px-3 py-1 text-xs font-medium text-[var(--color-success)]">
-            <span className="h-2 w-2 rounded-full bg-[var(--color-success)] anim-soft-pulse" />
-            Live Algorand
-          </span>
         </div>
       </header>
 
@@ -385,15 +388,15 @@ export default function Dashboard() {
               <LineChart data={points} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
                 <defs>
                   <linearGradient id="spend-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#c9522f" stopOpacity={0.16} />
+                    <stop offset="100%" stopColor="#c9522f" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ecebe6" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e1d2" vertical={false} />
                 <XAxis dataKey="ts" tick={axisTick} minTickGap={28} axisLine={false} tickLine={false} />
                 <YAxis tick={axisTick} axisLine={false} tickLine={false} width={52} />
-                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#57534e", fontWeight: 600 }} />
-                <Line type="monotone" dataKey="algo" name="ALGO" stroke="#4f46e5" strokeWidth={2.5} dot={false} fill="url(#spend-fill)" />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#6a6152", fontWeight: 600 }} />
+                <Line type="monotone" dataKey="algo" name="ALGO" stroke="#c9522f" strokeWidth={2.5} dot={false} fill="url(#spend-fill)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -432,14 +435,14 @@ export default function Dashboard() {
               <BarChart data={rows} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
                 <defs>
                   <linearGradient id="bar-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#059669" stopOpacity={0.9} />
-                    <stop offset="100%" stopColor="#059669" stopOpacity={0.4} />
+                    <stop offset="0%" stopColor="#2f7d5e" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#2f7d5e" stopOpacity={0.35} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ecebe6" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e1d2" vertical={false} />
                 <XAxis dataKey="agentName" tick={axisTick} axisLine={false} tickLine={false} />
                 <YAxis tick={axisTick} axisLine={false} tickLine={false} width={52} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f5f4f0" }} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f1eadc" }} />
                 <Bar dataKey="spendAlgo" name="ALGO" fill="url(#bar-fill)" radius={[5, 5, 0, 0]} maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
