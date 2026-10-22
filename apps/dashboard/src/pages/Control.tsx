@@ -610,10 +610,20 @@ export default function Control() {
           subtitle="Hash-chained proof of what ran, what was blocked, and which one-shot grant authorised it"
           right={
             <div className="flex items-center gap-2">
-              <Badge tone={receiptVerify.data?.verification.ok ? "ok" : "err"}>
-                {receiptVerify.data?.verification.ok
+              <Badge
+                tone={
+                  receiptVerify.data?.verification.ok === true
+                    ? "ok"
+                    : receiptVerify.data?.verification.ok === false
+                      ? "err"
+                      : "muted"
+                }
+              >
+                {receiptVerify.data?.verification.ok === true
                   ? `Chain verified · ${receiptVerify.data.verification.checked}`
-                  : "Receipt chain broken"}
+                  : receiptVerify.data?.verification.ok === false
+                    ? "Receipt chain broken"
+                    : "Checking receipts…"}
               </Badge>
               <Badge tone="info">{receiptsQuery.data?.receipts.length ?? 0} latest</Badge>
             </div>
