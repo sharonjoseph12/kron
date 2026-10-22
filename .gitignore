@@ -26,3 +26,6 @@ tmp/
 **/*.js.map
 **/*.d.ts.map
 .kilo/
+.vercel
+.env*
+!.env.example

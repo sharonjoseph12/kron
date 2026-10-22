@@ -45,8 +45,8 @@ export async function authRoutes(fastify: FastifyInstance) {
     const ok = await compare(password, user.passwordHash);
     if (!ok) return reply.code(401).send({ error: "Invalid credentials" });
 
-    const { token } = await createSession(user.id);
-    setSessionCookie(reply, token);
+    const { cookieToken } = await createSession(user.id);
+    setSessionCookie(reply, cookieToken);
     void recordAudit({
       actorId: user.id,
       actorType: "user",
@@ -150,8 +150,8 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       });
 
-      const { token } = await createSession(user.id);
-      setSessionCookie(reply, token);
+      const { cookieToken } = await createSession(user.id);
+      setSessionCookie(reply, cookieToken);
       void recordAudit({
         actorId: user.id,
         actorType: "user",

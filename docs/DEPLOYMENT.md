@@ -130,6 +130,36 @@ Then set the API's `DASHBOARD_URL` to the dashboard origin (e.g. `https://kron-d
 
 ---
 
+## Option C — Single Vercel Project (Dashboard + Serverless API)
+
+The repo includes a Vercel entrypoint for a one-click sandbox demo:
+
+- `vercel.json` builds the dashboard into `apps/dashboard/dist` and exposes `api/[...path].ts`.
+- `api/[...path].ts` mounts the existing Fastify app on Vercel's Node request/response pair. No API routes are duplicated.
+- The build regenerates `apps/api/prisma/deploy.db` from the Prisma schema and seed. Each cold function instance copies it to `/tmp/kron.db`; the sandbox business DB is initialized at `/tmp/kron-sandbox.db`.
+- `/api/*` requests are routed to the function. The SPA fallback is configured for direct dashboard routes such as `/control`.
+
+```bash
+vercel link --yes --project kron-ps21
+vercel env add SESSION_SECRET production
+vercel env add ENCRYPTION_KEY production
+vercel env add SEED_ADMIN_EMAIL production
+vercel env add SEED_ADMIN_PASSWORD production
+vercel env add DEMO_MODE production          # true for the sandbox demo
+vercel env add KRON_RECORDING_MODE production # true
+vercel env add KRON_SANDBOX_DB production    # /tmp/kron-sandbox.db
+vercel env add KRON_STATELESS_SESSIONS production # true (see below)
+vercel env add DASHBOARD_URL production      # https://<project>.vercel.app
+vercel env add API_PUBLIC_URL production     # https://<project>.vercel.app
+vercel deploy --prod
+```
+
+> **Serverless caveat:** Vercel functions do not share a filesystem. The SQLite snapshot is per-instance and resets on cold starts, so this mode is for the judge demo only. Set `KRON_STATELESS_SESSIONS=true` so the signed session cookie can be verified by any instance; logout clears the browser cookie, and signed sessions are intentionally short-lived (12 h). For durable production data, deploy the API as the long-running service described in Options A/B and point the Vercel dashboard at it with `VITE_KRON_API_URL`.
+
+`.vercelignore` keeps local `.env` files, SQLite databases, the merchant wallet file, and other sandbox data out of the upload. Secrets belong in Vercel project environment variables.
+
+---
+
 ## Judge Quick-Check
 
 - [x] `https://<api>/healthz` returns 200

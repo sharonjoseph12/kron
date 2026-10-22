@@ -1,5 +1,5 @@
 /**
- * Password hashing. bcrypt is pinned in root package.json's
+ * Password hashing. bcrypt is pinned in pnpm-workspace.yaml's
  * onlyBuiltDependencies so its native bindings install on this machine.
  */
 import bcrypt from "bcrypt";

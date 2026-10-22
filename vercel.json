@@ -1,0 +1,18 @@
+{
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @kron/api prisma:generate && pnpm build && DATABASE_URL=file:$PWD/apps/api/prisma/deploy.db pnpm --filter @kron/api prisma:deploy && DATABASE_URL=file:$PWD/apps/api/prisma/deploy.db pnpm --filter @kron/api prisma:seed",
+  "outputDirectory": "apps/dashboard/dist",
+  "functions": {
+    "api/[...path].ts": {
+      "maxDuration": 60,
+      "includeFiles": "apps/api/prisma/deploy.db"
+    }
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/api/(.*)", "dest": "/api/[...path]" },
+    { "src": "/mcp/(.*)", "dest": "/api/[...path]" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

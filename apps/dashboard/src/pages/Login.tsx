@@ -174,7 +174,7 @@ export default function Login() {
         </form>
 
         <p className="mt-4 text-center text-xs text-[var(--color-ink-3)]">
-          Demo credentials are written to data/demo-credentials.txt by pnpm demo:reset
+          Sandbox demo only. Use the operator credentials provided with this deployment.
         </p>
       </div>
     </div>
