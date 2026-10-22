@@ -75,5 +75,5 @@ Write-Host "  1. API + Gateway:      pnpm --filter @kron/api dev" -ForegroundCol
 Write-Host "  2. Resource Server:    pnpm --filter @kron/resource-server dev" -ForegroundColor White
 Write-Host "  3. Dashboard:          pnpm --filter @kron/dashboard dev" -ForegroundColor White
 Write-Host ""
-Write-Host "Open http://localhost:5173 (admin@kron.dev / admin1234)" -ForegroundColor Cyan
+Write-Host "Open http://localhost:5173 (credentials: data/demo-credentials.txt)" -ForegroundColor Cyan
 Write-Host ""

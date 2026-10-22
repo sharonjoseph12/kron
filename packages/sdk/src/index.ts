@@ -8,7 +8,7 @@
  * import { KronClient } from "@kron/sdk";
  *
  * const kron = new KronClient({ apiUrl: "http://localhost:8787" });
- * await kron.login("admin@kron.dev", "admin1234");
+ * await kron.login("operator@kron.local", process.env.KRON_ADMIN_PASSWORD!);
  *
  * // Create an agent with a wallet and policy
  * const agent = await kron.createAgent("researcher", "Market research agent");

@@ -127,7 +127,7 @@ if (!healthy) {
 log("health", "API is healthy");
 
 console.log("\n──────────────────────────────────────────────────────");
-console.log(`  Dashboard : ${DASHBOARD}   (admin@kron.dev / admin1234)`);
+console.log(`  Dashboard : ${DASHBOARD}   (credentials: data/demo-credentials.txt)`);
 console.log(`  Verify    : ${DASHBOARD}/verify`);
 console.log(`  Playground: ${DASHBOARD}/playground`);
 console.log("──────────────────────────────────────────────────────\n");

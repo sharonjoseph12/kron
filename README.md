@@ -5,7 +5,7 @@
 [![MCP Protocol](https://img.shields.io/badge/MCP-1.0-8b5cf6?style=flat)](https://modelcontextprotocol.io)
 [![x402 Micropayments](https://img.shields.io/badge/x402-Enabled-10b981?style=flat)](https://x402.org)
 [![TypeScript SDK](https://img.shields.io/badge/@kron/sdk-v0.1.0-blue?style=flat)](./packages/sdk)
-[![Tests Passing](https://img.shields.io/badge/Tests-101%20Passing-emerald?style=flat)](#-testing--verification)
+[![Tests Passing](https://img.shields.io/badge/Tests-120%20Passing-emerald?style=flat)](#-testing--verification)
 
 **One line:** KRON is the economic firewall and policy-governed payment runtime for autonomous AI agents on Algorand.
 
@@ -22,7 +22,7 @@ import { KronClient } from "@kron/sdk";
 
 // 1. Connect to runtime
 const kron = new KronClient({ apiUrl: "http://localhost:8787" });
-await kron.login("admin@kron.dev", "admin1234");
+await kron.login("operator@kron.local", process.env.KRON_ADMIN_PASSWORD!);
 
 // 2. Provision agent with dedicated Algorand wallet & spending limits
 const agent = await kron.createAgent("researcher-01", "Market research agent");
@@ -55,7 +55,7 @@ KRON ships adapters for every major AI agent framework — no extra `npm install
 import { KronClient, asLangChainTools } from "@kron/sdk";
 
 const kron = new KronClient({ apiUrl: "http://localhost:8787" });
-await kron.login("admin@kron.dev", "admin1234");
+await kron.login("operator@kron.local", process.env.KRON_ADMIN_PASSWORD!);
 
 const tools = asLangChainTools(kron, { agentId: "researcher-01", sessionId });
 // Pass directly to createReactAgent({ llm, tools }) or AgentExecutor
@@ -171,6 +171,21 @@ Live SDK calls against Algorand TestNet — no canned output.
 
 ---
 
+## 🛡️ PS 2.1 Agent Control Plane
+
+The control plane is the **action** firewall, separate from the payment policy engine. Every non-payment tool call is classified, previewed against a real sandbox SQLite database, risk-scored, and held for a human when needed. Safe alternatives are revalidated through the same pipeline; approvals are bound to `sha256(canonical action JSON)`.
+
+```bash
+pnpm demo:reset                 # deterministic sandbox + operator credentials in data/demo-credentials.txt
+pnpm demo:attack hero           # poisoned email → private contract → outside recipient (held, safe send only)
+pnpm demo:attack delete         # 1,204-row hard delete (held, archive alternative approved)
+pnpm demo:attack baseline       # before/after: raw approval leaks exactly one email
+pnpm demo:attack all            # all three, with proof-pane counts
+pnpm demo:proof                 # hero + delete, 10 runs each (20/20 assertions)
+```
+
+Open the dashboard and choose **Control Plane** in the sidebar. The page includes the approval desk, real impact card, safe rewrite, hash-chain verify/tamper demo, live timeline, proof pane and a KRON Guard / Baseline toggle. No live model or external network is used on the demo path.
+
 ## 🚀 Quick Start (Zero Docker Required)
 
 KRON runs out-of-the-box on Algorand TestNet with zero external Docker dependencies:
@@ -184,7 +199,7 @@ pnpm bootstrap
 pnpm dev
 ```
 
-Open **http://localhost:5173** to view the live dashboard (Login: `admin@kron.dev` / `admin1234`).
+Open **http://localhost:5173** to view the live dashboard (Login: the credentials in `data/demo-credentials.txt`).
 
 ---
 

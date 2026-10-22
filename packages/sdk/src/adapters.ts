@@ -17,7 +17,7 @@
  * import { asLangChainTools } from "@kron/sdk/adapters";
  *
  * const kron = new KronClient({ apiUrl: "http://localhost:8787" });
- * await kron.login("admin@kron.dev", "admin1234");
+ * await kron.login("operator@kron.local", process.env.KRON_ADMIN_PASSWORD!);
  *
  * const tools = asLangChainTools(kron, {
  *   agentId: "researcher-01",

@@ -33,7 +33,7 @@ const kron = new KronClient({ apiUrl: "http://localhost:8787" });
 
 async function runAutonomousGptAgent() {
   // 1. Authenticate & provision dedicated agent wallet
-  await kron.login("admin@kron.dev", "admin1234");
+  await kron.login("operator@kron.local", process.env.KRON_ADMIN_PASSWORD!);
   const agent = await kron.createAgent("gpt4-analyst", "Autonomous financial analysis agent");
 
   // 2. Set strict economic guardrails

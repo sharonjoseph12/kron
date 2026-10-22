@@ -1,6 +1,6 @@
 # KRON — Screenshots (for README + One-Pager + Submission)
 
-> Capture these 5 screenshots after `pnpm bootstrap && pnpm dev` + `pnpm demo:run` so the dashboard shows live on-chain data. Login: `admin@kron.dev` / `admin1234`.
+> Capture these 5 screenshots after `pnpm bootstrap && pnpm dev` + `pnpm demo:run` so the dashboard shows live on-chain data. Login: the credentials in `data/demo-credentials.txt`.
 
 ## 1. Dashboard — Economic Overview
 - URL: `http://localhost:5173/`

@@ -58,7 +58,7 @@ You can configure Claude's spending rules via the KRON Operator Dashboard (`http
 import { KronClient } from "@kron/sdk";
 
 const kron = new KronClient({ apiUrl: "http://localhost:8787" });
-await kron.login("admin@kron.dev", "admin1234");
+await kron.login("operator@kron.local", process.env.KRON_ADMIN_PASSWORD!);
 
 await kron.setPolicy("claude-agent-id", {
   perCallLimitAlgo: 0.10,    // Max 0.10 ALGO per tool call

@@ -82,7 +82,7 @@ pnpm --filter @kron/dashboard dev
 
 - Dashboard: http://localhost:5173
 - API: http://localhost:8787
-- Login: `admin@kron.dev` / `admin1234`
+- Login: the credentials in `data/demo-credentials.txt`
 
 ## Demo Scripts
 

@@ -14,10 +14,23 @@
  *   7. MCP servers are healthy
  */
 
+import { readFileSync } from "node:fs";
+
 const API_URL = process.env.KRON_API_URL ?? "http://localhost:8787";
 const RES_URL = process.env.RESOURCE_SERVER_URL ?? "http://localhost:9100";
-const EMAIL = "admin@kron.dev";
-const PASSWORD = "admin1234";
+const credentials = (() => {
+  try {
+    return readFileSync("data/demo-credentials.txt", "utf8");
+  } catch {
+    return "";
+  }
+})();
+const EMAIL = process.env.SEED_ADMIN_EMAIL ?? credentials.match(/email:\s*(\S+)/)?.[1] ?? "";
+const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? credentials.match(/password:\s*(\S+)/)?.[1] ?? "";
+if (!EMAIL || !PASSWORD) {
+  console.error("No operator credentials. Run `pnpm demo:reset` first.");
+  process.exit(1);
+}
 const MIN_BALANCE_ALGO = 0.5;
 
 interface CheckResult {

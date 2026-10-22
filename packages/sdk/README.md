@@ -29,7 +29,7 @@ const kron = new KronClient({
 });
 
 // 2. Authenticate
-await kron.login("admin@kron.dev", "admin1234");
+await kron.login("operator@kron.local", process.env.KRON_ADMIN_PASSWORD!);
 
 // 3. Create an agent with its dedicated Algorand wallet
 const agent = await kron.createAgent("researcher-01", "Autonomous market research agent");
