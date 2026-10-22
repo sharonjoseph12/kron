@@ -1,153 +1,207 @@
-# KRON — Project Submission (International Algorand Hackathon)
+# KRON — Project Submission
 
 ## Project Overview
 
-- **Project Name**: KRON — Policy-Controlled Economic Runtime for AI Agents
-- **One-liner**: The economic firewall and policy-governed payment runtime for autonomous AI agents on Algorand.
-- **Track**: AI & Agentic Finance / Infrastructure
-- **Network**: Algorand TestNet (MainNet-identical TEAL, atomic groups, 3.3s finality) + LocalNet via Docker
-- **Demo Dashboard**: React 18 + Vite + Tailwind v4 + Recharts (9 pages, SSE real-time, code-split)
-- **SDK**: `@kron/sdk` (TypeScript, 5-line integration, 7 tests)
-- **Smart Contract**: TEAL v10 ARC-4 (`anchor_policy`, `get_payment_count`, `get_last_policy_hash`, `get_agent_policy_hash`, `set_emergency_stop`, `flush`) — `packages/x402/src/contract.ts:172-395` + `KRON_ARC4_CONTRACT_ABI`
-- **Repo**: `https://github.com/sharonjoseph12/kron` (CI: typecheck + build + 77 tests)
+- **Project:** KRON — the capability firewall for AI agents
+- **Primary track:** PS 2.1 — AI-agent safety, control and enforcement
+- **One-liner:** Preview the blast radius. Bind the approval. Prove the enforcement.
+- **Mechanism:** every tool call goes through one gateway: classify → real impact preview → risk score → safe rewrite → hash-bound approval → one-shot capability grant → hash-chained receipt.
+- **Also preserved:** policy-controlled x402 payments on Algorand TestNet, including atomic policy-anchor groups, on-chain verification and a fleet emergency stop.
+- **Demo:** React control plane (`/control`) with approval desk, impact card, safe version, drift panel, proof pane, audit chain and enforcement receipts.
+- **Network:** Algorand TestNet for the payment rail. The PS 2.1 demo itself is fully offline and deterministic.
+- **Repo:** `https://github.com/sharonjoseph12/kron` (branch `ps21-agent-control`)
+- **Submission format:** video + PPT. No live hosted link is required.
 
 ---
 
-## Inspiration
+## The Problem
 
-Autonomous AI agents powered by LLMs (Gemini, Claude, GPT-4) can reason, code, and execute multi-step workflows via protocols like Anthropic's Model Context Protocol (MCP). However, when agents encounter paid APIs, premium datasets, or specialized compute resources, their autonomy halts.
+Autonomous agents are now given real tools: mail, files, customer data, databases and payment rails. A prompt injection is only dangerous when it becomes a **tool invocation**. Existing safety products mostly observe those invocations after the fact.
 
-Developers are currently forced to either:
-1. Hardcode sensitive credit cards or raw API keys directly into agent runtimes.
-2. Require manual human approvals for every small transaction.
+Approval dashboards are not enough either. They typically show a tool name and a JSON blob, then record a click that can be replayed. They do not answer:
 
-**KRON solves this by establishing a policy-governed economic safety layer.** Agents receive autonomous spending boundaries (per-call limits, session budgets, daily hard ceilings, recipient allowlists) while Algorand provides instant, sub-cent settlement with on-chain cryptographic auditability.
+1. What exactly will change, and how many sensitive rows are in scope?
+2. Is this the lethal combination of untrusted content, private data and a new outside recipient?
+3. Is there a safer action that still completes the task?
+4. Did the human approve the exact action that will run — or a card that went stale?
+5. Was the tool actually invoked, and can anyone prove it later?
+
+KRON answers all five in one path.
 
 ---
 
 ## What It Does
 
-KRON operates as a middleware runtime and governance firewall:
+### 1. One gateway, no bypass
 
-1. **Autonomous 402 Micropayments**: Intercepts HTTP 402 / x402 payment challenges returned by MCP resource servers and automatically negotiates settlement on Algorand.
-2. **Deterministic Policy Engine**: Evaluates 9+ spending constraints in <5ms before any funds move.
-3. **Atomic Transaction Anchoring**: Couples the payment transaction with a smart contract application call containing a SHA-256 hash of the policy decision in a single atomic group.
-4. **Policy What-If Simulation (`/simulation`)**: Allows operators to backtest proposed policy changes against historical transaction data before publishing.
-5. **On-Chain Cryptographic Verification (`/verify`)**: Enables anyone to verify that an autonomous payment was mathematically authorized by a specific policy version on the Algorand ledger.
-6. **Fleet-Wide Emergency Stop**: Instant kill switch to freeze autonomous agent activity across the entire runtime.
-7. **Developer SDK (`@kron/sdk`)**: Clean TypeScript SDK enabling 5-minute integration for any agent framework.
+Every non-payment action is classified as `read | write | delete | send | pay` and routed through the same pipeline. Reads still go through the capability adapter, so every invocation is accounted for.
+
+### 2. Real impact preview
+
+For mutations, the preview runs inside a **rolled-back transaction** against the actual sandbox database. It returns rows affected, sensitive rows, recoverability, recipient novelty, attachment sensitivity and a dataset fingerprint. For email, it resolves the real attachment and contact list.
+
+### 3. Deterministic risk and attack naming
+
+A rules-only risk engine scores the action and raises the decision band. It explicitly detects the **lethal trifecta** (untrusted content + private data + new outside recipient in one session), mission-contract drift, bulk mutation, irreversible deletes, private attachments and new recipients. Hard blocks (for example `db.drop_table`) can never be approved.
+
+### 4. Safe alternatives, revalidated
+
+For held actions KRON proposes a deterministic safe version: archive instead of hard delete, send to the internal owner instead of an outside address, scope an unscoped update, or cap a payment. The safe action is re-previewed and re-scored through the same pipeline and can still be `BLOCK`.
+
+### 5. Hash-bound, drift-aware approvals
+
+An approval is bound to `sha256(canonical action JSON)`. Changing the recipient, attachment, scope, mission or nonce produces a different hash. The approval also stores:
+
+- a fingerprint of the exact rows the preview observed;
+- the safe action's own preview and fingerprint;
+- an expiry.
+
+At decision time KRON revalidates the action, recomputes the preview and compares the fingerprint. If the dataset moved, the approval returns **409** and is marked expired. The receipt records `toolInvoked: false`.
+
+### 6. One-shot capability grants
+
+A grant is issued only after the gateway has decided an action may run. It is scoped to one agent, one tool and one canonical action hash, expires in 60 seconds, and is consumed with an atomic conditional update **before** the tool adapter touches the tool. Replay is rejected before any tool code runs.
+
+### 7. Enforcement receipts
+
+Every decision emits a hash-chained receipt containing:
+
+- the action and decision;
+- before/after sandbox state;
+- `toolInvoked`;
+- the linked approval and grant;
+- drift evidence when a card was invalidated;
+- `prevHash` and `hash`.
+
+Receipts are downloadable JSON, exposed through the API, and independently chain-verifiable.
+
+### 8. Preserved x402 / Algorand payment rail
+
+The original KRON runtime remains: isolated agent wallets, policy engine, atomic policy-anchor groups, ARC-2 notes, on-chain verification, what-if simulation and fleet emergency stop. PS 2.1 extends the same control philosophy from money to every dangerous tool call.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Autonomous AI Agent                      │
-│                  (LangChain / MCP Client)                   │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ MCP Tool Request
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      KRON MCP Gateway                       │
-│  - Intercepts 402 Payment Required                          │
-│  - Evaluates Policy Engine in <5ms                          │
-│  - Signs Algorand Payment from Isolated Vault               │
-└──────────────┬──────────────────────────────┬───────────────┘
-               │                              │
-     Policy Decision               Atomic Transaction Group
-               │                              │
-               ▼                              ▼
-┌──────────────────────────────┐ ┌────────────────────────────┐
-│      Operator Dashboard      │ │      Algorand Ledger       │
-│  - Real-Time SSE Feed        │ │  - App Call (Policy Hash)  │
-│  - What-If Simulation UI     │ │  - Payment (microAlgos)    │
-│  - On-Chain Verifier (/verify)││  - 3.3s Instant Finality   │
-└──────────────────────────────┘ └────────────────────────────┘
+Agent / MCP client
+        │ action request
+        ▼
+KRON action gateway
+  classify · real preview · risk · safe rewrite
+        │
+        ├─ ALLOW / FLAG ──► one-shot grant ──► tool adapter ──► sandbox
+        ├─ HOLD ─────────► hash-bound approval ──► revalidate + fingerprint ──► grant ──► tool adapter
+        └─ BLOCK ────────► no grant, no invocation
+        │
+        ▼
+hash-chained audit + enforcement receipts
+        │
+        └─ payment rail (x402 / Algorand TestNet) remains available
 ```
+
+### Data model (control plane)
+
+| Model | Purpose |
+|---|---|
+| `ActionRecord` | Decision, score, reasons, rule hits, execution, links to approval / grant / receipt |
+| `Approval` | Action hash, safe hash, preview fingerprint, safe preview fingerprint, expiry, decision |
+| `CapabilityGrant` | Agent, tool, action hash, scope, max uses, consumed at, expiry |
+| `EnforcementReceipt` | Before/after snapshot, tool invoked, approval, grant, drift, chain hash |
+| `ControlAuditEntry` | Hash-chained operator/system timeline |
 
 ---
 
-## Why Algorand?
+## Demo Script (2:45)
 
-- **Deterministic Instant Finality (3.3s)**: AI agents operate in rapid tool execution loops and cannot stall waiting for probabilistic consensus.
-- **Sub-Cent Fees (<$0.0002)**: Agentic micro-transactions require near-zero overhead.
-- **Atomic Transaction Groups**: Guarantees that the policy anchor contract execution and the ALGO payment succeed together or fail together.
-- **ARC-2 Structured Transaction Notes**: Embeds standardized metadata (`kron:j{...}`) directly onto the ledger.
+Full script: `VIDEO_SCRIPT.md`. Slide deck outline: `PPT_OUTLINE.md`.
+
+| Time | Beat | Real number |
+|---|---|---|
+| 0:00 | Monitoring is not control | — |
+| 0:20 | One pipeline, one grant | — |
+| 0:45 | Hero attack: poisoned email + contract → outside send | risk **75/100**, HOLD, attacker **0** |
+| 1:25 | Bulk delete | **1,204** rows, **37** sensitive, archive **1,204** |
+| 1:55 | Shadow drift | **826 → 40 changed → 786**, stale **409**, **0** executed, fresh **786** archived |
+| 2:25 | Baseline counterfactual + receipts | attacker **1** on baseline, **30/30** deterministic |
+| 2:40 | Close | — |
 
 ---
 
 ## How to Run & Verify
 
-### 1. Install & Build
 ```bash
 pnpm install
+pnpm demo:reset          # seeds 1,204 orders, 37 sensitive rows, empty attacker inbox
+pnpm dev                 # API + dashboard
+# open http://localhost:5173/control
+# credentials: data/demo-credentials.txt (gitignored, randomly generated)
+```
+
+Deterministic proof, no live model or external network:
+
+```bash
+pnpm demo:attack all     # hero | delete | baseline | drift, with exact end-state assertions
+pnpm demo:proof          # 30/30 repeated runs
+pnpm test                # 124 automated tests
+pnpm typecheck           # 12 workspaces
 pnpm build
 ```
 
-### 2. Run Tests (40+ unit tests across packages)
-```bash
-pnpm test
+Expected attack output:
+
 ```
-
-### 3. Start KRON Stack
-```bash
-# Terminal 1: API & MCP Gateway
-pnpm --filter @kron/api dev
-
-# Terminal 2: Resource Server (Paid Tools)
-pnpm --filter @kron/resource-server dev
-
-# Terminal 3: Operator Dashboard
-pnpm --filter @kron/dashboard dev
-```
-
-### 4. Run Multi-Agent Governance Demo
-```bash
-# Executes Researcher (0.05 limit) & Trader (0.50 limit) and demonstrates boundary block
-pnpm --filter @kron/demo-agent dev -- --multi
-# Or via the SDK playground at http://localhost:5173/playground
-```
-
-### 5. Verify On-Chain (Judge Walkthrough — no trust needed)
-```bash
-# Paste any txId from the dashboard into /verify, or:
-curl -s https://testnet-idx.algonode.cloud/v2/transactions/<TXID> | jq '.transaction["confirmed-round"]'
-# Atomic group check: tx group shares a group ID — both app call + payment confirm together in ~3.3s
-curl -s http://localhost:8787/api/contract | jq '.globalState'
+PASS  hero      HOLD → safe internal send · attacker 0
+PASS  delete    HOLD → archive 1,204 · attacker 0
+PASS  baseline  raw approval → attacker inbox 1
+PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 ```
 
 ---
 
-## Why We Win — Judging Rubric
+## Why This Wins — Judging Rubric
 
-| Criterion | Our Proof |
+| Criterion | Proof |
 |---|---|
-| **Wow (10/10)** | Judge sees an autonomous agent spend real money without a human click, then sees it **blocked** at 0.45 ALGO, then verifies the tx on AlgoExplorer in one click. |
-| **Technical Depth (9/10)** | MCP + x402 + policy engine <5ms + isolated vault AES-256-GCM + atomic groups + ARC-2 notes + ARC-4 ABI + SSE + audit + rate-limit + SSRF guard. |
-| **Novelty (9/10)** | Not "agents can pay" — **agents can be economically governed**: what-if simulation, explainable decisions, recipient/service allowlists, velocity anomaly, emergency stop. |
-| **Real-World (9/10)** | Paid APIs, datasets, compute, A2A hiring — 5-line SDK works with LangChain/LlamaIndex. Algorand sub-cent fees make $0.018 micropayments viable; Stripe $0.30+2.9% does not. |
-| **Completeness (9/10)** | `setup → task → 402 → policy → atomic settlement → verify → resource → continue` observable end-to-end with no mocked txIds. |
+| **Wow** | A human card goes stale, KRON rejects it with 409, a receipt proves the tool never ran, then a fresh approval archives exactly the remaining 786 rows. |
+| **Technical depth** | Rolled-back previews, canonical action hashing, dataset fingerprints, atomic one-shot grants, hash-chained receipts, drift invalidation, safe-rewrite revalidation, audit chain. |
+| **Novelty** | Not another monitoring dashboard: a **sandbox-first capability firewall** where consent is bound to the exact action and live dataset, and every decision has enforcement proof. |
+| **Real-world** | The same pattern applies to email, files, databases, cloud APIs and payments. Live adapters can replace the sandbox without changing the decision/grant/receipt contracts. |
+| **Completeness** | End-to-end: poisoned read → risk → hold → impact card → safe alternative → approval → grant → execution → before/after receipt → downloadable proof. |
+| **Honesty** | All numbers are produced by the runner and proof script. No invented benchmark or red-team metrics. Sandbox and TestNet boundaries are stated explicitly. |
 
 ---
 
-## Security & Correctness (PRD §9)
+## Security & Correctness
 
-- **Least privilege + isolated wallets** — per-agent wallets, never the operator's primary wallet (`FR-WALLET-003`, `apps/api/src/algorand/vault.ts`).
-- **Encrypted at rest** — mnemonics AES-256-GCM (`vault.ts:18-24`), never logged/returned.
-- **Replay protection** — deterministic `clientRequestId` idempotency (`payment-flow.ts:117-129`), never pays twice on retry; timeout → `RECONCILING` not fake success.
-- **SSRF guard** — MCP server URLs validated against private/metadata ranges (`lib/ssrf.ts`), localhost allowed only in dev.
-- **Rate limiting** — global 120/min + `/mcp` 60/min (`server.ts:43-47`), balances brute-force vs UX.
-- **Recipient verification** — payment recipient must match x402 instruction; unexpected change = security event.
+- **Approval binding:** `sha256(canonical action JSON)`; any argument change requires a fresh approval.
+- **Dataset binding:** fingerprint over the exact rows/recipient/file observed by the preview.
+- **One-shot grants:** atomic conditional consume; 60-second expiry; scoped by agent, tool and action hash.
+- **No transaction held over a human decision:** preview runs and rolls back; execution rechecks at decision time.
+- **Preview-vs-execution verification:** execution aborts and rolls back if affected rows differ from the preview.
+- **Receipt chain:** each receipt commits to the previous hash; verification walks the chain.
+- **Audit chain:** every control event is hash-chained; a tamper demo proves detection.
+- **Sandbox only:** `.example` domains, in-app mail sink, no real email or money, Algorand TestNet only.
+- **No secrets or default credentials:** credentials are generated by `pnpm demo:reset` and written to a gitignored, mode-`0600` file.
 
 ---
 
-## Team & Links
+## Honest Boundaries
 
-- **Track justification**: Algorand-native settlement — atomic groups, ARC-2/ARC-4, 3.3s finality, <0.001 ALGO fees. No EVM/Solana fork — built on `testnet-api.algonode.cloud` / `testnet-idx.algonode.cloud`.
-- **Docs**: `HACKATHON.md` (one-pager), `PITCH.md` (3-min script), `OFFLINE.md` (runbook), `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `TOP3_CHECKLIST.md`.
-- **Demo video**: *(add link after recording per `DEMO_REHEARSAL.md`)* — keep <3 min.
-- **One-pager PDF**: *(export `HACKATHON.md` → PDF + QR to playground)*.
-- **Screenshots**: `docs/SCREENSHOTS.md` (5 pages: Dashboard, Agents, Simulation, Verify, Playground).
+- The PS 2.1 demo uses a seeded sandbox database; the queries, previews, mutations and proofs are real, but the data shape is fixed for repeatability.
+- No production red-team was run; the baseline and drift numbers are reproducible sandbox measurements.
+- Live tool adapters, mission-scoped contracts, recovery/undo and context-aware privacy (PS 2.2) are the next layer.
+- The payment rail remains Algorand TestNet. No real funds move.
 
-Built for the International Algorand Hackathon — `Don't put a human in the payment loop. Put a policy in the loop.`
+---
+
+## Links
+
+- `VIDEO_SCRIPT.md` — 2:45 recording script
+- `PPT_OUTLINE.md` — 12-slide deck with speaker notes
+- `DEMO_REHEARSAL.md` — setup and fallback plan
+- `JUDGE_PREP.md` — Q&A
+- `docs/ARCHITECTURE.md` — original runtime architecture
+- `KRON_PRD_Final_PS2.1.md` — requirements
+
+**Don’t monitor the agent. Cap its actions.**

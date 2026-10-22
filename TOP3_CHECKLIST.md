@@ -1,137 +1,120 @@
-# KRON — Top 3 Hackathon Checklist
+# KRON — Top-3 Submission Checklist (PS 2.1)
 
-## Pre-Hackathon (Now — Day 0)
+> Primary mechanism: **capability firewall** — preview the blast radius, bind the approval, prove the enforcement.
+> Submission format: **video + PPT**. No live website link required.
 
-### Code Quality
-- [x] 77/77 tests passing (60 packages + 11 API + 6 resource-server)
-- [x] TypeScript typecheck clean across all 10 workspaces (`pnpm typecheck`)
-- [x] Build succeeds for all packages (`pnpm build` — dashboard code-split, <30s)
-- [x] TEAL contract source saved to `packages/x402/teal/`
-- [x] TEAL compile script added (`pnpm --filter @kron/x402 compile:teal`)
-- [x] Smart contract auto-deploys on first payment (`ensureKronApp`)
-- [x] Hardcoded `KRON_APP_ID=1023` removed from `.env`
-- [x] ARC-4 ABI contract with 6-method dispatch (`anchor_policy`, `get_payment_count`, `get_last_policy_hash`, `get_agent_policy_hash`, `set_emergency_stop`, `flush`)
-- [x] `/api/contract` endpoint reads live app global state from the indexer (type 2=uint, 1=bytes)
-- [x] Dashboard "Policy Anchor Contract" card shows on-chain state + code-split lazy routes
-- [x] USDC (ASA) priced resource + atomic group asset-transfer settlement + velocity guard wired
-- [x] API integration test suite (11 tests) + resource-server (6) + helmet + SSRF guard + atomic escalation
+---
 
-### Documentation
-- [x] `README.md` updated with architecture + offline docs links
-- [x] `HACKATHON.md` — one-page judge summary
-- [x] `OFFLINE.md` — 24-hour offline runbook
-- [x] `docs/ARCHITECTURE.md` — architecture diagrams + data flow
-- [x] `DEMO_REHEARSAL.md` — timed 3-minute pitch script
-- [x] `scripts/offline-bootstrap.ps1` — one-command Windows bootstrap
-- [x] `scripts/bootstrap-contract.ts` — standalone contract deploy
+## 1. Code & Proof — Done
 
-### Remaining (Do Before Submission)
-- [ ] Record 2-3 minute demo video (follow `DEMO_REHEARSAL.md`)
-- [ ] Convert `HACKATHON.md` to a one-page PDF (use Markdown -> PDF tool)
-- [ ] Screenshot the 5 key dashboard pages (Dashboard, Agents, Simulation, Verify, Playground)
-- [ ] Add screenshots to `README.md` or a separate `docs/SCREENSHOTS.md`
-- [ ] Test the full offline flow on a clean machine or VM
-- [ ] Push to GitHub (ensure `.env` files are NOT committed)
+- [x] One generic action gateway for read / write / delete / send / pay
+- [x] Rolled-back impact preview against the real sandbox database
+- [x] Rules-only risk engine with lethal-trifecta detection and hard blocks
+- [x] Deterministic safe rewrites, revalidated through the same pipeline
+- [x] Approvals bound to `sha256(canonical action JSON)`
+- [x] Dataset fingerprint binding (`previewFingerprint`, `safePreviewFingerprint`)
+- [x] Stale approval invalidation with HTTP **409**
+- [x] One-shot capability grants (agent + tool + hash, atomic consume, 60s expiry)
+- [x] Hash-chained enforcement receipts with before/after state + `toolInvoked`
+- [x] Hash-chained control audit + tamper detection
+- [x] Dashboard approval desk, impact card, safe version, drift panel, proof pane, receipts
+- [x] Deterministic sandbox: 1,204 orders, 37 sensitive rows, `.example` mail sink
+- [x] `pnpm demo:reset` / `pnpm demo:attack all` / `pnpm demo:proof`
+- [x] Baseline counterfactual leaks exactly one email
+- [x] No default credentials; random operator credentials in gitignored `data/`
+- [x] Algorand TestNet only for the preserved x402 payment rail
 
-## Day 1-2: Hardening
-
-### Critical Path
-1. **Verify Docker localnet**: Run `docker compose --profile localnet up -d` and confirm algod starts
-2. **Verify offline bootstrap**: Run `.\scripts\offline-bootstrap.ps1` on a clean terminal
-3. **Run all 3 demos**:
-   ```bash
-   pnpm demo:multi
-   pnpm demo:a2a
-   pnpm demo:budget
-   ```
-4. **Fix any flaky timing**: The demo agent has `await` calls; add delays if Algorand localnet is slow
-
-### Deployment & Credibility
-- [ ] Push to GitHub (main branch) with green CI — see `docs/DEPLOYMENT.md`
-- [ ] Deploy a live hosted instance (VPS / Railway / Render) — see `docs/DEPLOYMENT.md`
-
-### Polish
-- [ ] Add loading skeletons to dashboard pages
-- [ ] Ensure dashboard works on 1366x768 laptop screen
-- [ ] Fix any console errors in browser devtools
-- [ ] Test on Chrome + Firefox
-
-## Day 3-4: Assets
-
-### Demo Video
-- [ ] Record screen + voiceover (OBS Studio)
-- [ ] Script exactly follows `DEMO_REHEARSAL.md`
-- [ ] Keep under 3 minutes
-- [ ] Upload to YouTube / Google Drive / Loom
-- [ ] Add link to `HACKATHON.md`
-
-### One-Pager PDF
-- [ ] Open `HACKATHON.md` in Markdown editor
-- [ ] Export to PDF (e.g., using Pandoc, Markdown to PDF, or VS Code Print)
-- [ ] Include QR code to playground (generate at qr-code-generator.com)
-- [ ] Print one copy for the live demo
-
-## Day 5-6: Final Rehearsal
-
-### Run the Full Demo 3 Times
-- [ ] Time each run (target: < 3 min for pitch, < 5 min for full demo)
-- [ ] Have a backup plan for each slide (see `DEMO_REHEARSAL.md` Fallback Plan)
-- [ ] Practice answering the top 5 judge questions (in `PITCH.md`)
-
-### Offline Package Verification
-- [ ] Unzip / copy project to a USB drive
-- [ ] Boot a clean machine (or VM) with only Node + Docker + Git
-- [ ] Run `.\scripts\offline-bootstrap.ps1`
-- [ ] Verify dashboard loads and demos work
-- [ ] Time the entire bootstrap (target: < 10 min)
-
-## Day 7: Submission
-
-### Final Checks
-- [ ] All tests pass
-- [ ] Typecheck clean
-- [ ] Build succeeds
-- [ ] Demo video link works
-- [ ] One-pager PDF looks good
-- [ ] Submission form filled out with correct links
-
-### Submission Package
-```
-kron-hackathon-submission/
-├── README.md
-├── HACKATHON.md
-├── PITCH.md
-├── SUBMISSION.md
-├── OFFLINE.md
-├── DEMO_REHEARSAL.md
-├── docs/
-│   ├── ARCHITECTURE.md
-│   └── SCREENSHOTS.md
-├── KRON_One_Pager.pdf
-└── demo-video-link.txt
-```
-
-## Key Metrics for Judges
+### Verified numbers (from real runners)
 
 | Metric | Value |
 |---|---|
-| Tests Passing | 77/77 (60+11+6) |
-| TypeCheck | Clean (10/10 workspaces) |
-| Build Time | < 30s (dashboard code-split: react/query/charts) |
-| Policy Evaluation | < 5ms (13 ordered rules, velocity guard live) |
-| On-Chain Finality | 3.3s (Algorand) |
-| Transaction Fee | < $0.0002 (0.001 ALGO) |
-| Dashboard Pages | 9 (lazy-loaded, 1366x768 ready) |
-| SDK Integration | 5 lines of code |
-| Contract Methods | 6 (ARC-4: anchor_policy, get_payment_count, get_last_policy_hash, get_agent_policy_hash, set_emergency_stop, flush) |
-| Payment Rails | ALGO + USDC/USDT (ASA) atomic groups |
-| Security | Helmet + rate-limit + SSRF guard + AES-256-GCM vault + idempotency |
+| Hero risk | **75/100**, HOLD |
+| Hero attacker inbox | **0** |
+| Bulk delete preview | **1,204 rows**, **37 sensitive**, not recoverable |
+| Bulk delete approved | archive **1,204** |
+| Baseline | attacker inbox **1** |
+| Drift card → live | **826 → 786** after **40** concurrent changes |
+| Stale approval | **409**, `toolInvoked: false`, archived **0** |
+| Fresh approval | archives exactly **786** |
+| Deterministic runs | **30/30** |
+| Automated tests | **124** |
+| Typecheck / build | **12 workspaces clean** |
 
-## Top 3 Secret Sauce
+---
 
-1. **Real on-chain settlement**: Not a mock. Every payment hits Algorand (localnet/testnet) and the `/verify` portal re-checks the ledger independently.
-2. **Complete traceability**: `Agent → Session → ToolCall → PaymentRequest → PaymentDecision → Settlement` with full audit log.
-3. **Judge-friendly UX**: Interactive Playground lets judges click through the SDK without reading code.
-4. **Offline-ready**: One PowerShell script bootstraps everything. No internet needed after `pnpm install`.
-5. **Production-grade policy engine**: 13 ordered rules (6 hard-blocks, 3 escalations, 4 budgets), velocity anomaly (5/60s) actually wired, what-if simulation 25-500 tx.
-6. **A2A hiring**: Agents hiring agents with autonomous on-chain settlement — a narrative judges remember.
+## 2. Submission Assets — Remaining
+
+- [x] `VIDEO_SCRIPT.md` — 2:45 script with exact numbers
+- [x] `PPT_OUTLINE.md` — 12 slides + speaker notes
+- [x] `PITCH.md` — 3-minute pitch + Q&A
+- [x] `SUBMISSION.md` — submission write-up
+- [x] `JUDGE_PREP.md` — judge Q&A
+- [x] `DEMO_REHEARSAL.md` — setup, clicks, fallbacks
+- [ ] Record the screen + voiceover (follow `VIDEO_SCRIPT.md`)
+- [ ] Export the PPT from `PPT_OUTLINE.md` (12 slides, 16:9)
+- [ ] Watch the recording once with sound off; every number must be legible
+- [ ] Confirm no `.env`, credentials file, or secret appears on screen
+- [ ] Upload the video and paste the link into the submission form
+- [ ] Submit `PPT.pdf` + video link
+
+---
+
+## 3. Pre-Recording
+
+```bash
+pnpm install
+pnpm demo:reset
+pnpm dev
+# http://localhost:5173/control
+# credentials: data/demo-credentials.txt
+```
+
+```bash
+pnpm demo:attack all
+pnpm demo:proof
+pnpm test
+pnpm typecheck
+pnpm build
+```
+
+- [ ] Clean proof pane: orders 1,204 · sensitive 37 · attacker 0
+- [ ] Hero: risk 75 · HOLD · attacker 0
+- [ ] Delete: 1,204 / 37 · archive 1,204
+- [ ] Drift: 826 → 786 · stale 409 · 0 executed · fresh 786
+- [ ] Receipts: chain verified · download works
+- [ ] Terminal: `30/30 deterministic scenarios passed`
+
+---
+
+## 4. Top-3 Differentiators
+
+1. **Drift-bound consent** — the approval is invalid when the live dataset changes, not just when the JSON changes.
+2. **One-shot capability grants** — a decision and an invocation are different objects; the adapter refuses to run without a fresh grant.
+3. **Proof of enforcement** — hash-chained receipts with before/after state and `toolInvoked`, downloadable as JSON.
+4. **Real blast radius** — rolled-back previews over the actual data, with sensitive-row and recoverability counts.
+5. **Measured counterfactual** — the product ships the losing baseline so the difference is empirical, not rhetorical.
+
+---
+
+## 5. Honest Boundaries (do not overclaim)
+
+- Sandbox data is seeded; queries and mutations are real.
+- No production red-team or benchmark was run.
+- Email is an in-app sink; no real mail.
+- Algorand is TestNet; no real funds.
+- Live adapters, mission contracts, recovery/undo and PS 2.2 privacy are next.
+
+---
+
+## 6. Submission Package
+
+```
+kron-submission/
+├── KRON_PS21_Deck.pdf          # exported from PPT_OUTLINE.md
+├── VIDEO_SCRIPT.md             # reference / narration
+├── video-link.txt              # uploaded link
+├── SUBMISSION.md
+├── PITCH.md
+├── JUDGE_PREP.md
+└── DEMO_REHEARSAL.md
+```

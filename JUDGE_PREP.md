@@ -1,119 +1,148 @@
-# KRON — Judge Preparation & Q&A Sheet
+# KRON — Judge Preparation & Q&A
 
-> Goal: win the demo, the Q&A, and the "would you deploy this?" conversation.
-> Frame for every answer: **"No human in the loop. Policy in the loop."**
+> **Frame:** “Don’t monitor the agent. Cap its actions.”
+> **Mechanism:** Preview the blast radius. Bind the approval. Prove the enforcement.
+> **Primary track:** PS 2.1 — AI-agent safety and control.
 
 ---
 
 ## 30-Second Elevator Pitch
 
-> "KRON is the economic firewall for autonomous AI agents. Give an agent a wallet and it will spend — KRON gives operators deterministic, machine-readable policy boundaries, a what-if simulator to tune them, and a cryptographic anchor on Algorand so every payment can be independently verified. No human watches every transaction; the policy does. When the policy can't decide, it escalates to a human. When you say stop, it stops everywhere, on-chain, in seconds."
+> “KRON is a capability firewall for AI agents. Every dangerous tool call — send, write, delete, pay — goes through one path: we preview the real blast radius against the actual data, score the risk, generate a safer alternative, bind any human approval to a SHA-256 hash of the exact action, and require a one-shot capability grant before the tool runs. Every decision leaves a hash-chained receipt that proves whether the tool was invoked and exactly what changed.
+>
+> The demo is deterministic and offline: the hero attack is held at 75/100 with zero attacker mail, the bulk delete becomes a recoverable archive of 1,204 rows, and a stale approval is rejected with 409 when the dataset moves under it.”
 
 ---
 
-## The 5 Tough Questions (and the honest answers)
+## The Five Tough Questions
 
-### 1. "It's TestNet only — is this production-ready?"
-**Say:**
-- "The protocol, contracts, and settlement path are identical on MainNet — same TEAL, same atomic groups, same signing. We chose TestNet so judges can click a live link, pull funds from the faucet, and watch real settlements in 3.3 seconds with zero cost and zero risk."
-- "The production deployment path is documented (`docs/DEPLOYMENT.md`): swap one env var (`ALGORAND_NETWORK=mainnet`), fund a MainNet account, and the exact same stack runs. The database is the only swap — SQLite → managed Postgres."
-- "TestNet is actually the *correct* demo surface: a judge can verify every claim on-chain without spending money."
+### 1. “How is this different from an agent observability / approval dashboard?”
 
-### 2. "You're using SQLite — isn't that a toy?"
 **Say:**
-- "SQLite is the zero-ops default so `pnpm dev` boots in seconds with no Docker. The data layer is Prisma — one line in `prisma/schema.prisma` switches to Postgres, and `docker-compose.prod.yml` already documents the Postgres option."
-- "The ledger is the source of truth for auditability; the DB is just the operational cache. Even if the DB vanished, every payment is recoverable from Algorand via the ARC-2 notes."
+- “Observability tells you what happened. KRON decides what is allowed to happen, and then proves it.”
+- “Our approval card is not a tool name and a JSON blob. It shows the real rows affected, sensitive rows, recoverability, recipient novelty and attachment sensitivity.”
+- “The click is bound to `sha256(canonical action JSON)` plus a fingerprint of the exact rows the preview saw. A changed argument or a changed dataset invalidates consent.”
+- “Execution requires a one-shot capability grant consumed by the tool adapter. The receipt records `toolInvoked` and before/after state.”
 
-### 3. "x402 is a new/unknown standard — why bet on it?"
-**Say:**
-- "x402 is the 402 Payment Required extension for the agent economy, backed by the x402.org community, and it's the closest thing to a standard for 'pay-as-you-go AI'. It fits us perfectly: HTTP-first, wallet-to-wallet, sub-second."
-- "We implemented the flow natively on Algorand (deterministic fees, atomic groups, 3.3s finality) instead of on top of a legacy chain. That's a feature: it's the fastest, cheapest path to a working agent-payment loop today."
-- "And we're not dependent on x402 the protocol for the *auditability* story — that's our own ARC-4 contract + ARC-2 note scheme."
-
-### 4. "The smart contract is small — is that enough?"
-**Say:**
-- "Deliberately. Our contract does exactly three auditable things and nothing else: (1) it anchors a SHA-256 hash of every policy decision, (2) it records per-agent policy hashes in box storage, and (3) it can freeze the whole system on-chain. Minimal surface area = minimal attack surface. The *intelligence* lives in the off-chain policy engine, which is fully simulated and unit-tested (21 tests)."
-- "v3 adds an emergency-stop switch (creator-only), per-agent box storage, and an inner-transaction flush — all compiled and verified against the TestNet algod in CI."
-- "Small, audited, upgradeable later — not a kitchen sink."
-
-### 5. "You store wallet mnemonics — that's a liability"
-**Say:**
-- "The demo uses a dedicated funding account and per-agent wallets encrypted at rest with AES-256 (`ENCRYPTION_KEY`, 64 hex chars, auto-generated or operator-set). Real deployments would use a custodian, HSM, or agent-key custody (e.g. DKIM-style signer service) — the key vault is an isolated module (`services/key-vault`) precisely so it can be swapped."
-- "The model is 'least privilege': agents can only spend within their policy limits, and the operator can freeze the fleet on-chain in seconds."
+**Proof to show:** the hero card, the drift 409, the downloaded receipt.
 
 ---
 
-## The Differentiators — Ranked for Impact
+### 2. “Why a dataset fingerprint? Isn’t a row count enough?”
 
-1. **Atomic Group + On-Chain Policy Anchoring** — payment and policy-hash land together or not at all. Verifiable in one click on AlgoExplorer.
-2. **Policy What-If Simulator** — tune limits against real history *before* deploying a policy that breaks production. This is the "wow" tool for operators.
-3. **On-Chain Verify Portal (`/verify`)** — paste any tx ID, prove a payment was authorized under policy vX, independently of the app.
-4. **Fleet-Wide Emergency Kill Switch** — plus the new on-chain `set_emergency_stop` for hard-stopping the contract.
-5. **5-Minute SDK** — real developer integration story for the agent ecosystem.
+**Say:**
+- “No. A concurrent job can change the values a human approved while leaving the row count identical.”
+- “In the drift demo the card says 826 pending orders. Another job moves 40 to shipped. The live count is 786, but more importantly the fingerprint of the exact rows changed.”
+- “The stale approval is rejected with 409 before the adapter is called. The receipt proves `toolInvoked: false` and zero rows archived.”
+- “The agent re-evaluates, the fresh card shows 786, and the human approves the new hash. Exactly 786 rows are archived.”
+
+**Proof to show:** `pnpm demo:attack drift`.
 
 ---
 
-## Why Algorand (one-pager talking points)
+### 3. “Can an agent replay an approval or a capability grant?”
 
-| Criterion | Algorand | Ethereum/Solana |
-|---|---|---|
-| Finality | **3.3s, deterministic, no forks** | 12s+ (ETH) / 400ms (Sol, fork risk) |
-| Fees | **0.001 ALGO (fractions of a cent)** | $0.10–$10+ under load |
-| Atomicity | **Native atomic groups (up to 16 txns)** | Contract-level workarounds / bundlers |
-| Consensus | Pure Proof-of-Stake, no MEV races | High MEV / front-running surface |
-| On-chain data | **Global state + boxes + ARC-2 notes, cheap** | Expensive storage (ETH) |
-| Alignment | **x402-native, purpose-built for micro-settlement** | General-purpose, fee-heavy |
+**Say:**
+- “No. Approvals are bound to the canonical action hash; changing any field produces a different hash.”
+- “Grants are scoped to one agent, one tool and one action hash, expire in 60 seconds, and are consumed with an atomic conditional update before the tool runs.”
+- “A second consume attempt is rejected. Tests cover replay, hash mismatch and expiry.”
 
-**The one-liner:** *Algorand is the only chain where a $0.018 autonomous agent payment is economically viable AND cryptographically auditable in one atomic transaction.*
+**Proof to show:** `capability.integration` tests, grant card `active → consumed`, `maxUses 1`.
+
+---
+
+### 4. “What if the safe alternative is still dangerous?”
+
+**Say:**
+- “The safe version is not a bypass. It is re-previewed and re-scored through the full pipeline, and it can still be BLOCK.”
+- “The differences are explicit: archive instead of delete, internal owner instead of outside recipient, scoped update instead of table-wide.”
+- “A human approves the alternative, not a silent rewrite.”
+
+**Proof to show:** hero safe-version card; `safeRevalidation.decision` in the API response.
+
+---
+
+### 5. “Is this only a sandbox demo?”
+
+**Say:**
+- “The demo is sandbox-only on purpose: `.example` domains, an in-app mail sink, seeded data, no real money or email.”
+- “The control plane is adapter-shaped. The gateway reaches tools only through the capability adapter. A production deployment swaps in live adapters while keeping the same decision, grant and receipt contracts.”
+- “The payment rail is already real on Algorand TestNet: isolated wallets, atomic policy-anchor groups and on-chain verification. PS 2.1 extends that same runtime from money to every dangerous tool call.”
+
+---
+
+## The Differentiators, Ranked
+
+1. **Drift-bound approvals** — consent expires when the live dataset moves, not just when the JSON changes.
+2. **One-shot capability grants** — the approval authorises a decision; the grant authorises exactly one invocation.
+3. **Proof of enforcement** — hash-chained receipts with before/after state, `toolInvoked`, approval, grant and drift evidence.
+4. **Real blast-radius preview** — rolled-back transaction against the actual sandbox; sensitive rows and recoverability, not a model guess.
+5. **Revalidated safe alternatives** — deterministic rewrites that can still be blocked.
+6. **Measured baseline** — the product ships the losing mode; approve the raw card and exactly one email reaches the attacker.
+
+---
+
+## Claims and Proof
+
+| Claim | Proof |
+|---|---|
+| “Risk 75/100, HOLD, attacker inbox 0” | `pnpm demo:attack hero`; integration test asserts risk 75 and attacker 0 |
+| “1,204 rows, 37 sensitive, archive instead of delete” | `pnpm demo:attack delete`; preview and proof pane both query the sandbox |
+| “826 → 40 changed → 786 live; stale 409; 0 executed; fresh 786 archived” | `pnpm demo:attack drift`; stale receipt has `toolInvoked: false` |
+| “Baseline leaks exactly one email” | `pnpm demo:attack baseline`; proof pane attacker messages = 1 |
+| “One-shot grants” | atomic consume + replay/expiry tests |
+| “Hash-chained receipts” | `GET /api/receipts/verify`; receipt JSON has `prevHash` + `hash` |
+| “30/30 deterministic runs” | `pnpm demo:proof` |
+| “124 automated tests, typecheck + build clean” | `pnpm test`, `pnpm typecheck`, `pnpm build` |
 
 ---
 
 ## Rogue-Agent Demo (the money shot)
 
-> Scenario: `researcher-01`'s key is compromised (or the model is jailbroken). It tries to spend 10× its per-call limit on an unknown recipient.
+> The agent reads a poisoned supplier email, reads a signed customer contract, then tries to send it to a new outside address.
 
-1. **x402 intercepts** the request (HTTP 402 → wallet challenge).
-2. **Policy engine evaluates** in <5ms: over limit + unknown recipient → **BLOCKED**. Zero ALGO moves.
-3. Show the **"What happened?"** panel on the dashboard: the exact rule that fired, the hash anchored on-chain, and the attempted amount.
-4. Hit **Fleet Emergency Stop** → the on-chain `emergency_stop` flips; *even a valid policy request is rejected at the contract level*. Show the contract card flip from "armed" to "ENGAGED".
-5. **Reset** and show recovery.
+1. **Reads are allowed**, but they mark the session: untrusted content and private data.
+2. **The send is held at 75/100** because of the lethal trifecta.
+3. The impact card reveals the customer-confidential attachment and the new recipient.
+4. The safe version sends an internal review copy to legal; the operator approves that hash.
+5. The proof pane stays at **0 attacker messages**.
+6. The receipt records the before/after state and the consumed grant.
 
-**What to say:** *"The model is not the trust boundary. The policy is. When the model goes rogue, the policy stops it in milliseconds — and if the operator is asleep, the contract itself refuses on-chain."*
-
----
-
-## Claims We Make (and the proof behind each)
-
-| Claim | Proof |
-|---|---|
-| "3.3s settlement" | Algorand TestNet finality; every demo payment shows round + tx ID |
-| "Atomic group lands or nothing does" | Tx group in Pera Explorer; app call + payment share a group ID |
-| "Every payment is verifiable" | `/verify` portal + ARC-2 note on-chain |
-| "Policy enforced before money moves" | BLOCKED cases never produce a payment txn |
-| "Contract can freeze the fleet" | `set_emergency_stop` is creator-only; state visible on the dashboard |
-
-**Bold closing claim:** *"In the agent economy, the question isn't whether agents will spend money — it's whether you can trust how they spend it. KRON is the answer: policy in the loop, money on chain, humans in command."*
+**What to say:** “The model is not the trust boundary. The action pipeline is. When the model is convinced to exfiltrate, the pipeline makes exfiltration a reviewed, bounded, provable event.”
 
 ---
 
-## Demo Flow (90 seconds, live)
+## Algorand / x402 Questions
 
-1. **Login** to the dashboard (admin creds) — 5s
-2. **Show the fleet health card + contract card** (payments anchored, emergency stop armed) — 10s
-3. **Run one payment** through the demo agent → watch the live timeline animate with per-step durations → settlement chip (~3.3s) — 30s
-4. **Click the Pera Explorer deep link** → show the atomic group (app call + payment) — 15s
-5. **Rogue-agent block** (over-limit attempt) → "What happened?" panel — 15s
-6. **Fleet emergency stop** → contract flips to ENGAGED — 10s
-7. **Verify a past tx** in `/verify` — 5s
+### “Why Algorand?”
+- Deterministic 3.3-second finality suits agent loops.
+- Sub-cent fees make small tool payments viable.
+- Native atomic groups let the policy anchor and the payment succeed or fail together.
 
-Total: ~90 seconds. Every step is on-chain, clickable, undeniable.
+### “Did PS 2.1 replace the payment product?”
+- No. The x402 rail is preserved: isolated wallets, policy engine, atomic policy-anchor groups, ARC-2 notes, on-chain verification, simulation and emergency stop.
+- PS 2.1 extends the control plane from money to all dangerous actions. Payments are one action kind (`pay`) in the same gateway vocabulary.
+
+### “Where are the real on-chain proofs?”
+- The payment demo remains under `pnpm --filter @kron/api demo:attack:x402` and the `/verify` dashboard route.
+- The PS 2.1 submission does not require a live chain link; its proof is the deterministic sandbox runner and enforcement receipts.
 
 ---
 
-## Housekeeping Before Submitting
+## Honest Boundaries (say this before a judge asks)
 
-- [ ] Push the latest main (contract v3, dashboard features) to GitHub and confirm CI is green.
-- [ ] Set stable `SESSION_SECRET` / `ENCRYPTION_KEY` on the deployed host.
-- [ ] Fund the merchant + funding TestNet accounts and record the merchant address for the demo.
-- [ ] Record a 90-second demo video (OBS/QuickTime) and a screenshot of the dashboard.
-- [ ] Pre-fill the demo DB with a handful of payments so the dashboard looks alive on first load.
+- The PS 2.1 data is seeded; the queries, previews, mutations and proofs are real.
+- No production red-team was run. The baseline and drift numbers are sandbox measurements.
+- Email is an in-app sink; no real mail leaves the machine.
+- Algorand stays on TestNet.
+- Next: live tool adapters, mission contracts, recovery/undo, optional PS 2.2 context privacy.
+
+---
+
+## Closing Line
+
+> “The agent economy does not need another dashboard. It needs a control point.
+>
+> Preview the blast radius. Bind the approval. Prove the enforcement.
+>
+> Don’t monitor the agent. Cap its actions.”

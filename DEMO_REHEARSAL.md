@@ -1,90 +1,125 @@
-# KRON Demo Rehearsal Script
+# KRON Demo Rehearsal (PS 2.1)
 
-## Setup Before Demo (5 minutes)
+> Target: **2:45 video**, 3:00 hard stop.
+> Every number in the script is produced by the deterministic runner. Rehearse with the same commands.
 
-1. Open 3 terminals in the project root
-2. Terminal 1: `pnpm --filter @kron/api dev`
-3. Terminal 2: `pnpm --filter @kron/resource-server dev`
-4. Terminal 3: `pnpm --filter @kron/dashboard dev`
-5. Browser: Open http://localhost:5173
-6. Login: `admin@kron.dev` / `admin1234`
+---
 
-## Slide 1: Title (0:00 - 0:25)
+## Setup (5 minutes)
 
-**Speaking points:**
-> "Autonomous AI agents can write code, analyze data, and invoke complex tools. But the moment an agent needs to pay for an API, compute, or dataset — everything breaks. Either a human must manually authorize every micropayment, or developers give agents naked API keys and credit cards with zero spending boundaries. Putting humans in the payment loop kills autonomy. Giving agents raw wallets invites bankruptcy."
+```bash
+pnpm install
+pnpm demo:reset
+pnpm dev
+```
 
-**Action:** Click to Dashboard. Show the 2 agents already seeded.
+1. Open `http://localhost:5173/control`.
+2. Log in with the email/password in `data/demo-credentials.txt` (generated locally, gitignored, never a default).
+3. Confirm the proof pane reads: **orders 1,204 · sensitive 37 · attacker inbox 0**.
+4. Open a second terminal at the repo root for backup proof commands.
 
-## Slide 2: Live Multi-Agent Demo (0:25 - 1:30)
+### Pre-flight (30 seconds)
 
-**Speaking points:**
-> "Meet KRON — the economic firewall and policy-controlled payment runtime for AI agents, built on Algorand. Every agent gets an isolated Algorand wallet, a mathematically enforceable spending policy, and an immutable audit trail on the ledger."
+```bash
+pnpm demo:attack all
+pnpm demo:proof
+```
 
-**Action:**
-1. Click "Playground" in sidebar
-2. Select snippet "2. Agent-to-Agent (A2A) Autonomous Hiring"
-3. Click "Run in Sandbox"
-4. Watch the console show A2A hire of 0.035 ALGO
-5. Copy the Tx ID and show the "On-Chain Proof" section
+Expected:
 
-**Backup:** If Playground fails, run `pnpm demo:multi` in Terminal 4.
+```
+PASS  hero      HOLD → safe internal send · attacker 0
+PASS  delete    HOLD → archive 1,204 · attacker 0
+PASS  baseline  raw approval → attacker inbox 1
+PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
-## Slide 3: Boundary Enforcement (1:30 - 2:00)
+30/30 deterministic scenarios passed
+```
 
-**Speaking points:**
-> "Watch what happens when an agent tries to exceed its policy. Researcher-01 has a 0.05 ALGO per-call limit. It tries to buy market/sentiment for 0.450 ALGO. KRON blocks it instantly — zero ALGO moves on-chain."
+Then run `pnpm demo:reset` once more before recording so the dashboard opens on a clean slate.
 
-**Action:**
-1. In Playground, select snippet "3. Dry-Run Policy Evaluation (What-If)"
-2. Run with 0.450 ALGO against researcher-01
-3. Show the result: `BLOCKED` with reasons
+---
 
-## Slide 4: What-If Simulation (2:00 - 2:20)
+## Timeline
 
-**Speaking points:**
-> "Before operators deploy a policy, they can backtest candidate limits against historical transactions. Here I'll tighten the per-call limit from 0.05 to 0.02 and see that it would block 40% of past transactions — all without risking a single microAlgo."
+| Time | Beat | Action | Number to say |
+|---|---|---|---|
+| 0:00 | The gap | Split screen / title | “A log line is not a control.” |
+| 0:20 | Mechanism | Show `/control` pipeline | “One path. No bypass.” |
+| 0:45 | Hero attack | Click **Run hero attack**; select email card | risk **75/100**, HOLD |
+| 1:05 | Safe version | Click **Approve safe version** | attacker **0** |
+| 1:25 | Bulk delete | Click **Bulk delete**; approve archive | **1,204** rows, **37** sensitive |
+| 1:55 | Drift | Click **Shadow drift** | **826 → 40 → 786**, stale **409**, fresh **786** |
+| 2:25 | Receipts | Scroll to **Enforcement receipts**; click **Download** | `toolInvoked` + before/after |
+| 2:35 | Proof | Cut to terminal or show badge | **30/30**, **124 tests** |
+| 2:40 | Close | Title card | “Cap its actions.” |
 
-**Action:**
-1. Click "Simulation" in sidebar
-2. Change "Per-Call Autonomous Limit" to `0.02`
-3. Click "Run What-If Simulation"
-4. Show the bar chart and "Projected Spend Reduction"
+---
 
-## Slide 5: On-Chain Verification (2:20 - 2:40)
+## What to click, exactly
 
-**Speaking points:**
-> "Finally, anyone can verify that an autonomous payment was mathematically authorized. Paste a transaction ID into KRON's verification portal and it proves on the ledger that the payment was authorized under policy vX with a SHA-256 decision hash anchored in an atomic group."
+### Hero attack
+1. `Run hero attack`.
+2. The timeline adds: read poisoned email → read contract → send held.
+3. Select the `email.send` card.
+4. Point at: **risk 75/100**, lethal trifecta reason, attachment `customer-confidential`, recipient **New**.
+5. Point at the safe version: **Send to the internal owner for review**.
+6. Click **Approve safe version**.
+7. Proof pane: **attacker inbox 0**, outbound 1.
 
-**Action:**
-1. Click "Verify Proof" in sidebar
-2. Paste the Tx ID from Slide 2
-3. Show the "Cryptographically Verified" banner and the policy hash
+### Bulk delete
+1. `Bulk delete`.
+2. Select the `db.delete` card.
+3. Point at: **1,204 rows**, **37 sensitive**, **Recoverable: No**.
+4. Safe version: **Archive instead of delete**.
+5. Click **Approve safe version**.
+6. Proof pane: **1,204 archived**, total **1,204**, attacker **0**.
 
-## Slide 6: Why Algorand + SDK (2:40 - 3:00)
+### Shadow drift
+1. `Shadow drift`.
+2. The drift panel appears:
+   - card preview **826**
+   - concurrent change **40**
+   - live **786**
+   - executed by stale card **0**
+   - stale **409** with receipt id
+   - fresh archive **786**, active **418**
+3. Scroll to receipts; the stale receipt shows `blocked`, `toolInvoked: false`, `drift`.
+4. Download one receipt JSON.
 
-**Speaking points:**
-> "Why Algorand? 3.3-second instant finality. Sub-cent fees. Atomic transaction groups guarantee the policy anchor and the payment succeed together or fail together. And with the @kron/sdk, any agent developer can integrate this in 5 lines of code."
-
-**Action:**
-1. Show the SDK code snippet in Playground
-2. Close with: "Don't put a human in the payment loop. Put a policy in the loop. KRON gives AI agents money, and gives humans control."
+---
 
 ## Fallback Plan
 
 | Failure | Fallback |
 |---|---|
-| Dashboard won't load | Run `pnpm demo:multi` in terminal and narrate the console output |
-| Algorand localnet slow | Use TestNet mode (update `.env` to use `testnet-api.algonode.cloud`) |
-| Playground crashes | Use the Dashboard "Payments" tab to show historical transactions |
-| Docker not available | Use TestNet with pre-funded wallets from algonode faucet |
+| Dashboard won't load | Run `pnpm demo:attack all`; narrate the terminal output. |
+| Browser animation stalls | Cut the wait; keep the final proof numbers. |
+| Click does not register | Use the API runner directly; the numbers are identical. |
+| Receipt panel is empty | Run any scenario; every decision writes a receipt. |
+| Drift button fails | Run `pnpm demo:attack drift`; it executes the same service path. |
+| Demo database is dirty | `pnpm demo:reset` (≈3s). |
 
-## Timing Checklist
+---
 
-- [ ] 0:00 - Problem statement (25s)
-- [ ] 0:25 - Live demo: multi-agent + A2A (65s)
-- [ ] 1:30 - Boundary enforcement (30s)
-- [ ] 2:00 - What-if simulation (20s)
-- [ ] 2:20 - On-chain verification (20s)
-- [ ] 2:40 - Why Algorand + SDK (20s)
-- [ ] 3:00 - Done
+## Recording Rules
+
+- 1920×1080, browser zoom 100%, light theme.
+- Never show `.env`, `data/demo-credentials.txt`, or terminal history with secrets.
+- Do not claim a benchmark or red-team result that is not printed by `demo:attack` / `demo:proof`.
+- Do not imply real email or real money. Say “sandbox” and “Algorand TestNet”.
+- Keep the video under 3:00. The deck can carry the detail.
+
+---
+
+## Final Checklist
+
+- [ ] `pnpm demo:reset` run immediately before recording
+- [ ] `/control` loads and proof pane shows 1,204 / 37 / 0
+- [ ] Hero: risk 75, HOLD, attacker 0
+- [ ] Delete: 1,204 / 37, archive 1,204
+- [ ] Drift: 826 / 40 / 786, stale 409, 0 executed, fresh 786
+- [ ] Receipts: chain verified, download works
+- [ ] Terminal backup: `30/30 deterministic scenarios passed`
+- [ ] No secrets on screen
+- [ ] Video exported at 1080p, under 3:00

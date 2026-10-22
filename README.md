@@ -1,15 +1,17 @@
-# KRON — Policy-Controlled Economic Runtime for AI Agents
+# KRON — The Capability Firewall for AI Agents
 
 [![CI](https://github.com/sharonjoseph12/kron/actions/workflows/ci.yml/badge.svg)](https://github.com/sharonjoseph12/kron/actions/workflows/ci.yml)
 [![Algorand TestNet](https://img.shields.io/badge/Algorand-TestNet-00d2ff?style=flat&logo=algorand)](https://testnet.explorer.perawallet.app)
 [![MCP Protocol](https://img.shields.io/badge/MCP-1.0-8b5cf6?style=flat)](https://modelcontextprotocol.io)
 [![x402 Micropayments](https://img.shields.io/badge/x402-Enabled-10b981?style=flat)](https://x402.org)
 [![TypeScript SDK](https://img.shields.io/badge/@kron/sdk-v0.1.0-blue?style=flat)](./packages/sdk)
-[![Tests Passing](https://img.shields.io/badge/Tests-120%20Passing-emerald?style=flat)](#-testing--verification)
+[![Tests Passing](https://img.shields.io/badge/Tests-124%20Passing-emerald?style=flat)](#-testing--verification)
 
-**One line:** KRON is the economic firewall and policy-governed payment runtime for autonomous AI agents on Algorand.
+**One line:** KRON is the capability firewall for AI agents — preview the blast radius, bind the approval, prove the enforcement.
 
-**The Vision:** Give AI agents dedicated Algorand wallets and spending autonomy, while giving operators mathematically enforceable boundaries, what-if policy simulations, and on-chain cryptographic auditability.
+**PS 2.1 mechanism:** every dangerous tool call goes through one path: classify → real impact preview → risk score → safe rewrite → hash-bound approval → one-shot capability grant → hash-chained enforcement receipt. A human approval is bound to the exact action **and** a fingerprint of the live data; if the dataset drifts, consent expires.
+
+**Also preserved:** the original policy-controlled x402 payment runtime on Algorand TestNet — isolated agent wallets, atomic policy-anchor groups, what-if simulation, on-chain verification and a fleet emergency stop. Payments are now one action kind (`pay`) inside the same control plane.
 
 ---
 
@@ -173,18 +175,19 @@ Live SDK calls against Algorand TestNet — no canned output.
 
 ## 🛡️ PS 2.1 Agent Control Plane
 
-The control plane is the **action** firewall, separate from the payment policy engine. Every non-payment tool call is classified, previewed against a real sandbox SQLite database, risk-scored, and held for a human when needed. Safe alternatives are revalidated through the same pipeline; approvals are bound to `sha256(canonical action JSON)`.
+The control plane is a **capability firewall**, not a monitoring dashboard. Every read, write, delete, send or payment tool call is classified, previewed against the real sandbox SQLite database inside a rolled-back transaction, risk-scored, and held for a human when needed. Safe alternatives are revalidated through the same pipeline; approvals are bound to `sha256(canonical action JSON)` plus a fingerprint of the exact rows the preview observed. Execution requires a **one-shot capability grant**; every decision emits a **hash-chained enforcement receipt**.
 
 ```bash
 pnpm demo:reset                 # deterministic sandbox + operator credentials in data/demo-credentials.txt
-pnpm demo:attack hero           # poisoned email → private contract → outside recipient (held, safe send only)
-pnpm demo:attack delete         # 1,204-row hard delete (held, archive alternative approved)
+pnpm demo:attack hero           # poisoned email → private contract → outside recipient (75/100, attacker inbox 0)
+pnpm demo:attack delete         # 1,204-row hard delete → archive alternative (1,204 archived)
 pnpm demo:attack baseline       # before/after: raw approval leaks exactly one email
-pnpm demo:attack all            # all three, with proof-pane counts
-pnpm demo:proof                 # hero + delete, 10 runs each (20/20 assertions)
+pnpm demo:attack drift          # 826 pending → concurrent 40 → live 786; stale card 409, 0 executed, fresh 786 archived
+pnpm demo:attack all            # all four, with exact end-state assertions
+pnpm demo:proof                 # hero + delete + drift, 10 runs each (30/30 assertions)
 ```
 
-Open the dashboard and choose **Control Plane** in the sidebar. The page includes the approval desk, real impact card, safe rewrite, hash-chain verify/tamper demo, live timeline, proof pane and a KRON Guard / Baseline toggle. No live model or external network is used on the demo path.
+Open the dashboard and choose **Control Plane** in the sidebar. The page includes the approval desk, real impact card, safe rewrite, drift panel, hash-chain verify/tamper demo, live timeline, proof pane, enforcement receipts and a KRON Guard / Baseline toggle. No live model or external network is used on the demo path.
 
 ## 🚀 Quick Start (Zero Docker Required)
 
@@ -249,27 +252,31 @@ A scripted run proves the full lifecycle on TestNet:
 ## 🧪 Testing & Verification
 
 ```bash
-# 101 passing tests: 76 package + 15 API + 10 resource-server
-pnpm test                          # 76 package tests
-pnpm --filter @kron/api test       # 15 API integration tests (incl. security suite)
-pnpm --filter @kron/resource-server test  # 10 resource-server tests
-# Or all at once via CI: typecheck + build + tests + LocalNet contract e2e
-
-# Build all workspace packages (9 workspaces, Vite code-split dashboard)
-pnpm build
+# 124 tests across 12 workspaces: shared, policy, x402, SDK, business tools,
+# safe rewrite, risk, LLM agent, API integration, resource server, dashboard
+pnpm test
 pnpm typecheck
+pnpm build
+
+# Deterministic control-plane proof (no network, no live model)
+pnpm demo:attack all              # hero | delete | baseline | drift
+pnpm demo:proof                   # 30/30 repeated runs
 ```
 
 ---
 
 ## 🏆 Hackathon Documents
 
-- [`PITCH.md`](./PITCH.md) — 3-Minute Winning Pitch Script & Judge Q&A Cheat Sheet
+- [`VIDEO_SCRIPT.md`](./VIDEO_SCRIPT.md) — 2:45 demo recording script with exact numbers
+- [`PPT_OUTLINE.md`](./PPT_OUTLINE.md) — 12-slide deck outline + speaker notes
+- [`PITCH.md`](./PITCH.md) — 3-Minute Pitch Script & Judge Q&A Cheat Sheet
 - [`SUBMISSION.md`](./SUBMISSION.md) — Full Hackathon Project Submission Document
+- [`TOP3_CHECKLIST.md`](./TOP3_CHECKLIST.md) — submission checklist and verified metrics
+- [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md) — setup, clicks and fallback plan
+- [`JUDGE_PREP.md`](./JUDGE_PREP.md) — Tough Q&A + Rogue-Agent Demo
 - [`HACKATHON.md`](./HACKATHON.md) — One-Page Judge Summary
 - [`OFFLINE.md`](./OFFLINE.md) — 24-Hour Offline Runbook
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — Architecture Diagrams & Data Flow
 - [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) — VPS / Render / Railway Deploy (TestNet)
-- [`docs/SCREENSHOTS.md`](./docs/SCREENSHOTS.md) — 5 Required Screenshots (Dashboard, Agents, Simulation, Verify, Playground)
-- [`JUDGE_PREP.md`](./JUDGE_PREP.md) — Tough Q&A + Rogue-Agent Demo
+- [`docs/SCREENSHOTS.md`](./docs/SCREENSHOTS.md) — 5 Required Screenshots
 - [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md) — Timed 3-Minute Rehearsal + Fallback Plan
