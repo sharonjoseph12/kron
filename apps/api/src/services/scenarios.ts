@@ -3,17 +3,19 @@
  * `pnpm demo:attack`. Every number comes from the sandbox SQLite DB; only
  * the sequence of actions and the fixed seed shape are scripted.
  */
-import type { ActionDecisionResult, ApprovalDTO, ProofPaneDTO } from "@kron/shared";
+import type { ActionDecisionResult, ApprovalDTO, DriftProofDTO, ProofPaneDTO } from "@kron/shared";
 import {
   HERO,
   openSandbox,
   proofPane,
+  saveSandbox,
+  simulateConcurrentOrderChange,
 } from "@kron/business-tools";
-import { decideApproval, evaluateAction } from "./action-gateway.js";
+import { ApprovalError, decideApproval, evaluateAction } from "./action-gateway.js";
 import { getApproval } from "./control-approvals.js";
 import { resetDemoState } from "./demo-reset.js";
 
-export type ScenarioName = "hero" | "delete" | "baseline" | "all";
+export type ScenarioName = "hero" | "delete" | "baseline" | "drift" | "all";
 
 export interface ScenarioStep {
   label: string;
@@ -27,6 +29,7 @@ export interface ScenarioResult {
   action: ActionDecisionResult;
   approval: ApprovalDTO | null;
   proof: ProofPaneDTO;
+  drift?: DriftProofDTO;
 }
 
 const AGENT_ID = "agent-control-demo";
@@ -135,8 +138,7 @@ async function deleteScenario(autoApprove: boolean, reset: boolean): Promise<Sce
   return { scenario: "delete", steps, action, approval, proof: proofPane(await openSandbox()) };
 }
 
-async function baselineScenario(autoApprove: boolean, reset: boolean): Promise<ScenarioResult> {
-  await resetIfRequested(reset);
+async function baselineScenario(autoApprove: boolean, reset: boolean): Promise<ScenarioResult> {  await resetIfRequested(reset);
   const sessionId = "sess-baseline";
   const steps: ScenarioStep[] = [];
 
@@ -192,6 +194,127 @@ async function baselineScenario(autoApprove: boolean, reset: boolean): Promise<S
   return { scenario: "baseline", steps, action, approval, proof: proofPane(await openSandbox()) };
 }
 
+async function driftScenario(reset: boolean): Promise<ScenarioResult> {
+  await resetIfRequested(reset);
+  const sessionId = "sess-drift";
+  const args = { table: "orders", where: { status: "pending" }, hard: true };
+  const steps: ScenarioStep[] = [];
+
+  const action = await evaluateAction({
+    agentId: AGENT_ID,
+    sessionId,
+    tool: "db.delete",
+    args,
+  });
+  steps.push({
+    label: "Agent asks to hard-delete every pending order",
+    decision: action.decision,
+    detail: action.preview?.summary ?? "KRON held the action.",
+  });
+
+  const approval = action.approvalId ? await getApproval(action.approvalId) : null;
+  if (!approval?.safeActionHash) {
+    throw new Error("Drift scenario requires a held action with a bound safe version.");
+  }
+  const previewRows = action.preview?.rowsAffected ?? 0;
+  const fingerprintBefore = action.preview?.fingerprint ?? approval.previewFingerprint;
+
+  // A concurrent job mutates the same rows after the human card was rendered.
+  // The action hash and the row count are unchanged; only the dataset moved.
+  const db = await openSandbox();
+  const mutation = simulateConcurrentOrderChange(db, 40);
+  saveSandbox();
+  const afterChange = proofPane(db);
+  steps.push({
+    label: `A concurrent job moves ${mutation.changed} pending orders to shipped`,
+    detail: `The card still says ${previewRows} rows. The dataset fingerprint has changed.`,
+  });
+
+  let staleStatus = 200;
+  let staleError = "";
+  let staleReceiptId: string | null = null;
+  try {
+    await decideApproval({
+      approvalId: approval.id,
+      decision: "approve",
+      target: "safe",
+      presentedHash: approval.safeActionHash,
+      userId: "scenario-runner",
+    });
+    throw new Error("Stale approval unexpectedly executed");
+  } catch (err) {
+    if (!(err instanceof ApprovalError)) throw err;
+    staleStatus = err.statusCode;
+    staleError = err.message;
+    staleReceiptId = typeof err.details?.receiptId === "string" ? err.details.receiptId : null;
+  }
+  const afterStale = proofPane(db);
+  steps.push({
+    label: "KRON rejects the stale card before the tool adapter is called",
+    decision: "BLOCK",
+    detail: `${staleStatus}: ${staleError} Archived rows: ${afterStale.orders.archived}.`,
+  });
+
+  // The agent must re-evaluate against the live data. The human sees the new
+  // count and a fresh hash, then approves that exact action.
+  const fresh = await evaluateAction({
+    agentId: AGENT_ID,
+    sessionId,
+    tool: "db.delete",
+    args,
+    nonce: `n-drift-fresh-${Date.now().toString(36)}`,
+  });
+  const freshApproval = fresh.approvalId ? await getApproval(fresh.approvalId) : null;
+  if (!freshApproval?.safeActionHash) {
+    throw new Error("Fresh drift evaluation did not produce a safe approval.");
+  }
+  steps.push({
+    label: "A fresh preview sees the live dataset",
+    decision: fresh.decision,
+    detail: fresh.preview?.summary ?? "Fresh preview computed.",
+  });
+
+  const decided = await decideApproval({
+    approvalId: freshApproval.id,
+    decision: "approve",
+    target: "safe",
+    presentedHash: freshApproval.safeActionHash,
+    userId: "scenario-runner",
+  });
+  const finalProof = proofPane(db);
+  steps.push({
+    label: "Human approves the fresh archive; exactly the remaining rows change",
+    detail: decided.execution?.summary ?? "Safe action executed.",
+  });
+
+  return {
+    scenario: "drift",
+    steps,
+    action: fresh,
+    approval: decided.approval,
+    proof: finalProof,
+    drift: {
+      previewRows,
+      freshRows: fresh.preview?.rowsAffected ?? 0,
+      changedRows: mutation.changed,
+      staleStatus,
+      staleError,
+      staleReceiptId,
+      toolInvoked: false,
+      archivedAfterStale: afterStale.orders.archived,
+      pendingAfterStale: afterStale.orders.pending,
+      archivedAfterFresh: finalProof.orders.archived,
+      pendingAfterFresh: finalProof.orders.pending,
+      activeAfterFresh: finalProof.orders.active,
+      freshApprovalId: freshApproval.id,
+      freshExecutedRows: decided.execution?.affectedRows ?? 0,
+      fingerprintBefore,
+      fingerprintAfter: fresh.preview?.fingerprint ?? null,
+      steps: steps.map((step) => ({ label: step.label, detail: step.detail })),
+    },
+  };
+}
+
 export async function runScenario(
   name: ScenarioName,
   opts: { autoApprove?: boolean; reset?: boolean } = {},
@@ -204,10 +327,12 @@ export async function runScenario(
         await hero(autoApprove, true),
         await deleteScenario(autoApprove, true),
         await baselineScenario(autoApprove, true),
+        await driftScenario(true),
       ],
     };
   }
   if (name === "hero") return { scenarios: [await hero(autoApprove, reset)] };
   if (name === "delete") return { scenarios: [await deleteScenario(autoApprove, reset)] };
+  if (name === "drift") return { scenarios: [await driftScenario(reset)] };
   return { scenarios: [await baselineScenario(autoApprove, reset)] };
 }

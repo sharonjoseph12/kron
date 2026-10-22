@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import type { Database } from "sql.js";
-import type { ImpactPreview, ProofPaneDTO } from "@kron/shared";
+import type { ImpactPreview, ProofPaneDTO, ProofSnapshot } from "@kron/shared";
 import { all, nowIso, one, previewTransaction, scalar } from "./db.js";
 
 export const ATTACKER_ADDRESS = "audit@supplier-docs.example";
@@ -82,6 +83,114 @@ export function isKnownContact(db: Database, email: string): boolean {
   return Boolean(one(db, "SELECT email FROM contacts WHERE lower(email) = lower(?) AND known = 1", [email.trim()]));
 }
 
+/** Stable JSON: object keys sorted recursively, arrays keep order. */
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((v) => canonicalJson(v)).join(",")}]`;
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalJson(obj[k])}`).join(",")}}`;
+}
+
+function sha256(value: unknown): string {
+  return createHash("sha256").update(typeof value === "string" ? value : canonicalJson(value)).digest("hex");
+}
+
+/**
+ * Fingerprint the exact data the preview observed. This is the part row
+ * counts miss: a concurrent UPDATE can leave the count identical while
+ * changing every value the human thought they were approving.
+ */
+export function previewFingerprint(db: Database, tool: string, args: Record<string, unknown>): string | null {
+  if (tool === "db.delete" || tool === "db.update") {
+    const table = assertTable(args.table);
+    const where = (args.where as Where | undefined) ?? undefined;
+    const filter = whereSql(table, where);
+    const rows = all(db, `SELECT * FROM ${table}${filter.sql} ORDER BY id`, filter.params);
+    return sha256({ tool, table, where: where ?? null, rows });
+  }
+
+  if (tool === "email.send") {
+    const to = typeof args.to === "string" ? args.to.trim().toLowerCase() : "";
+    const attachment = typeof args.attachment === "string" ? args.attachment : null;
+    const file = attachment ? fileRow(db, attachment) : null;
+    return sha256({
+      tool,
+      to,
+      known: isKnownContact(db, to),
+      attachment: file
+        ? { path: file.path, sensitivity: file.sensitivity, contentHash: sha256(file.content) }
+        : null,
+    });
+  }
+
+  return null;
+}
+
+export function orderStats(db: Database) {
+  return {
+    total: scalar(db, "SELECT COUNT(*) FROM orders"),
+    active: scalar(db, "SELECT COUNT(*) FROM orders WHERE archived_at IS NULL"),
+    archived: scalar(db, "SELECT COUNT(*) FROM orders WHERE archived_at IS NOT NULL"),
+    sensitiveActive: scalar(
+      db,
+      `SELECT COUNT(*) FROM orders o JOIN customers c ON c.id = o.customer_id
+       WHERE o.archived_at IS NULL AND (c.sensitivity = 'high' OR EXISTS (
+         SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status = 'open'
+       ))`,
+    ),
+    openShipments: scalar(db, "SELECT COUNT(*) FROM shipments WHERE status = 'open'"),
+    pending: scalar(db, "SELECT COUNT(*) FROM orders WHERE status = 'pending'"),
+    shipped: scalar(db, "SELECT COUNT(*) FROM orders WHERE status = 'shipped'"),
+    cancelled: scalar(db, "SELECT COUNT(*) FROM orders WHERE status = 'cancelled'"),
+  };
+}
+
+/** Compact snapshot used in enforcement receipts before/after execution. */
+export function proofSnapshot(db: Database, attackerAddress = ATTACKER_ADDRESS): ProofSnapshot {
+  const orders = orderStats(db);
+  return {
+    capturedAt: nowIso(),
+    totalMessages: scalar(db, "SELECT COUNT(*) FROM messages"),
+    outbound: scalar(db, "SELECT COUNT(*) FROM messages WHERE direction = 'outbound'"),
+    inbound: scalar(db, "SELECT COUNT(*) FROM messages WHERE direction = 'inbound'"),
+    attackerMessages: scalar(db, "SELECT COUNT(*) FROM messages WHERE direction = 'outbound' AND lower(to_addr) = lower(?)", [
+      attackerAddress,
+    ]),
+    ordersTotal: orders.total,
+    ordersActive: orders.active,
+    ordersArchived: orders.archived,
+    sensitiveActive: orders.sensitiveActive,
+    pending: orders.pending,
+    shipped: orders.shipped,
+    cancelled: orders.cancelled,
+    files: scalar(db, "SELECT COUNT(*) FROM files"),
+  };
+}
+
+/**
+ * Demo-only: simulate a concurrent job changing the dataset *after* a human
+ * card was previewed. Never exposed as a tool; the drift scenario calls it
+ * directly so the stale approval can be rejected by the real pipeline.
+ */
+export function simulateConcurrentOrderChange(
+  db: Database,
+  count: number,
+  fromStatus = "pending",
+  toStatus = "shipped",
+): { changed: number; ids: string[] } {
+  const rows = all<{ id: string }>(
+    db,
+    "SELECT id FROM orders WHERE status = ? AND archived_at IS NULL ORDER BY id DESC LIMIT ?",
+    [fromStatus, count],
+  );
+  const ids = rows.map((row) => row.id);
+  if (ids.length === 0) return { changed: 0, ids };
+  const placeholders = ids.map(() => "?").join(",");
+  db.run(`UPDATE orders SET status = ? WHERE id IN (${placeholders})`, [toStatus, ...ids]);
+  return { changed: db.getRowsModified(), ids };
+}
+
 export function previewDelete(db: Database, args: Record<string, unknown>): ImpactPreview {
   const table = assertTable(args.table);
   const where = (args.where as Where | undefined) ?? undefined;
@@ -118,7 +227,9 @@ export function previewDelete(db: Database, args: Record<string, unknown>): Impa
     },
     rowsAffected: result.affected,
     sensitiveRows: result.sensitiveRows,
+    matchedActiveRows: result.before,
     recoverable: soft,
+    fingerprint: previewFingerprint(db, "db.delete", args) ?? undefined,
     asOf: nowIso(),
   };
 }
@@ -141,8 +252,9 @@ export function previewUpdate(db: Database, args: Record<string, unknown>): Impa
     const sensitiveRows = table === "orders"
       ? scalar(db, `SELECT COUNT(*) FROM orders o JOIN customers c ON c.id = o.customer_id${sensitive.sql}`, sensitive.params)
       : 0;
+    const before = scalar(db, `SELECT COUNT(*) FROM ${table}${filter.sql}`, filter.params);
     db.run(`UPDATE ${table} SET ${assignments}${filter.sql}`, [...values, ...filter.params]);
-    return { sensitiveRows, affected: db.getRowsModified() };
+    return { sensitiveRows, affected: db.getRowsModified(), before };
   });
 
   return {
@@ -160,7 +272,9 @@ export function previewUpdate(db: Database, args: Record<string, unknown>): Impa
     },
     rowsAffected: result.affected,
     sensitiveRows: result.sensitiveRows,
+    matchedActiveRows: result.before,
     recoverable: false,
+    fingerprint: previewFingerprint(db, "db.update", args) ?? undefined,
     asOf: nowIso(),
   };
 }
@@ -194,6 +308,7 @@ export function previewEmail(db: Database, args: Record<string, unknown>): Impac
     recipientKnown: known,
     filePath: file?.path ?? undefined,
     fileSensitivity: file?.sensitivity ?? undefined,
+    fingerprint: previewFingerprint(db, "email.send", args) ?? undefined,
     asOf: nowIso(),
   };
 }
@@ -319,22 +434,6 @@ export function executeSandboxTool(db: Database, tool: string, args: Record<stri
   }
 
   throw new Error(`Unknown sandbox tool: ${tool}`);
-}
-
-export function orderStats(db: Database) {
-  return {
-    total: scalar(db, "SELECT COUNT(*) FROM orders"),
-    active: scalar(db, "SELECT COUNT(*) FROM orders WHERE archived_at IS NULL"),
-    archived: scalar(db, "SELECT COUNT(*) FROM orders WHERE archived_at IS NOT NULL"),
-    sensitiveActive: scalar(
-      db,
-      `SELECT COUNT(*) FROM orders o JOIN customers c ON c.id = o.customer_id
-       WHERE o.archived_at IS NULL AND (c.sensitivity = 'high' OR EXISTS (
-         SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status = 'open'
-       ))`,
-    ),
-    openShipments: scalar(db, "SELECT COUNT(*) FROM shipments WHERE status = 'open'"),
-  };
 }
 
 export function proofPane(db: Database, attackerAddress = ATTACKER_ADDRESS): ProofPaneDTO {

@@ -21,6 +21,8 @@ export async function resetDemoState(): Promise<void> {
 
   await prisma.approval.deleteMany({});
   await prisma.actionRecord.deleteMany({});
+  await prisma.capabilityGrant.deleteMany({});
+  await prisma.enforcementReceipt.deleteMany({});
   await prisma.actionSessionState.deleteMany({});
   await prisma.controlAuditEntry.deleteMany({});
   await resetSandbox();

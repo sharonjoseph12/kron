@@ -20,7 +20,7 @@ const { runScenario } = await import("../src/services/scenarios.js");
 const { prisma } = await import("../src/db.js");
 
 let pass = 0;
-const total = 20;
+const total = 30;
 
 for (let i = 1; i <= 10; i++) {
   const hero = (await runScenario("hero", { autoApprove: true, reset: true })).scenarios[0]!;
@@ -43,6 +43,22 @@ for (let i = 1; i <= 10; i++) {
     del.proof.orders.archived === 1204;
   console.log(`  ${delOk ? "PASS" : "FAIL"}  delete #${i}  attacker=${del.proof.mail.attackerMessages} archived=${del.proof.orders.archived}`);
   if (delOk) pass++;
+
+  const drift = (await runScenario("drift", { reset: true })).scenarios[0]!.drift;
+  const driftOk =
+    Boolean(drift) &&
+    drift!.staleStatus === 409 &&
+    drift!.toolInvoked === false &&
+    drift!.changedRows === 40 &&
+    drift!.archivedAfterStale === 0 &&
+    drift!.freshRows === drift!.previewRows - 40 &&
+    drift!.freshExecutedRows === drift!.freshRows &&
+    drift!.archivedAfterFresh === drift!.freshRows &&
+    drift!.fingerprintBefore !== drift!.fingerprintAfter;
+  console.log(
+    `  ${driftOk ? "PASS" : "FAIL"}  drift  #${i}  stale=${drift?.previewRows} live=${drift?.freshRows} archived=${drift?.archivedAfterFresh}`,
+  );
+  if (driftOk) pass++;
 }
 
 await prisma.$disconnect();

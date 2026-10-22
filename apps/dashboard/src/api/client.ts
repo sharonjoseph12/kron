@@ -10,7 +10,10 @@ import type {
   AuditEntryDTO,
   AuditVerifyResult,
   BurnRate,
+  CapabilityGrantDTO,
   DecisionSlice,
+  DriftProofDTO,
+  EnforcementReceiptDTO,
   MCPServerDTO,
   OverviewStats,
   PaymentDTO,
@@ -18,6 +21,7 @@ import type {
   PolicyEvaluation,
   PolicyUpdateInput,
   ProofPaneDTO,
+  ReceiptVerifyResult,
   SimulationResult,
   SpendPoint,
   TimelineEvent,
@@ -234,17 +238,25 @@ export const api = {
     id: string,
     input: { decision: "approve" | "reject"; target?: "safe" | "original"; actionHash?: string },
   ) =>
-    post<{ approval: ApprovalDTO; execution: { summary: string } | null; proof: ProofPaneDTO }>(
-      `/api/approvals/${encodeURIComponent(id)}/decide`,
-      input,
-    ),
+    post<{
+      approval: ApprovalDTO;
+      execution: { summary: string; affectedRows?: number } | null;
+      proof: ProofPaneDTO;
+      grantId?: string | null;
+      receiptId?: string | null;
+    }>(`/api/approvals/${encodeURIComponent(id)}/decide`, input),
   getProof: () => get<{ proof: ProofPaneDTO }>("/api/proof"),
+  listGrants: (limit = 50) => get<{ grants: CapabilityGrantDTO[] }>(`/api/grants?limit=${limit}`),
+  listReceipts: (limit = 50) => get<{ receipts: EnforcementReceiptDTO[] }>(`/api/receipts?limit=${limit}`),
+  getReceipt: (id: string) => get<{ receipt: EnforcementReceiptDTO }>(`/api/receipts/${encodeURIComponent(id)}`),
+  verifyReceipts: () => get<{ verification: ReceiptVerifyResult }>("/api/receipts/verify"),
   getControlSession: (sessionId: string, agentId: string) =>
     get<{ state: ActionSessionStateDTO }>(
       `/api/control/sessions/${encodeURIComponent(sessionId)}?agentId=${encodeURIComponent(agentId)}`,
     ),
-  runScenario: (name: "hero" | "delete" | "baseline" | "all", opts?: { autoApprove?: boolean; reset?: boolean }) =>
+  runScenario: (name: "hero" | "delete" | "baseline" | "drift" | "all", opts?: { autoApprove?: boolean; reset?: boolean }) =>
     post<{ scenarios: unknown[] }>("/api/demo/scenario", { name, ...opts }),
+  runDrift: () => post<{ drift: DriftProofDTO }>("/api/demo/drift", {}),
   controlAudit: (limit = 100) => get<{ entries: AuditChainEntryDTO[] }>(`/api/control/audit?limit=${limit}`),
   verifyControlAudit: () => get<{ verification: AuditVerifyResult }>("/api/control/audit/verify"),
   tamperControlAudit: () => post<{ ok: boolean }>("/api/control/audit/tamper", {}),

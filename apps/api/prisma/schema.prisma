@@ -163,6 +163,8 @@ model ActionRecord {
   preview         Json?
   safeAction      Json?
   approvalId      String?
+  grantId         String?
+  receiptId       String?
   mode            String   @default("kron")
   execution       Json?
   executedAt      DateTime?
@@ -187,6 +189,9 @@ model Approval {
   safeRevalidation Json?
   differences     Json
   preview         Json?
+  previewFingerprint String?
+  safePreview     Json?
+  safePreviewFingerprint String?
   reasons         Json
   riskScore       Int
   decision        String
@@ -198,6 +203,67 @@ model Approval {
   createdAt       DateTime @default(now())
   @@index([status, createdAt])
   @@index([agentId, createdAt])
+}
+
+/**
+ * A one-shot, scoped capability issued only after the gateway has decided an
+ * action may run. The tool adapter consumes it atomically before invoking the
+ * sandbox. A grant is bound to the same action hash as the approval and can
+ * never be reused.
+ */
+model CapabilityGrant {
+  id         String   @id @default(cuid())
+  agentId    String
+  sessionId  String?
+  approvalId String?
+  tool       String
+  kind       String
+  actionHash String
+  scope      Json
+  reason     String
+  status     String   @default("active") // active | consumed | revoked | expired
+  maxUses    Int      @default(1)
+  useCount   Int      @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+  @@index([agentId, createdAt])
+  @@index([actionHash])
+  @@index([status, expiresAt])
+}
+
+/**
+ * Proof of enforcement. One immutable receipt per decision/attempt, chained
+ * by hash. It captures the sandbox before and after, whether the tool was
+ * actually invoked, the approval and grant that authorised it, and drift
+ * evidence when an approval was invalidated.
+ */
+model EnforcementReceipt {
+  id             String    @id @default(cuid())
+  seq            Int       @unique
+  actionRecordId String?
+  approvalId     String?
+  grantId        String?
+  actionHash     String
+  tool           String
+  agentId        String
+  sessionId      String?
+  decision       String
+  status         String // executed | blocked | held | rejected
+  toolInvoked    Boolean   @default(false)
+  summary        String
+  actionJson     Json?
+  before         Json
+  after          Json
+  approval       Json?
+  grant          Json?
+  drift          Json?
+  executedAt     DateTime?
+  prevHash       String
+  hash           String
+  createdAt      DateTime  @default(now())
+  @@index([agentId, createdAt])
+  @@index([approvalId])
 }
 
 model ControlAuditEntry {

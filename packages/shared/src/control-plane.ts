@@ -43,6 +43,8 @@ export interface ImpactPreview {
   details: Record<string, string | number | boolean | null>;
   rowsAffected?: number;
   sensitiveRows?: number;
+  /** Rows that are currently live (not archived) for delete/update previews. */
+  matchedActiveRows?: number;
   recoverable?: boolean;
   recipient?: string;
   recipientKnown?: boolean;
@@ -50,6 +52,12 @@ export interface ImpactPreview {
   fileSensitivity?: string;
   amountAlgo?: number;
   limitAlgo?: number;
+  /**
+   * SHA-256 over the exact rows/recipient/file the preview observed. The
+   * approval binds this, so a concurrent data change with the same row count
+   * is still detected as stale.
+   */
+  fingerprint?: string;
   asOf: string;
 }
 
@@ -58,6 +66,8 @@ export interface SafeVersion {
   label: string;
   /** Explicit "alternative, not an equivalent" differences. */
   differences: string[];
+  /** Real preview of the safe action, computed before it is shown. */
+  preview?: ImpactPreview | null;
   revalidation: {
     decision: ControlDecision;
     riskScore: number;
@@ -78,6 +88,10 @@ export interface ActionDecisionResult {
   actionHash: string | null;
   mode: ControlMode;
   recordId: string | null;
+  /** Capability grant consumed by the adapter when the tool actually ran. */
+  grantId?: string | null;
+  /** Durable proof-of-enforcement artifact for this decision. */
+  receiptId?: string | null;
   execution?: {
     ok: boolean;
     summary: string;
@@ -111,6 +125,9 @@ export interface ApprovalDTO {
   safeLabel: string | null;
   differences: string[];
   preview: ImpactPreview | null;
+  previewFingerprint: string | null;
+  safePreview: ImpactPreview | null;
+  safePreviewFingerprint: string | null;
   reasons: string[];
   riskScore: number;
   decision: ControlDecision;
@@ -119,6 +136,115 @@ export interface ApprovalDTO {
   decidedBy: string | null;
   decidedAt: string | null;
   phoneUrl: string | null;
+}
+
+/** Compact state of the sandbox at one point in time. */
+export interface ProofSnapshot {
+  capturedAt: string;
+  totalMessages: number;
+  outbound: number;
+  inbound: number;
+  attackerMessages: number;
+  ordersTotal: number;
+  ordersActive: number;
+  ordersArchived: number;
+  sensitiveActive: number;
+  pending: number;
+  shipped: number;
+  cancelled: number;
+  files: number;
+}
+
+export type ReceiptStatus = "executed" | "blocked" | "held" | "rejected";
+
+export interface DriftInfo {
+  kind: "impact_drift";
+  message: string;
+  expectedRows: number | null;
+  actualRows: number | null;
+  expectedFingerprint: string | null;
+  actualFingerprint: string | null;
+}
+
+export interface CapabilityGrantDTO {
+  id: string;
+  agentId: string;
+  sessionId: string | null;
+  approvalId: string | null;
+  tool: string;
+  kind: string;
+  actionHash: string;
+  status: "active" | "consumed" | "revoked" | "expired";
+  maxUses: number;
+  useCount: number;
+  scope: Record<string, unknown>;
+  expiresAt: string;
+  consumedAt: string | null;
+  createdAt: string;
+}
+
+export interface EnforcementReceiptDTO {
+  id: string;
+  seq: number;
+  actionRecordId: string | null;
+  approvalId: string | null;
+  grantId: string | null;
+  actionHash: string;
+  tool: string;
+  agentId: string;
+  sessionId: string | null;
+  decision: ControlDecision;
+  status: ReceiptStatus;
+  toolInvoked: boolean;
+  summary: string;
+  actionJson: Record<string, unknown> | null;
+  before: ProofSnapshot;
+  after: ProofSnapshot;
+  approval: {
+    id: string;
+    status: string;
+    target: string | null;
+    actionHash: string;
+    decidedBy: string | null;
+  } | null;
+  grant: {
+    id: string;
+    status: string;
+    actionHash: string;
+    consumedAt: string | null;
+  } | null;
+  drift: DriftInfo | null;
+  executedAt: string | null;
+  prevHash: string;
+  hash: string;
+  createdAt: string;
+}
+
+export interface ReceiptVerifyResult {
+  ok: boolean;
+  checked: number;
+  headHash: string | null;
+  firstBroken: { id: string; seq: number; reason: string } | null;
+}
+
+export interface DriftProofDTO {
+  previewRows: number;
+  freshRows: number;
+  changedRows: number;
+  staleStatus: number;
+  staleError: string;
+  staleReceiptId: string | null;
+  toolInvoked: boolean;
+  archivedAfterStale: number;
+  pendingAfterStale: number;
+  archivedAfterFresh: number;
+  pendingAfterFresh: number;
+  activeAfterFresh: number;
+  freshApprovalId: string | null;
+  freshExecutedRows: number;
+  fingerprintBefore: string | null;
+  fingerprintAfter: string | null;
+  steps: Array<{ label: string; detail: string }>;
 }
 
 export interface ProofPaneDTO {
@@ -145,6 +271,9 @@ export interface ProofPaneDTO {
     archived: number;
     sensitiveActive: number;
     openShipments: number;
+    pending: number;
+    shipped: number;
+    cancelled: number;
   };
   files: Array<{ path: string; sensitivity: string }>;
 }

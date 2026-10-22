@@ -5,6 +5,8 @@
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildServer } from "./server.js";
+import { prisma } from "./db.js";
+import { consumeGrant, issueGrant } from "./services/capability-grants.js";
 import { resetDemoState } from "./services/demo-reset.js";
 
 let app: FastifyInstance;
@@ -209,6 +211,118 @@ describe("PS 2.1 control plane", () => {
     const after = await proof();
     expect(after.orders.total).toBe(1204);
     expect(after.orders.active).toBe(1204);
+  });
+
+  it("consumes one capability grant per execution and emits a linked receipt", async () => {
+    await resetDemoState();
+    const result = await evaluate({
+      agentId: "agent-test",
+      sessionId: "sess-grant",
+      tool: "email.send",
+      args: { to: "legal@coastalcatch.example", subject: "Internal review" },
+    });
+    expect(result.decision).toBe("ALLOW");
+    expect(result.grantId).toBeTruthy();
+    expect(result.receiptId).toBeTruthy();
+    expect(result.execution?.affectedRows).toBe(1);
+
+    const grants = await app.inject({ method: "GET", url: "/api/grants", headers: sessionHeader() });
+    expect(grants.statusCode).toBe(200);
+    const grant = grants.json().grants.find((g: { id: string }) => g.id === result.grantId);
+    expect(grant.status).toBe("consumed");
+    expect(grant.useCount).toBe(1);
+    expect(grant.maxUses).toBe(1);
+    expect(grant.actionHash).toBe(result.actionHash);
+
+    // Replaying the same grant is denied before the tool adapter is called.
+    await expect(
+      consumeGrant({
+        id: result.grantId,
+        agentId: "agent-test",
+        tool: "email.send",
+        actionHash: result.actionHash,
+      }),
+    ).rejects.toThrow(/already consumed/);
+
+    const receipts = await app.inject({ method: "GET", url: "/api/receipts", headers: sessionHeader() });
+    expect(receipts.statusCode).toBe(200);
+    const receipt = receipts.json().receipts.find((r: { id: string }) => r.id === result.receiptId);
+    expect(receipt.status).toBe("executed");
+    expect(receipt.toolInvoked).toBe(true);
+    expect(receipt.grant.status).toBe("consumed");
+    expect(receipt.before.outbound).toBe(0);
+    expect(receipt.after.outbound).toBe(1);
+    expect(receipt.before.attackerMessages).toBe(0);
+    expect(receipt.after.attackerMessages).toBe(0);
+    expect(receipt.hash).toMatch(/^[a-f0-9]{64}$/);
+
+    const verify = await app.inject({ method: "GET", url: "/api/receipts/verify", headers: sessionHeader() });
+    expect(verify.statusCode).toBe(200);
+    expect(verify.json().verification.ok).toBe(true);
+    expect(verify.json().verification.checked).toBeGreaterThan(0);
+  });
+
+  it("refuses a grant bound to another action or one that has expired", async () => {
+    const hash = "a".repeat(64);
+    const grant = await issueGrant({
+      agentId: "agent-test",
+      tool: "orders.read",
+      kind: "read",
+      actionHash: hash,
+      reason: "test",
+    });
+
+    await expect(
+      consumeGrant({
+        id: grant.id,
+        agentId: "agent-test",
+        tool: "orders.read",
+        actionHash: "b".repeat(64),
+      }),
+    ).rejects.toThrow(/different action hash/);
+
+    await prisma.capabilityGrant.update({
+      where: { id: grant.id },
+      data: { expiresAt: new Date(Date.now() - 1_000) },
+    });
+    await expect(
+      consumeGrant({ id: grant.id, agentId: "agent-test", tool: "orders.read", actionHash: hash }),
+    ).rejects.toThrow(/expired/);
+  });
+
+  it("rejects a stale approval when the dataset drifts, proving nothing executed", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/demo/drift",
+      headers: sessionHeader(),
+      payload: {},
+    });
+    expect(res.statusCode, res.body).toBe(200);
+    const drift = res.json().drift;
+
+    expect(drift.staleStatus).toBe(409);
+    expect(drift.toolInvoked).toBe(false);
+    expect(drift.changedRows).toBe(40);
+    expect(drift.freshRows).toBe(drift.previewRows - 40);
+    expect(drift.pendingAfterStale).toBe(drift.freshRows);
+    expect(drift.archivedAfterStale).toBe(0);
+    expect(drift.freshExecutedRows).toBe(drift.freshRows);
+    expect(drift.archivedAfterFresh).toBe(drift.freshRows);
+    expect(drift.fingerprintBefore).toMatch(/^[a-f0-9]{64}$/);
+    expect(drift.fingerprintAfter).toMatch(/^[a-f0-9]{64}$/);
+    expect(drift.fingerprintBefore).not.toBe(drift.fingerprintAfter);
+    expect(drift.staleReceiptId).toBeTruthy();
+
+    const receipts = await app.inject({ method: "GET", url: "/api/receipts?limit=50", headers: sessionHeader() });
+    const stale = receipts.json().receipts.find((r: { id: string }) => r.id === drift.staleReceiptId);
+    expect(stale.status).toBe("blocked");
+    expect(stale.toolInvoked).toBe(false);
+    expect(stale.drift.kind).toBe("impact_drift");
+    expect(stale.drift.expectedRows).toBe(drift.previewRows);
+    expect(stale.drift.actualRows).toBe(drift.freshRows);
+
+    const verify = await app.inject({ method: "GET", url: "/api/receipts/verify", headers: sessionHeader() });
+    expect(verify.json().verification.ok).toBe(true);
   });
 
   it("verifies the hash chain and detects a tampered entry", async () => {

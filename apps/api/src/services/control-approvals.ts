@@ -14,6 +14,9 @@ export interface CreateApprovalInput {
   action: ActionRequest;
   safe: SafeVersion | null;
   preview: ImpactPreview | null;
+  previewFingerprint?: string | null;
+  safePreview?: ImpactPreview | null;
+  safePreviewFingerprint?: string | null;
   reasons: string[];
   riskScore: number;
   decision: ControlDecision;
@@ -38,6 +41,9 @@ export async function createApproval(input: CreateApprovalInput): Promise<Approv
       safeRevalidation: input.safe ? (input.safe.revalidation as object) : undefined,
       differences: (input.safe?.differences ?? []) as object,
       preview: input.preview ? (input.preview as object) : undefined,
+      previewFingerprint: input.previewFingerprint ?? input.preview?.fingerprint ?? null,
+      safePreview: input.safePreview ? (input.safePreview as object) : undefined,
+      safePreviewFingerprint: input.safePreviewFingerprint ?? input.safePreview?.fingerprint ?? null,
       reasons: input.reasons as object,
       riskScore: input.riskScore,
       decision: input.decision,
@@ -104,6 +110,9 @@ export function toApprovalDTO(row: Approval): ApprovalDTO {
     safeLabel: row.safeLabel,
     differences: (row.differences as string[]) ?? [],
     preview: (row.preview as unknown as ImpactPreview | null) ?? null,
+    previewFingerprint: row.previewFingerprint ?? null,
+    safePreview: (row.safePreview as unknown as ImpactPreview | null) ?? null,
+    safePreviewFingerprint: row.safePreviewFingerprint ?? null,
     reasons: (row.reasons as string[]) ?? [],
     riskScore: row.riskScore,
     decision: row.decision as ControlDecision,

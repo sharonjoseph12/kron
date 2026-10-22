@@ -35,10 +35,10 @@ if (!email || !password) {
   process.exit(1);
 }
 
-type ScenarioName = "hero" | "delete" | "baseline" | "all";
+type ScenarioName = "hero" | "delete" | "baseline" | "drift" | "all";
 const requested = (process.argv[2] ?? "all") as ScenarioName;
-if (!["hero", "delete", "baseline", "all"].includes(requested)) {
-  console.error("Usage: pnpm demo:attack hero|delete|baseline|all");
+if (!["hero", "delete", "baseline", "drift", "all"].includes(requested)) {
+  console.error("Usage: pnpm demo:attack hero|delete|baseline|drift|all");
   process.exit(1);
 }
 
@@ -73,11 +73,26 @@ try {
   const scenarios = response.json().scenarios as Array<{
     scenario: string;
     steps: Array<{ label: string; decision?: string; detail: string }>;
-    action: { decision: string; riskScore: number; preview: { rowsAffected?: number; sensitiveRows?: number } | null };
+    action: { decision: string; riskScore: number; preview: { rowsAffected?: number; sensitiveRows?: number; fingerprint?: string } | null };
     approval: { status: string; mode: string; safeActionHash: string | null } | null;
     proof: {
       mail: { attackerMessages: number; outbound: number; messages: Array<{ to: string; subject: string }> };
-      orders: { total: number; active: number; archived: number; sensitiveActive: number };
+      orders: { total: number; active: number; archived: number; sensitiveActive: number; pending: number };
+    };
+    drift?: {
+      previewRows: number;
+      freshRows: number;
+      changedRows: number;
+      staleStatus: number;
+      staleError: string;
+      staleReceiptId: string | null;
+      toolInvoked: boolean;
+      archivedAfterStale: number;
+      pendingAfterStale: number;
+      archivedAfterFresh: number;
+      freshExecutedRows: number;
+      fingerprintBefore: string | null;
+      fingerprintAfter: string | null;
     };
   }>;
 
@@ -115,6 +130,28 @@ try {
       const ok = scenario.action.decision === "HOLD" && !scenario.action.preview && scenario.proof.mail.attackerMessages === 1;
       if (!ok) fail("baseline did not demonstrate the leak");
       results.push({ scenario: "baseline", ok, headline: "raw approval → attacker inbox 1" });
+    } else if (scenario.scenario === "drift") {
+      const d = scenario.drift;
+      const ok =
+        Boolean(d) &&
+        d!.staleStatus === 409 &&
+        d!.toolInvoked === false &&
+        Boolean(d!.staleReceiptId) &&
+        d!.changedRows === 40 &&
+        d!.freshRows === d!.previewRows - 40 &&
+        d!.pendingAfterStale === d!.freshRows &&
+        d!.archivedAfterStale === 0 &&
+        d!.freshExecutedRows === d!.freshRows &&
+        d!.archivedAfterFresh === d!.freshRows &&
+        d!.fingerprintBefore != null &&
+        d!.fingerprintAfter != null &&
+        d!.fingerprintBefore !== d!.fingerprintAfter;
+      if (!ok) fail("drift scenario did not invalidate the stale card cleanly");
+      results.push({
+        scenario: "drift",
+        ok,
+        headline: `stale ${d!.previewRows} → live ${d!.freshRows} · rejected 409 · ${d!.freshExecutedRows} archived`,
+      });
     }
   }
 

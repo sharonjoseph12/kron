@@ -1,12 +1,95 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ApprovalDTO, ControlDecision } from "@kron/shared";
+import type { ApprovalDTO, ControlDecision, DriftProofDTO, EnforcementReceiptDTO } from "@kron/shared";
 import { api } from "../api/client.js";
 import { type BadgeTone, fmtInt, fmtTs, shortId } from "../lib/format.js";
 import { Badge, Card, CardHeader, ErrorBox, GlassCard, Mono, Spinner, btnAccent, btnDanger, btnGhost } from "../components/ui.js";
 import LiveFeed from "../components/LiveFeed.js";
 
 type Mode = "kron" | "baseline";
+
+function receiptTone(status: EnforcementReceiptDTO["status"]): BadgeTone {
+  if (status === "executed") return "ok";
+  if (status === "held") return "warn";
+  if (status === "blocked") return "err";
+  return "muted";
+}
+
+function downloadReceipt(receipt: EnforcementReceiptDTO): void {
+  const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `kron-enforcement-receipt-${String(receipt.seq).padStart(4, "0")}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function DriftPanel({ drift, onClose }: { drift: DriftProofDTO; onClose: () => void }) {
+  return (
+    <div className="rounded-xl border border-[#e5b0a6] bg-[var(--color-danger-soft)]/70 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-danger)]">
+            Shadow-mode drift detected
+          </div>
+          <h2 className="mt-1 text-sm font-semibold text-[var(--color-ink)]">
+            The card was stale. The tool adapter was never called.
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge tone="err">nothing executed</Badge>
+          <button className="text-[var(--color-ink-3)] hover:text-[var(--color-ink)]" onClick={onClose}>
+            ×
+          </button>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <DetailStat label="Card preview" value={fmtInt(drift.previewRows)} sub="rows at preview time" />
+        <DetailStat label="Concurrent change" value={fmtInt(drift.changedRows)} tone="text-[var(--color-warning)]" sub="rows moved by another job" />
+        <DetailStat label="Live data" value={fmtInt(drift.freshRows)} tone="text-[var(--color-danger)]" sub="fresh preview after drift" />
+        <DetailStat label="Executed by stale card" value={fmtInt(drift.archivedAfterStale)} tone="text-[var(--color-success)]" sub="proven by receipt" />
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] md:grid-cols-2">
+        <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-3)] p-3">
+          <div className="font-semibold text-[var(--color-ink-2)]">Binding check</div>
+          <div className="mt-1 font-mono text-[10px] text-[var(--color-ink-3)]">
+            action hash unchanged · fingerprint {shortId(drift.fingerprintBefore ?? "", 8)} →{" "}
+            {shortId(drift.fingerprintAfter ?? "", 8)}
+          </div>
+          <div className="mt-1 text-[var(--color-danger)]">
+            {drift.staleStatus}: {drift.staleError}
+          </div>
+          {drift.staleReceiptId ? (
+            <div className="mt-1 font-mono text-[10px] text-[var(--color-ink-3)]">
+              receipt {shortId(drift.staleReceiptId, 12)}
+            </div>
+          ) : null}
+        </div>
+        <div className="rounded-lg border border-[#a8cfb8] bg-[var(--color-success-soft)]/50 p-3">
+          <div className="font-semibold text-[var(--color-ink-2)]">Recovery path</div>
+          <div className="mt-1 text-[var(--color-ink-2)]">
+            A fresh preview showed {fmtInt(drift.freshRows)} rows. The human approved the new hash and exactly{" "}
+            <strong>{fmtInt(drift.freshExecutedRows)}</strong> rows were archived.
+          </div>
+          <div className="mt-1 font-mono text-[10px] text-[var(--color-ink-3)]">
+            archived {fmtInt(drift.archivedAfterFresh)} · active {fmtInt(drift.activeAfterFresh)}
+          </div>
+        </div>
+      </div>
+      <ol className="mt-3 space-y-1 text-[11px] leading-relaxed text-[var(--color-ink-2)]">
+        {drift.steps.map((step, i) => (
+          <li key={i} className="flex gap-2">
+            <span className="font-mono text-[10px] text-[var(--color-ink-3)]">{i + 1}.</span>
+            <span>
+              <strong>{step.label}.</strong> {step.detail}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 function decisionTone(decision: ControlDecision | string | null | undefined): BadgeTone {
   if (decision === "ALLOW") return "ok";
@@ -161,6 +244,7 @@ export default function Control() {
   const [mode, setMode] = useState<Mode>("kron");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [drift, setDrift] = useState<DriftProofDTO | null>(null);
 
   const approvalsQuery = useQuery({
     queryKey: ["approvals", "pending"],
@@ -170,6 +254,8 @@ export default function Control() {
   const proofQuery = useQuery({ queryKey: ["proof"], queryFn: api.getProof, refetchInterval: 2_000 });
   const auditQuery = useQuery({ queryKey: ["control-audit"], queryFn: () => api.controlAudit(80), refetchInterval: 2_000 });
   const verifyQuery = useQuery({ queryKey: ["control-verify"], queryFn: api.verifyControlAudit, refetchInterval: 4_000 });
+  const receiptsQuery = useQuery({ queryKey: ["receipts"], queryFn: () => api.listReceipts(8), refetchInterval: 2_000 });
+  const receiptVerify = useQuery({ queryKey: ["receipt-verify"], queryFn: api.verifyReceipts, refetchInterval: 4_000 });
   const meQuery = useQuery({ queryKey: ["me"], queryFn: api.me });
 
   const approvals = approvalsQuery.data?.approvals ?? [];
@@ -190,6 +276,8 @@ export default function Control() {
     queryClient.invalidateQueries({ queryKey: ["proof"] });
     queryClient.invalidateQueries({ queryKey: ["control-audit"] });
     queryClient.invalidateQueries({ queryKey: ["control-verify"] });
+    queryClient.invalidateQueries({ queryKey: ["receipts"] });
+    queryClient.invalidateQueries({ queryKey: ["receipt-verify"] });
   };
 
   const scenario = useMutation({
@@ -203,6 +291,17 @@ export default function Control() {
             ? "Baseline card created with no preview. Approve the original to show the leak."
             : "Hero scenario loaded: poisoned email → private contract → outside recipient.",
       );
+      refresh();
+    },
+    onError: (err) => setNotice(err instanceof Error ? err.message : String(err)),
+  });
+
+  const driftScenario = useMutation({
+    mutationFn: api.runDrift,
+    onSuccess: (data) => {
+      setDrift(data.drift);
+      setSelectedId(null);
+      setNotice("Stale approval rejected. The live dataset changed, so a fresh preview and a fresh hash were required.");
       refresh();
     },
     onError: (err) => setNotice(err instanceof Error ? err.message : String(err)),
@@ -264,6 +363,9 @@ export default function Control() {
           <button className={btnGhost} disabled={scenario.isPending} onClick={() => scenario.mutate("delete")}>
             Bulk delete
           </button>
+          <button className={btnGhost} disabled={driftScenario.isPending} onClick={() => driftScenario.mutate()}>
+            {driftScenario.isPending ? "Simulating…" : "Shadow drift"}
+          </button>
         </div>
       </header>
 
@@ -282,6 +384,8 @@ export default function Control() {
           preview, risk score, safe rewrite or revalidation. Use this for the before/after comparison.
         </div>
       ) : null}
+
+      {drift ? <DriftPanel drift={drift} onClose={() => setDrift(null)} /> : null}
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
         <Card className="xl:col-span-4">
@@ -499,6 +603,59 @@ export default function Control() {
           </div>
         </GlassCard>
       </div>
+
+      <GlassCard>
+        <CardHeader
+          title="Enforcement receipts"
+          subtitle="Hash-chained proof of what ran, what was blocked, and which one-shot grant authorised it"
+          right={
+            <div className="flex items-center gap-2">
+              <Badge tone={receiptVerify.data?.verification.ok ? "ok" : "err"}>
+                {receiptVerify.data?.verification.ok
+                  ? `Chain verified · ${receiptVerify.data.verification.checked}`
+                  : "Receipt chain broken"}
+              </Badge>
+              <Badge tone="info">{receiptsQuery.data?.receipts.length ?? 0} latest</Badge>
+            </div>
+          }
+        />
+        <div className="max-h-[340px] space-y-2 overflow-y-auto p-4">
+          {(receiptsQuery.data?.receipts ?? []).map((receipt) => (
+            <div
+              key={receipt.id}
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-3)] px-3 py-2"
+            >
+              <span className="font-mono text-[9px] text-[var(--color-ink-3)]">#{receipt.seq}</span>
+              <Badge tone={receiptTone(receipt.status)}>{receipt.status}</Badge>
+              <span className="font-mono text-[11px] font-semibold text-[var(--color-ink)]">{receipt.tool}</span>
+              <span className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-ink-2)]">{receipt.summary}</span>
+              <span className="font-mono text-[9px] text-[var(--color-ink-3)]">
+                attacker {receipt.before.attackerMessages}→{receipt.after.attackerMessages} · archived{" "}
+                {receipt.before.ordersArchived}→{receipt.after.ordersArchived}
+              </span>
+              {receipt.grant ? (
+                <span className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--color-ink-3)]">
+                  grant {receipt.grant.status}
+                </span>
+              ) : null}
+              {receipt.drift ? <Badge tone="err">drift</Badge> : null}
+              <span className="font-mono text-[9px] text-[var(--color-ink-3)]">{shortId(receipt.hash, 8)}</span>
+              <button
+                className={btnGhost + " !px-2 !py-1 !text-[10px]"}
+                onClick={() => downloadReceipt(receipt)}
+                title="Download the signed receipt JSON"
+              >
+                Download
+              </button>
+            </div>
+          ))}
+          {(receiptsQuery.data?.receipts ?? []).length === 0 ? (
+            <div className="py-8 text-center text-xs text-[var(--color-ink-3)]">
+              No receipts yet. Run a scenario and every decision will produce one.
+            </div>
+          ) : null}
+        </div>
+      </GlassCard>
 
       {scenario.isError ? <ErrorBox message={scenario.error instanceof Error ? scenario.error.message : "Scenario failed"} /> : null}
     </div>

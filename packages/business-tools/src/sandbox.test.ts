@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeSandbox, openSandbox, resetSandbox, setSandboxPath } from "./db.js";
-import { executeSandboxTool, previewDelete, previewEmail, proofPane, HERO, orderStats } from "./tools.js";
+import { executeSandboxTool, previewDelete, previewEmail, previewFingerprint, proofPane, HERO, orderStats, simulateConcurrentOrderChange } from "./tools.js";
 import type { Database } from "sql.js";
 
 let dir = "";
@@ -51,6 +51,27 @@ describe("sandbox business tools", () => {
     expect(preview.fileSensitivity).toBe("customer-confidential");
     expect(preview.summary).toContain("customer-confidential");
     expect(preview.summary).toContain("new recipient");
+  });
+
+  it("fingerprints exact rows so a concurrent change invalidates the card", async () => {
+    await resetSandbox();
+    db = await openSandbox();
+    const args = { table: "orders", where: { status: "pending" }, hard: true };
+    const before = previewDelete(db, args);
+    const beforeFingerprint = previewFingerprint(db, "db.delete", args);
+    expect(beforeFingerprint).toMatch(/^[a-f0-9]{64}$/);
+
+    const mutation = simulateConcurrentOrderChange(db, 40);
+    expect(mutation.changed).toBe(40);
+
+    const after = previewDelete(db, args);
+    const afterFingerprint = previewFingerprint(db, "db.delete", args);
+    expect(after.rowsAffected).toBe(before.rowsAffected! - 40);
+    expect(afterFingerprint).not.toBe(beforeFingerprint);
+    expect(orderStats(db).pending).toBe(after.rowsAffected);
+
+    await resetSandbox();
+    db = await openSandbox();
   });
 
   it("sends nothing to the attacker until the email tool executes", () => {

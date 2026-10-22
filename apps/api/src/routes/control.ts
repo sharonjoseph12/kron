@@ -17,6 +17,9 @@ import {
   evaluateAction,
 } from "../services/action-gateway.js";
 import { getApproval, listApprovals } from "../services/control-approvals.js";
+import { CapabilityError, getGrant, listGrants } from "../services/capability-grants.js";
+import { getReceipt, listReceipts, verifyReceipts } from "../services/control-receipts.js";
+import { ToolInvocationError } from "../services/tool-adapter.js";
 import { getSessionState } from "../services/control-session.js";
 import {
   listControlAudit,
@@ -30,7 +33,13 @@ const EvaluateSchema = ActionRequestSchema.extend({
 
 function handleError(reply: FastifyReply, err: unknown) {
   if (err instanceof ApprovalError) {
-    return reply.code(err.statusCode).send({ error: err.message });
+    return reply.code(err.statusCode).send({ error: err.message, code: err.code, details: err.details });
+  }
+  if (err instanceof CapabilityError) {
+    return reply.code(err.statusCode).send({ error: err.message, code: err.code });
+  }
+  if (err instanceof ToolInvocationError) {
+    return reply.code(err.statusCode).send({ error: err.message, code: err.code });
   }
   return reply.code(500).send({ error: err instanceof Error ? err.message : "Internal error" });
 }
@@ -86,6 +95,45 @@ export async function controlRoutes(fastify: FastifyInstance) {
   fastify.get("/api/proof", { preHandler: requireAuth }, async () => {
     const db = await openSandbox();
     return { proof: proofPane(db) };
+  });
+
+  // ---- capability grants: what was authorised, what was actually used ----
+  fastify.get("/api/grants", { preHandler: requireAuth }, async (request) => {
+    const q = request.query as { limit?: string };
+    return { grants: await listGrants(Number(q.limit ?? 50)) };
+  });
+
+  fastify.get("/api/grants/:id", { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const grant = await getGrant(id);
+    if (!grant) return reply.code(404).send({ error: "Grant not found" });
+    return { grant };
+  });
+
+  // ---- enforcement receipts: durable, hash-chained proof ----
+  fastify.get("/api/receipts", { preHandler: requireAuth }, async (request) => {
+    const q = request.query as { limit?: string };
+    return { receipts: await listReceipts(Number(q.limit ?? 50)) };
+  });
+
+  fastify.get("/api/receipts/verify", { preHandler: requireAuth }, async () => {
+    return { verification: await verifyReceipts() };
+  });
+
+  fastify.get("/api/receipts/:id", { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const receipt = await getReceipt(id);
+    if (!receipt) return reply.code(404).send({ error: "Receipt not found" });
+    return { receipt };
+  });
+
+  // Public receipt link for the video/phone flow. Contains no secrets; the
+  // id is high-entropy and the hash chain makes it tamper-evident.
+  fastify.get("/api/public/receipts/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const receipt = await getReceipt(id);
+    if (!receipt) return reply.code(404).send({ error: "Receipt not found" });
+    return { receipt };
   });
 
   fastify.get("/api/control/sessions/:sessionId", { preHandler: requireAuth }, async (request, reply) => {

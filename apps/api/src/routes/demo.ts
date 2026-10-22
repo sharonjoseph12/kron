@@ -25,7 +25,7 @@ export async function demoRoutes(fastify: FastifyInstance) {
 
   fastify.post("/api/demo/scenario", { preHandler: requireAuth }, async (request, reply) => {
     const body = (request.body ?? {}) as { name?: string; autoApprove?: boolean; reset?: boolean };
-    const allowed: ScenarioName[] = ["hero", "delete", "baseline", "all"];
+    const allowed: ScenarioName[] = ["hero", "delete", "baseline", "drift", "all"];
     if (!body.name || !allowed.includes(body.name as ScenarioName)) {
       return reply.code(400).send({ error: `name must be one of: ${allowed.join(", ")}` });
     }
@@ -34,6 +34,13 @@ export async function demoRoutes(fastify: FastifyInstance) {
       reset: body.reset !== false,
     });
     return { scenarios };
+  });
+
+  fastify.post("/api/demo/drift", { preHandler: requireAuth }, async (_request, reply) => {
+    const { scenarios } = await runScenario("drift", { reset: true });
+    const result = scenarios[0];
+    if (!result?.drift) return reply.code(500).send({ error: "Drift scenario did not produce a proof" });
+    return { drift: result.drift, scenario: result };
   });
 
   fastify.get("/api/demo/status", { preHandler: requireAuth }, async (_req, _reply) => {
