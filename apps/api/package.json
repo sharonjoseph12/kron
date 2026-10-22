@@ -17,14 +17,20 @@
     "bootstrap:chain": "tsx scripts/bootstrap-chain.ts",
     "bootstrap:contract": "tsx scripts/bootstrap-contract.ts",
     "demo:attack": "tsx scripts/demo-attack.ts",
-    "demo:reset": "tsx scripts/reset-demo.ts"
+    "demo:attack:x402": "tsx scripts/demo-attack-x402.ts",
+    "demo:reset": "tsx scripts/demo-reset.ts",
+    "demo:reset:legacy": "tsx scripts/reset-demo.ts",
+    "demo:proof": "tsx scripts/demo-proof.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^13.1.1",
     "@fastify/rate-limit": "^10.0.0",
+    "@kron/action-risk": "workspace:*",
+    "@kron/business-tools": "workspace:*",
     "@kron/policy-engine": "workspace:*",
+    "@kron/safe-rewrite": "workspace:*",
     "@kron/shared": "workspace:*",
     "@kron/x402": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",

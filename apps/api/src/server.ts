@@ -20,6 +20,7 @@ import { eventsRoutes } from "./routes/events.js";
 import { healthRoutes } from "./routes/health.js";
 import { contractRoutes } from "./routes/contract.js";
 import { demoRoutes } from "./routes/demo.js";
+import { controlRoutes } from "./routes/control.js";
 
 const dev = config.nodeEnv !== "production";
 
@@ -64,6 +65,7 @@ export async function buildServer() {
   await fastify.register(healthRoutes);
   await fastify.register(contractRoutes);
   await fastify.register(demoRoutes);
+  await fastify.register(controlRoutes);
 
   return fastify;
 }

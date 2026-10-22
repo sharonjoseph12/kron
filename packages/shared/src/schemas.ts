@@ -102,3 +102,35 @@ export const FundWalletSchema = z.object({
   agentId: z.string().min(1),
   amountAlgo: z.number().positive().max(1000),
 });
+
+/** Generic PS 2.1 action gateway request. */
+export const ActionRequestSchema = z.object({
+  agentId: z.string().min(1),
+  sessionId: z.string().min(1).optional(),
+  missionId: z.string().min(1).optional(),
+  tool: z.string().min(1).max(120),
+  args: z.record(z.string(), z.unknown()).default({}),
+  nonce: z.string().min(1).max(120).optional(),
+});
+
+export const BaselineModeSchema = z.object({
+  mode: z.enum(["kron", "baseline"]).optional().default("kron"),
+});
+
+export const ApprovalDecisionSchema = z.object({
+  decision: z.enum(["approve", "reject"]),
+  /** Which action the human is approving. */
+  target: z.enum(["safe", "original"]).optional().default("safe"),
+  /** Optional proof that the card the human saw is the action being decided. */
+  actionHash: z.string().min(16).max(128).optional(),
+});
+
+export const MissionContractInputSchema = z.object({
+  agentId: z.string().min(1),
+  task: z.string().min(1).max(500),
+  allowedTools: z.array(z.string()).default([]),
+  deniedTools: z.array(z.string()).default([]),
+  requiresApproval: z.array(z.string()).default([]),
+  budgetAlgo: z.object({ perCall: z.number().nonnegative(), session: z.number().nonnegative() }).optional(),
+  expiresInMinutes: z.number().int().positive().max(60 * 24 * 365).default(30),
+});

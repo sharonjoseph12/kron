@@ -15,6 +15,15 @@ import type {
   TimelineStep,
   WalletDTO,
 } from "./types.js";
+import type { ActionDecisionResult, ApprovalDTO } from "./control-plane.js";
+
+export interface ControlActionEvent extends ActionDecisionResult {
+  id: string;
+  ts: string;
+  tool: string;
+  sessionId: string | null;
+  args: Record<string, unknown>;
+}
 
 export interface TimelineEvent {
   id: string;
@@ -52,6 +61,9 @@ export type StreamEvent =
   | { type: "wallet.updated"; wallet: WalletDTO }
   | { type: "mcp.health"; server: MCPServerDTO }
   | { type: "audit"; entry: AuditEntryDTO }
+  | { type: "action.updated"; action: ControlActionEvent }
+  | { type: "approval.updated"; approval: ApprovalDTO }
+  | { type: "proof.updated"; asOf: string }
   | { type: "ping"; ts: string };
 
 /** SSE comment used to keep connections alive. */

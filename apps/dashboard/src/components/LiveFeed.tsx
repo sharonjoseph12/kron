@@ -24,6 +24,9 @@ const EVENT_TYPES = [
   "wallet.updated",
   "mcp.health",
   "audit",
+  "action.updated",
+  "approval.updated",
+  "proof.updated",
   "ping",
 ] as const;
 
@@ -84,6 +87,32 @@ function describe(ev: StreamEvent): FeedEntry | null {
       };
     case "audit":
       return { id: ev.entry.id, ts: ev.entry.ts, kind: "audit", summary: ev.entry.summary, badge: "info" };
+    case "action.updated":
+      return {
+        id: ev.action.id,
+        ts: ev.action.ts,
+        kind: "action",
+        summary: `${ev.action.tool} — ${ev.action.decision} · risk ${ev.action.riskScore}/100`,
+        badge:
+          ev.action.decision === "ALLOW"
+            ? "ok"
+            : ev.action.decision === "FLAG"
+              ? "info"
+              : ev.action.decision === "HOLD"
+                ? "warn"
+                : "err",
+      };
+    case "approval.updated":
+      return {
+        id: `${ev.approval.id}-${ev.approval.status}`,
+        ts: ev.approval.decidedAt ?? ev.approval.createdAt,
+        kind: "approval",
+        summary: `${ev.approval.tool} — ${ev.approval.status}`,
+        badge:
+          ev.approval.status === "approved" ? "ok" : ev.approval.status === "rejected" ? "err" : "warn",
+      };
+    case "proof.updated":
+      return { id: `proof-${ev.asOf}`, ts: ev.asOf, kind: "proof", summary: "Sandbox proof refreshed after execution", badge: "info" };
     case "session.updated":
       return {
         id: ev.session.id,

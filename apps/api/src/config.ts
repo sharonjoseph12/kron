@@ -88,7 +88,7 @@ export const config: KronConfig = {
   sessionSecret: secret("SESSION_SECRET", 32),
   encryptionKey: secret("ENCRYPTION_KEY", 64),
   seedAdminEmail: optional("SEED_ADMIN_EMAIL", "admin@kron.dev"),
-  seedAdminPassword: optional("SEED_ADMIN_PASSWORD", "admin1234"),
+  seedAdminPassword: optional("SEED_ADMIN_PASSWORD", ""),
   forceEscalate: optional("FORCE_ESCALATE", "false") === "true",
   demoMode: optional("DEMO_MODE", "false") === "true",
   escalationTtlMinutes: Number(optional("ESCALATION_TTL_MINUTES", "15")),

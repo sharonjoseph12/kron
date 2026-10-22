@@ -1,8 +1,14 @@
 import type {
+  ActionDecisionResult,
+  ActionRequest,
+  ActionSessionStateDTO,
   AgentDTO,
   AgentSessionDTO,
   AgentSpendRow,
+  ApprovalDTO,
+  AuditChainEntryDTO,
   AuditEntryDTO,
+  AuditVerifyResult,
   BurnRate,
   DecisionSlice,
   MCPServerDTO,
@@ -11,6 +17,7 @@ import type {
   PolicyConfig,
   PolicyEvaluation,
   PolicyUpdateInput,
+  ProofPaneDTO,
   SimulationResult,
   SpendPoint,
   TimelineEvent,
@@ -216,6 +223,31 @@ export const api = {
     get<{ status: string; ok: boolean; latencyMs?: number; error?: string | null; tools?: string[] }>(
       `/api/mcp/servers/${encodeURIComponent(id)}/health`,
     ),
+
+  // ---- PS 2.1 control plane ----
+  evaluateAction: (input: ActionRequest & { mode?: "kron" | "baseline" }) =>
+    post<{ result: ActionDecisionResult }>("/api/actions/evaluate", input),
+  listApprovals: (status = "pending") =>
+    get<{ approvals: ApprovalDTO[] }>(`/api/approvals?status=${encodeURIComponent(status)}`),
+  getApproval: (id: string) => get<{ approval: ApprovalDTO }>(`/api/approvals/${encodeURIComponent(id)}`),
+  decideApproval: (
+    id: string,
+    input: { decision: "approve" | "reject"; target?: "safe" | "original"; actionHash?: string },
+  ) =>
+    post<{ approval: ApprovalDTO; execution: { summary: string } | null; proof: ProofPaneDTO }>(
+      `/api/approvals/${encodeURIComponent(id)}/decide`,
+      input,
+    ),
+  getProof: () => get<{ proof: ProofPaneDTO }>("/api/proof"),
+  getControlSession: (sessionId: string, agentId: string) =>
+    get<{ state: ActionSessionStateDTO }>(
+      `/api/control/sessions/${encodeURIComponent(sessionId)}?agentId=${encodeURIComponent(agentId)}`,
+    ),
+  runScenario: (name: "hero" | "delete" | "baseline" | "all", opts?: { autoApprove?: boolean; reset?: boolean }) =>
+    post<{ scenarios: unknown[] }>("/api/demo/scenario", { name, ...opts }),
+  controlAudit: (limit = 100) => get<{ entries: AuditChainEntryDTO[] }>(`/api/control/audit?limit=${limit}`),
+  verifyControlAudit: () => get<{ verification: AuditVerifyResult }>("/api/control/audit/verify"),
+  tamperControlAudit: () => post<{ ok: boolean }>("/api/control/audit/tamper", {}),
 
   // ---- demo ----
   resetDemo: () => post<{ ok: boolean; message: string }>("/api/demo/reset", {}),

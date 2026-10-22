@@ -4,3 +4,4 @@ export * from "./protocol.js";
 export * from "./schemas.js";
 export * from "./constants.js";
 export * from "./mcp.js";
+export * from "./control-plane.js";

@@ -118,6 +118,102 @@ model AgentSession {
 }
 
 // ---------------------------------------------------------------------------
+// PS 2.1 control plane — generic actions, mission contracts, bound approvals
+// ---------------------------------------------------------------------------
+
+model Mission {
+  id               String   @id @default(cuid())
+  agentId          String
+  task             String
+  allowedTools     Json
+  deniedTools      Json
+  requiresApproval Json
+  budget           Json?
+  expiresAt        DateTime
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  @@index([agentId, active])
+}
+
+model ActionSessionState {
+  sessionId       String   @id
+  agentId         String
+  tainted         Boolean  @default(false)
+  sensitiveRead   Boolean  @default(false)
+  taintSource     String?
+  sensitiveSource String?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  @@index([agentId])
+}
+
+model ActionRecord {
+  id              String   @id @default(cuid())
+  agentId         String
+  sessionId       String?
+  missionId       String?
+  tool            String
+  args            Json
+  kind            String
+  decision        String
+  riskScore       Int
+  reasons         Json
+  ruleHits        Json
+  factors         Json
+  preview         Json?
+  safeAction      Json?
+  approvalId      String?
+  mode            String   @default("kron")
+  execution       Json?
+  executedAt      DateTime?
+  createdAt       DateTime @default(now())
+  @@index([agentId, createdAt])
+  @@index([sessionId, createdAt])
+}
+
+model Approval {
+  id              String   @id @default(cuid())
+  mode            String   @default("kron")
+  status          String   @default("pending") // pending | approved | rejected | expired
+  agentId         String
+  sessionId       String?
+  missionId       String?
+  tool            String
+  actionJson      Json
+  actionHash      String
+  safeActionJson  Json?
+  safeActionHash  String?
+  safeLabel       String?
+  safeRevalidation Json?
+  differences     Json
+  preview         Json?
+  reasons         Json
+  riskScore       Int
+  decision        String
+  accessTokenHash String?
+  expiresAt       DateTime
+  decidedBy       String?
+  decidedAt       DateTime?
+  execution       Json?
+  createdAt       DateTime @default(now())
+  @@index([status, createdAt])
+  @@index([agentId, createdAt])
+}
+
+model ControlAuditEntry {
+  id        String   @id @default(cuid())
+  seq       Int      @unique
+  ts        DateTime @default(now())
+  actorType String   @default("system") // user | system | agent
+  action    String
+  summary   String
+  detail    Json?
+  prevHash  String
+  hash      String
+  @@index([ts])
+}
+
+// ---------------------------------------------------------------------------
 // MCP integration
 // ---------------------------------------------------------------------------
 

@@ -18,6 +18,7 @@ const Simulation = lazy(() => import("./pages/Simulation.js"));
 const Verify = lazy(() => import("./pages/Verify.js"));
 const Playground = lazy(() => import("./pages/Playground.js"));
 const Audit = lazy(() => import("./pages/Audit.js"));
+const Control = lazy(() => import("./pages/Control.js"));
 
 function PageFallback() {
   return (
@@ -74,6 +75,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route element={<AuthGuard />}>
                 <Route element={<Layout />}>
                   <Route path="/" element={<Dashboard />} />
+                  <Route path="/control" element={<Control />} />
                   <Route path="/agents" element={<Agents />} />
                   <Route path="/simulation" element={<Simulation />} />
                   <Route path="/verify" element={<Verify />} />

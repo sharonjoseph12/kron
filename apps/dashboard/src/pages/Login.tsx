@@ -46,8 +46,8 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 export default function Login() {
-  const [email, setEmail] = useState("admin@kron.dev");
-  const [password, setPassword] = useState("admin1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [peraError, setPeraError] = useState<string | null>(null);
   const [peraPending, setPeraPending] = useState(false);
   const navigate = useNavigate();
@@ -174,7 +174,7 @@ export default function Login() {
         </form>
 
         <p className="mt-4 text-center text-xs text-[var(--color-ink-3)]">
-          Demo console · admin@kron.dev / admin1234
+          Demo credentials are written to data/demo-credentials.txt by pnpm demo:reset
         </p>
       </div>
     </div>
