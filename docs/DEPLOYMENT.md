@@ -136,7 +136,7 @@ The repo includes a Vercel entrypoint for a one-click sandbox demo:
 
 - `vercel.json` builds the dashboard into `apps/dashboard/dist` and exposes `api/[...path].ts`.
 - `api/[...path].ts` mounts the existing Fastify app on Vercel's Node request/response pair. No API routes are duplicated.
-- The build regenerates `apps/api/prisma/deploy.db` from the Prisma schema and seed. Each cold function instance copies it to `/tmp/kron.db`; the sandbox business DB is initialized at `/tmp/kron-sandbox.db`.
+- The build regenerates `apps/api/prisma/deploy.db` from the Prisma schema and seed, then runs a deterministic demo slate that leaves two held approvals and read receipts. Each cold function instance copies both `deploy.db` and `deploy-sandbox.db` to `/tmp`.
 - `/api/*` requests are routed to the function. The SPA fallback is configured for direct dashboard routes such as `/control`.
 
 ```bash
@@ -149,6 +149,7 @@ vercel env add DEMO_MODE production          # true for the sandbox demo
 vercel env add KRON_RECORDING_MODE production # true
 vercel env add KRON_SANDBOX_DB production    # /tmp/kron-sandbox.db
 vercel env add KRON_STATELESS_SESSIONS production # true (see below)
+vercel env add VITE_DEMO_LOGIN production    # true: one-click sandbox operator button
 vercel env add DASHBOARD_URL production      # https://<project>.vercel.app
 vercel env add API_PUBLIC_URL production     # https://<project>.vercel.app
 vercel deploy --prod

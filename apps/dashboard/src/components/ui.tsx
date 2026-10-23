@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode } from "react";
 import { badgeClass, badgeDot, type BadgeTone } from "../lib/format.js";
 
 /* ------------------------------------------------------------------ */
@@ -122,30 +122,6 @@ export function Spinner({ label }: { label?: string }) {
   );
 }
 
-export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-[var(--color-surface-2)] ${className}`} />;
-}
-
-export function SkeletonCard() {
-  return (
-    <div className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)] p-4 space-y-3">
-      <Skeleton className="h-4 w-1/3" />
-      <Skeleton className="h-8 w-1/2" />
-      <Skeleton className="h-3 w-2/3" />
-    </div>
-  );
-}
-
-export function SkeletonRow() {
-  return (
-    <div className="flex gap-3 py-2">
-      <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-4 w-16" />
-      <Skeleton className="h-4 w-20" />
-    </div>
-  );
-}
-
 export function ErrorBox({ message }: { message: string }) {
   return (
     <div className="border-l-2 border-[var(--color-danger)] bg-[var(--color-danger-soft)]/50 px-4 py-2.5 text-[12px] text-[var(--color-danger)]">
@@ -183,29 +159,8 @@ export const btnDanger =
   "btn-cream px-3.5 py-2 text-[13px] text-[var(--color-danger)] border-[#e5b0a6] bg-[var(--color-danger-soft)] disabled:cursor-not-allowed disabled:opacity-50 hover:bg-[#f5cdc4] hover:text-[#a03220]";
 
 /* ------------------------------------------------------------------ */
-/* Animated Counter & Stat                                             */
+/* Stat                                                                */
 /* ------------------------------------------------------------------ */
-
-export function useCountUp(target: number, durationMs = 900): number {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (isNaN(target)) return;
-    let start = 0;
-    const startTime = performance.now();
-
-    const update = (now: number) => {
-      const progress = Math.min((now - startTime) / durationMs, 1);
-      const ease = 1 - Math.pow(1 - progress, 3); // cubic ease-out
-      setCount(start + (target - start) * ease);
-      if (progress < 1) requestAnimationFrame(update);
-    };
-
-    requestAnimationFrame(update);
-  }, [target, durationMs]);
-
-  return count;
-}
 
 export function Stat({
   label,

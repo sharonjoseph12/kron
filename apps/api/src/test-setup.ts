@@ -28,6 +28,7 @@ const TEST_ENV: NodeJS.ProcessEnv = {
   SEED_ADMIN_PASSWORD: "admin1234",
   KRON_SANDBOX_DB: path.join(dbDir, "sandbox.db"),
   KRON_RECORDING_MODE: "true",
+  DEMO_MODE: "false",
 };
 
 for (const [key, value] of Object.entries(TEST_ENV)) {

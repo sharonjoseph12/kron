@@ -14,18 +14,23 @@ async function getApp(): Promise<KronApp> {
   if (!appPromise) {
     appPromise = (async () => {
       const seedDb = join(process.cwd(), "apps/api/prisma/deploy.db");
+      const seedSandbox = join(process.cwd(), "apps/api/prisma/deploy-sandbox.db");
       const runtimeDb = "/tmp/kron.db";
+      const runtimeSandbox = "/tmp/kron-sandbox.db";
       if (!existsSync(runtimeDb)) {
         if (!existsSync(seedDb)) {
           throw new Error(`KRON seed database missing at ${seedDb}`);
         }
         copyFileSync(seedDb, runtimeDb);
       }
+      if (!existsSync(runtimeSandbox) && existsSync(seedSandbox)) {
+        copyFileSync(seedSandbox, runtimeSandbox);
+      }
 
       // The Fastify app is stateful and SQLite-backed. Vercel functions get a
       // writable /tmp, so each cold instance starts from the seeded snapshot.
       process.env.DATABASE_URL = `file:${runtimeDb}`;
-      process.env.KRON_SANDBOX_DB = "/tmp/kron-sandbox.db";
+      process.env.KRON_SANDBOX_DB = runtimeSandbox;
       process.env.DEMO_MODE ??= "false";
       process.env.NODE_ENV ??= "production";
 

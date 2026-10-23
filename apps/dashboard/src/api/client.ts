@@ -90,6 +90,7 @@ export const api = {
   // ---- auth ----
   me: () => get<{ user: User }>("/api/auth/me"),
   login: (email: string, password: string) => post<{ user: User }>("/api/auth/login", { email, password }),
+  demoLogin: () => post<{ user: User }>("/api/auth/demo", {}),
   logout: () => post<{ ok: boolean }>("/api/auth/logout", {}),
 
   // ---- pera wallet (sign-in with Algorand) ----

@@ -371,6 +371,7 @@ export type AuditAction =
   | "mcp.server.created"
   | "mcp.server.health"
   | "auth.login"
+  | "auth.demo_login"
   | "auth.logout"
   | "auth.api_key_created"
   | "api.key.created"

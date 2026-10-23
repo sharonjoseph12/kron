@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { TimelineEvent } from "@kron/shared";
-import { GlassCard, CardHeader, OnChainBadge } from "./ui.js";
+import { OnChainBadge } from "./ui.js";
 import { fmtTs } from "../lib/format.js";
 
 /* ------------------------------------------------------------------ */
@@ -159,25 +159,5 @@ export function PaymentTimeline({ events }: { events: TimelineEvent[] }) {
         })}
       </div>
     </div>
-  );
-}
-
-export function PaymentTimelineCard({ events }: { events: TimelineEvent[] }) {
-  return (
-    <GlassCard accent>
-      <CardHeader
-        title="Payment lifecycle"
-        subtitle="Real-time transaction flow with on-chain policy anchoring"
-        right={
-          events.length > 0 ? (
-            <span className="flex items-center gap-1.5 rounded-full border border-[#a8cfb8] bg-[var(--color-success-soft)] px-3 py-1 text-[11px] font-medium text-[var(--color-success)]">
-              <span className="h-2 w-2 rounded-full bg-[var(--color-success)] anim-soft-pulse" />
-              {events.length} steps
-            </span>
-          ) : null
-        }
-      />
-      <PaymentTimeline events={events} />
-    </GlassCard>
   );
 }

@@ -145,12 +145,6 @@ importers:
       '@kron/llm-agent':
         specifier: workspace:*
         version: link:../../packages/llm-agent
-      '@kron/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.30.0
-        version: 1.30.0(zod@3.25.76)
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
@@ -220,9 +214,6 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -245,9 +236,6 @@ importers:
       '@types/sql.js':
         specifier: ^1.4.9
         version: 1.4.11
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -267,9 +255,6 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -282,16 +267,10 @@ importers:
       '@kron/shared':
         specifier: workspace:*
         version: link:../shared
-      zod:
-        specifier: ^3.24.1
-        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -308,9 +287,6 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -346,9 +322,6 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -364,9 +337,6 @@ importers:
       algosdk:
         specifier: ^3.6.0
         version: 3.6.0
-      zod:
-        specifier: ^3.24.1
-        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^24.0.0

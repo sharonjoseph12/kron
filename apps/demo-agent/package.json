@@ -11,8 +11,6 @@
   },
   "dependencies": {
     "@kron/llm-agent": "workspace:*",
-    "@kron/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.30.0",
     "dotenv": "^16.4.7"
   },
   "devDependencies": {

@@ -57,6 +57,12 @@ export default function Login() {
     onSuccess: () => navigate("/", { replace: true }),
   });
 
+  const demoLogin = useMutation({
+    mutationFn: () => api.demoLogin(),
+    onSuccess: () => navigate("/", { replace: true }),
+  });
+  const demoEnabled = import.meta.env.DEV || import.meta.env.VITE_DEMO_LOGIN === "true";
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     login.mutate();
@@ -116,6 +122,32 @@ export default function Login() {
         <form onSubmit={onSubmit} className="anim-blur-fade-in stagger-children rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
           <h2 className="mb-5 display-serif text-base font-semibold tracking-tight text-[var(--color-ink)]">Operator sign in</h2>
 
+          {demoEnabled ? (
+            <>
+              <button
+                type="button"
+                onClick={() => demoLogin.mutate()}
+                disabled={demoLogin.isPending}
+                className={`${btnPrimary} w-full`}
+              >
+                {demoLogin.isPending ? "Opening demo…" : "Enter demo control room"}
+              </button>
+              <p className="mt-2 text-center text-[11px] leading-relaxed text-[var(--color-ink-3)]">
+                One-click sandbox operator session with seeded demo data.
+              </p>
+              {demoLogin.isError ? (
+                <div className="mt-3">
+                  <ErrorBox message={demoLogin.error instanceof Error ? demoLogin.error.message : "Demo login failed"} />
+                </div>
+              ) : null}
+              <div className="my-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-[var(--color-line)]" />
+                <span className="text-[11px] uppercase tracking-widest text-[var(--color-ink-3)]">or use credentials</span>
+                <div className="h-px flex-1 bg-[var(--color-line)]" />
+              </div>
+            </>
+          ) : null}
+
           <div className="mb-4">
             <label className={labelClass} htmlFor="email">
               Email
@@ -174,7 +206,9 @@ export default function Login() {
         </form>
 
         <p className="mt-4 text-center text-xs text-[var(--color-ink-3)]">
-          Sandbox demo only. Use the operator credentials provided with this deployment.
+          {demoEnabled
+            ? "Sandbox demo only. Demo data resets when the serverless function cold-starts."
+            : "Sandbox demo only. Use the operator credentials provided with this deployment."}
         </p>
       </div>
     </div>

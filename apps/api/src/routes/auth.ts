@@ -58,6 +58,27 @@ export async function authRoutes(fastify: FastifyInstance) {
     return { user: { id: user.id, email: user.email, name: user.name, role: user.role, algorandAddress: user.algorandAddress } };
   });
 
+  // Deliberate sandbox shortcut for the judge demo. Disabled unless the
+  // deployment explicitly sets DEMO_MODE=true; the normal password and wallet
+  // flows remain the only paths in every other environment.
+  fastify.post("/api/auth/demo", async (_request, reply) => {
+    if (!config.demoMode) return reply.code(404).send({ error: "Not found" });
+    const email = config.seedAdminEmail.toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return reply.code(503).send({ error: "Demo operator is not seeded" });
+    const { cookieToken } = await createSession(user.id);
+    setSessionCookie(reply, cookieToken);
+    void recordAudit({
+      actorId: user.id,
+      actorType: "user",
+      action: "auth.demo_login",
+      targetType: "User",
+      targetId: user.id,
+      summary: `Demo login: ${user.email}`,
+    });
+    return { user: { id: user.id, email: user.email, name: user.name, role: user.role, algorandAddress: user.algorandAddress } };
+  });
+
   fastify.post("/api/auth/api-keys", { preHandler: requireAuth }, async (request, reply) => {
     const user = currentUser(request);
     const { token } = await createSession(user.id);

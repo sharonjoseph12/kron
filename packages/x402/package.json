@@ -20,8 +20,7 @@
   },
   "dependencies": {
     "@kron/shared": "workspace:*",
-    "algosdk": "^3.6.0",
-    "zod": "^3.24.1"
+    "algosdk": "^3.6.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

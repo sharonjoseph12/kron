@@ -97,6 +97,28 @@ describe("KRON API integration", () => {
     expect(user.id).toBeTruthy();
   });
 
+  it("POST /api/auth/demo is disabled unless DEMO_MODE is enabled", async () => {
+    const res = await app.inject({ method: "POST", url: "/api/auth/demo" });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("POST /api/auth/demo opens a sandbox operator session when enabled", async () => {
+    const { config } = await import("./config.js");
+    const previous = config.demoMode;
+    config.demoMode = true;
+    try {
+      const res = await app.inject({ method: "POST", url: "/api/auth/demo" });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().user.email).toBe(ADMIN_EMAIL);
+      const cookie = extractSessionCookie(res);
+      const me = await app.inject({ method: "GET", url: "/api/auth/me", headers: { cookie } });
+      expect(me.statusCode).toBe(200);
+      expect(me.json().user.email).toBe(ADMIN_EMAIL);
+    } finally {
+      config.demoMode = previous;
+    }
+  });
+
   it("rejects unauthenticated access to /api/agents with 401", async () => {
     const res = await app.inject({ method: "GET", url: "/api/agents" });
     expect(res.statusCode).toBe(401);
