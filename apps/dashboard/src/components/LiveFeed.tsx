@@ -4,6 +4,9 @@ import { API_BASE } from "../api/client.js";
 import { badgeDot, type BadgeTone } from "../lib/format.js";
 
 interface FeedEntry {
+  /** Monotonic per-render key — guarantees unique React keys even when the
+   *  server replays the same logical event (reconnect / StrictMode). */
+  uid: number;
   id: string;
   ts: string;
   kind: string;
@@ -30,7 +33,7 @@ const EVENT_TYPES = [
   "ping",
 ] as const;
 
-function describe(ev: StreamEvent): FeedEntry | null {
+function describe(ev: StreamEvent): Omit<FeedEntry, "uid"> | null {
   switch (ev.type) {
     case "hello":
       return { id: `hello-${ev.ts}`, ts: ev.ts, kind: "hello", summary: "Connected to live event stream", badge: "info" };
@@ -160,6 +163,7 @@ export default function LiveFeed({ limit = 200, plain = false }: { limit?: numbe
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [connected, setConnected] = useState(true);
   const boxRef = useRef<HTMLDivElement>(null);
+  const nextUid = useRef(1);
 
   useEffect(() => {
     const es = new EventSource(`${API_BASE}/api/events`);
@@ -169,7 +173,15 @@ export default function LiveFeed({ limit = 200, plain = false }: { limit?: numbe
         const parsed = JSON.parse(e.data) as StreamEvent;
         const entry = describe(parsed);
         if (!entry) return;
-        setEntries((prev) => [...prev.slice(-(limit - 1)), entry]);
+        const uid = nextUid.current++;
+        setEntries((prev) => {
+          // The stream replays recent history on (re)connect, and React
+          // StrictMode mounts the effect twice in dev. Drop exact replays so
+          // the feed does not show the same line twice.
+          const duplicate = prev.some((p) => p.id === entry.id && p.ts === entry.ts && p.summary === entry.summary);
+          if (duplicate) return prev;
+          return [...prev.slice(-(limit - 1)), { ...entry, uid }];
+        });
       } catch {
         /* malformed frame */
       }
@@ -203,7 +215,7 @@ export default function LiveFeed({ limit = 200, plain = false }: { limit?: numbe
         <ul className="relative z-20">
           {entries.map((e) => (
             <li
-              key={e.id}
+              key={e.uid}
               className="flex items-start gap-3 border-b border-[var(--color-line)]/60 px-3 py-2 last:border-0 hover:bg-[var(--color-surface-2)]/40"
             >
               <span className="mt-1.5 shrink-0">
