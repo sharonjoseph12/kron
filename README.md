@@ -6,7 +6,7 @@
 [![MCP Protocol](https://img.shields.io/badge/MCP-1.0-8b5cf6?style=flat)](https://modelcontextprotocol.io)
 [![x402 Micropayments](https://img.shields.io/badge/x402-Enabled-10b981?style=flat)](https://x402.org)
 [![TypeScript SDK](https://img.shields.io/badge/@kron/sdk-v0.1.0-blue?style=flat)](./packages/sdk)
-[![Tests Passing](https://img.shields.io/badge/Tests-126%20Passing-emerald?style=flat)](#-testing--verification)
+[![Tests Passing](https://img.shields.io/badge/Tests-126%20Passing-emerald?style=flat)](#testing)
 
 **One line:** KRON is the capability firewall for AI agents — preview the blast radius, bind the approval, prove the enforcement.
 
