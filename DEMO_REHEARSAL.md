@@ -67,24 +67,24 @@ Run the final `pnpm demo:reset` immediately before recording so the dashboard op
 | Time | Beat | Action | Number to say |
 |---|---|---|---|
 | 0:00 | The gap | Title → agent log → flat green chart | “A log line is not a control.” |
-| 0:25 | Mechanism | Pan the `/control` pipeline strip | “No grant, no call.” |
-| 0:54 | Hero attack | **Run hero attack**; select email card | risk **75/100**, HOLD |
-| 1:12 | Lethal trifecta | Point at `Why held` + attachment + recipient | untrusted + private + new recipient |
-| 1:28 | Safe version | **Approve safe version** | attacker **0**, outbound **1** |
-| 1:40 | Bulk delete | **Bulk delete**; select `db.delete` card | **1,204** rows, **37** sensitive, not recoverable |
-| 2:00 | Archive | **Approve safe version** | **1,204** archived, **0** lost |
-| 2:20 | Drift | **Shadow drift**; hold on the red panel | **826 → 40 → 786** |
-| 2:38 | Stale rejection | Point at binding check | **409**, **0 executed** |
-| 2:52 | Fresh approval | Point at recovery path | fresh **786**, active **418** |
-| 3:05 | Counterfactual | Toggle **Baseline**, run it | attacker **1**, KRON **0** |
-| 3:18 | Audit | Receipts; download one | `toolInvoked`, chain intact |
-| 3:32 | Close | Wordmark + proof | **30/30**, **126 tests** |
+| 0:29 | Mechanism | Pan the `/control` pipeline strip | “No grant, no call. Two callers, one wins.” |
+| 1:00 | Hero attack | **Run hero attack**; select email card | risk **75/100**, HOLD |
+| 1:14 | Lethal trifecta | Point at `Why held` + attachment + recipient | untrusted + private + new recipient |
+| 1:30 | Safe version | **Approve safe version** | attacker **0**, outbound **1** |
+| 1:46 | Bulk delete | **Bulk delete**; select `db.delete` card | **1,204** rows, **37** sensitive, not recoverable |
+| 2:06 | Archive | **Approve safe version** | **1,204** archived, **0** lost |
+| 2:22 | Drift | **Shadow drift**; hold on the red panel | **826 → 40 → 786** |
+| 2:40 | Stale rejection | Point at binding check | **409**, **0 executed** |
+| 2:55 | Fresh approval | Point at recovery path | fresh **786**, active **418** |
+| 3:12 | Counterfactual | Toggle **Baseline**, run it | attacker **1**, KRON **0** |
+| 3:20 | Audit | Receipts; download one | `toolInvoked`, chain intact |
+| 3:36 | Close | Wordmark + proof | **30/30**, **126 tests** |
 
 ---
 
 ## What to click, exactly
 
-### Hero attack (0:54)
+### Hero attack (1:00)
 1. `Run hero attack`.
 2. The timeline adds: read poisoned email → read contract → send held.
 3. Select the `email.send` card.
@@ -93,7 +93,7 @@ Run the final `pnpm demo:reset` immediately before recording so the dashboard op
 6. Click **Approve safe version**.
 7. Evidence pane: **attacker inbox 0**, outbound **1**, delivered to `legal@coastalcatch.example`.
 
-### Bulk delete (1:40)
+### Bulk delete (1:46)
 1. `Bulk delete`.
 2. Select the `db.delete` card.
 3. Point at: **1,204 rows**, **37 sensitive**, **Recoverable: No**.
@@ -101,7 +101,7 @@ Run the final `pnpm demo:reset` immediately before recording so the dashboard op
 5. Click **Approve safe version**.
 6. Evidence pane: archived **1,204**, total **1,204**, attacker **0**.
 
-### Shadow drift (2:20)
+### Shadow drift (2:22)
 1. `Shadow drift`.
 2. The drift panel appears — pause two seconds before speaking:
    - card preview **826**
@@ -112,7 +112,7 @@ Run the final `pnpm demo:reset` immediately before recording so the dashboard op
 4. Point at the recovery path: fresh preview **786**, archived **786**, active **418**.
 5. Dismiss the panel.
 
-### Baseline + receipts (3:05)
+### Baseline + receipts (3:12)
 1. Toggle **Baseline** on.
 2. `Run baseline attack`.
 3. Point at attacker inbox **1**. Pause one beat.

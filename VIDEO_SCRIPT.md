@@ -11,9 +11,24 @@
 
 > *Monitoring tells you what the agent did. KRON decides what it can do — and proves it.*
 
+**The one-line analogy, if you need it in Q&A:** *Most agent-safety tools are CCTV. KRON is the customs checkpoint — nothing crosses without a declaration and a stamp.*
+
 ---
 
-## 0. Why this wins PS 2.1 (read before you record)
+## 0. The four wow moments (build the edit around these)
+
+| # | Moment | Why it lands |
+|---|---|---|
+| **1** | **The preview really runs the delete — then rolls it back.** 1,204 rows are actually deleted inside a transaction, counted, and restored. | It is not an estimate or a policy guess. The agent sees the truth; the database keeps its data. |
+| **2** | **A valid approval is rejected because the data moved.** The action hash is unchanged, the click is legitimate, and it still dies with a **409**. | This is TOCTOU on human consent — the failure mode almost every approval dashboard has and nobody demos. |
+| **3** | **The control experiment.** Same desk, same agent, raw actions: **1** email leaks. With KRON: **0**. | Judges don't have to take the claim on faith. The baseline is the counterfactual. |
+| **4** | **The audit proof.** One-shot grants, `toolInvoked`, before/after state, hash-chained receipts. | Every intervention is reconstructable after the fact — the third PS 2.1 deliverable, shown, not asserted. |
+
+**Optional fifth wow (10 seconds, see §6):** tamper with the audit log on camera → *Tamper detected*.
+
+---
+
+## 1. Why this wins PS 2.1
 
 The brief asks for three things. The video proves all three on screen, in this order:
 
@@ -23,17 +38,17 @@ The brief asks for three things. The video proves all three on screen, in this o
 | **Detect or block harmful / unauthorised actions** | Hero attack, bulk delete, stale approval | risk **75/100** → **HOLD**; **1,204 rows / 37 sensitive** → archive; stale approval **409**, **0 executed** |
 | **Audit / monitoring interface with actions, alerts, interventions** | Approval desk, drift panel, enforcement receipts, baseline diff | attacker inbox **0 vs 1**, `toolInvoked`, before/after state, hash chain **intact** |
 
-**Three things that make this different — say them, don't assume the judge infers them:**
+**Three differentiators — say them, don't assume the judge infers them:**
 
 1. **Inline, not after the fact.** It is the enforcement point, not an observability layer. Nothing reaches a tool without a grant.
-2. **It allows safely, not just blocks.** Every held action gets a deterministic safe rewrite — archive instead of delete, internal review instead of external exfiltration — revalidated through the same pipeline. Blocking is easy; completing the task without the damage is the product.
-3. **Consent is bound to the data it was granted for.** Approvals are tied to the action hash *and* a fingerprint of the exact rows the human saw. If the data moves, the approval dies — that is the drift demo, and almost nobody demos it.
+2. **It allows safely, not just blocks.** Every held action gets a deterministic safe rewrite — archive instead of delete, internal review instead of exfiltration — revalidated through the same pipeline. Blocking is easy; completing the task without the damage is the product.
+3. **Consent is bound to the data it was granted for.** Approval = action hash + a SHA-256 fingerprint of the exact rows the human saw. If the data moves, the approval dies.
 
 **Tone:** calm, specific, evidence-first. Do not sell. Let the numbers do the selling. Never say "100% secure", "prevents all attacks", "benchmark", or "real customers".
 
 ---
 
-## 1. Verified demo values (memorise these, don't improvise)
+## 2. Verified demo values (memorise these, don't improvise)
 
 | Value | Where it comes from |
 |---|---|
@@ -52,7 +67,7 @@ The brief asks for three things. The video proves all three on screen, in this o
 
 ---
 
-## 2. Pre-flight (do this 10 minutes before recording)
+## 3. Pre-flight (10 minutes before recording)
 
 ```bash
 pnpm install
@@ -92,30 +107,31 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 ---
 
-## 3. Shot list at a glance
+## 4. Shot list at a glance
 
 | Time | Beat | On screen | Numbers to say |
 |---|---|---|---|
-| 0:00–0:25 | The gap: watching is not controlling | Title, then a log scrolling into a green chart | — |
-| 0:25–0:54 | The mechanism: one path, no bypass | `/control`, pipeline strip | one path, one grant |
-| 0:54–1:40 | Detect + block: the lethal trifecta | Run hero attack → impact card → safe rewrite | **75/100**, HOLD, attacker **0** |
-| 1:40–2:20 | Control scope: blast radius | Bulk delete → archive instead | **1,204** / **37**, not recoverable → archived |
-| 2:20–3:05 | Trust the consent: stale approval | Shadow drift → **409** → fresh card | **826 → 40 → 786**, **0 executed**, fresh **786** |
-| 3:05–3:32 | Audit + counterfactual | Baseline toggle, receipts | attacker **1**, `toolInvoked`, chain intact |
-| 3:32–4:00 | Close: the claim | Wordmark, proof badge | **30/30**, **126** tests |
+| 0:00–0:29 | The gap: watching is not controlling | Title, then a log scrolling into a flat green chart | — |
+| 0:29–1:00 | The mechanism: one path, no bypass | `/control`, pipeline strip | one path, one grant |
+| 1:00–1:46 | Detect + block: the lethal trifecta | Run hero attack → impact card → safe rewrite | **75/100**, HOLD, attacker **0** |
+| 1:46–2:22 | Control scope: blast radius | Bulk delete → archive instead | **1,204** / **37**, not recoverable → archived |
+| 2:22–3:12 | Trust the consent: stale approval | Shadow drift → **409** → fresh card | **826 → 40 → 786**, **0 executed**, fresh **786** |
+| 3:12–3:36 | Audit + counterfactual | Baseline toggle, receipts | attacker **1**, `toolInvoked`, chain intact |
+| 3:36–4:00 | Close: the claim | Wordmark, proof badge | **30/30**, **126** tests |
 
 ---
 
-## 4. The script
+## 5. The complete script
 
-### 0:00–0:25 · Cold open — "Watching is not controlling"
+### 0:00–0:29 · Cold open — "Watching is not controlling"
 
 **SHOT** Title card: KRON wordmark + `PS 2.1 · AI Agent Safety and Control`. Hard cut to a plain agent log scrolling fast — `read inbox`, `read contract`, `email.send → external` — then a green observability chart that flatlines. The chart is the punchline: it is already too late.
 
 **SAY**
 
 > Give an AI agent your inbox, your contracts, your production database — then let it act unsupervised.
-> Most agent-safety tools watch that happen and draw a chart. A log line is not a control. A kill switch is not judgement.
+> An agent doesn't have to be malicious to be dangerous. It only needs one bad instruction.
+> Most safety tools watch that happen and draw a chart. A log line is not a control. A kill switch is not judgement.
 > KRON sits between the agent and every tool it can touch, and decides before anything runs.
 > Monitor. Block. Prove.
 
@@ -125,7 +141,7 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 ---
 
-### 0:25–0:54 · The mechanism — "One path. No bypass."
+### 0:29–1:00 · The mechanism — "One path. No bypass."
 
 **SHOT** `/control` loads. Slow horizontal pan across the pipeline strip. Cursor parked, no clicking. The page itself is the diagram.
 
@@ -134,29 +150,31 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 > Every action — read, write, delete, send, pay — takes one path. No bypass.
 > KRON classifies it, previews the real blast radius, scores the risk, and drafts a safer action.
 > A human approval is bound to a SHA-256 of that exact action, and to a fingerprint of the exact rows the preview saw.
-> Execution needs a one-shot grant. No grant, no call.
+> Execution needs a one-shot grant, claimed atomically. No grant, no call. Two callers? One wins.
 > Every decision ends in a hash-chained receipt.
 > This is not observability. It's an enforcement point.
 
 **ON SCREEN** `classify → preview → score → safe rewrite → hash-bound approval → one-shot grant → receipt`
 
+**WOW #1 — say this slowly:** *"claimed atomically. Two callers? One wins."* The grant is consumed by a conditional database update **before** the adapter is called; a replay gets a 403 and the tool never runs.
+
 **DELIVERY** Animate the pipeline once, left to right, in sync. Slow down on "No grant, no call." — it is the whole architecture. Land hard on "enforcement point."
 
 ---
 
-### 0:54–1:40 · Demo 1 — the lethal trifecta
+### 1:00–1:46 · Demo 1 — the lethal trifecta
 
 **SHOT** Click **Run hero attack**. Let the **Live timeline** fill, then select the `email.send` card. Hold on the impact card before speaking.
 
 **SAY**
 
 > Demo one: the lethal trifecta.
-> The agent reads a poisoned supplier email. Then it reads a signed customer contract. Then it tries to send that contract to an address it has never used.
+> The agent reads a poisoned supplier email. Then a signed customer contract. Then it tries to send that contract to an address it has never used.
 > KRON holds it at 75 out of 100.
-> The impact card shows why: untrusted content, a customer-confidential attachment, and a new outside recipient — all in one session.
-> The operator doesn't get a JSON blob and a yes-or-no button. They get the actual blast radius, in business terms.
-> But blocking would fail the task. KRON proposes the safe version: send it to the internal legal owner for review — revalidated through the same pipeline.
-> Approve. The attacker's inbox stays at zero. The task still completes.
+> The impact card shows why: untrusted content, a customer-confidential attachment, a new outside recipient — all in one session.
+> The operator gets the blast radius in business terms, not a JSON blob and a yes-or-no button.
+> But blocking would fail the task. KRON rewrites it: send to the internal legal owner for review — revalidated through the same pipeline.
+> Approve. Attacker inbox: zero. Task complete.
 
 **DO**
 
@@ -169,11 +187,11 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 **ON SCREEN** `risk 75/100 · HOLD · attacker inbox 0 · safe send to legal@coastalcatch.example`
 
-**DELIVERY** This is the "detect and block" deliverable. Say the three ingredients slowly — untrusted content, private data, new recipient — and let the judge connect them. Pause on **75** for a full second.
+**DELIVERY** Say the three ingredients slowly — untrusted content, private data, new recipient — and let the judge connect them. Pause on **75** for a full second.
 
 ---
 
-### 1:40–2:20 · Demo 2 — blast radius
+### 1:46–2:22 · Demo 2 — blast radius
 
 **SHOT** Click **Bulk delete**. Select the `db.delete` card. Let the preview numbers sit unchanged for two seconds before narrating.
 
@@ -181,9 +199,8 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 > Demo two: blast radius.
 > The agent asks to hard-delete every order.
-> KRON runs the preview inside a rolled-back transaction against the real database. 1,204 rows. Thirty-seven of them belong to customers with open shipments. Not recoverable.
+> This is not a simulation of a delete. KRON actually runs it inside a transaction, counts what would die, then rolls the database back. 1,204 rows. Thirty-seven belong to customers with open shipments. Not recoverable.
 > A dashboard shows you that after the delete. KRON shows it before.
-> Every number here is computed live — not a policy document, not an estimate.
 > The safe rewrite is an archive. Same business outcome, without the irreversible part.
 > Approve: 1,204 archived, zero lost.
 
@@ -192,26 +209,29 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 1. Click **Bulk delete**.
 2. Select the `db.delete` card.
 3. Point at **1,204 rows**, **37 sensitive**, **Recoverable: No**.
-4. Point at the safe version: **Archive instead of delete**.
-5. Click **Approve safe version**.
-6. Point at **Evidence**: archived **1,204**, total **1,204**, attacker **0**.
+4. Point at the **Evidence** pane: all **1,204 orders are still there** — the preview rolled back.
+5. Point at the safe version: **Archive instead of delete**.
+6. Click **Approve safe version**.
+7. Point at **Evidence**: archived **1,204**, total **1,204**, attacker **0**.
 
 **ON SCREEN** `1,204 rows · 37 sensitive · not recoverable → archive · 1,204 archived`
+
+**WOW #2 — the technical flex:** the preview is a real `DELETE`, then a `ROLLBACK`. The counter is not a model estimate. Step 4 is the proof: the data is still there.
 
 **DELIVERY** "A dashboard shows you that after the delete" is the differentiation line — say it plainly, no sarcasm. Pause after "Not recoverable."
 
 ---
 
-### 2:20–3:05 · Demo 3 — the card that went stale
+### 2:22–3:12 · Demo 3 — the card that went stale
 
 **SHOT** Click **Shadow drift**. The red drift panel expands. Let it sit for two full seconds before narrating; the silence makes the judge read the numbers.
 
 **SAY**
 
 > Demo three — the failure nobody demos: stale consent.
-> A human is looking at a card that says 826 pending orders. While they decide, a concurrent job moves 40 of them to shipped. Live data is now 786.
-> The action hash hasn't changed. The row count on the card hasn't changed. Most approval systems would execute that stale click.
-> KRON binds the fingerprint of the rows the human actually saw. The approval is rejected with a 409 before the tool adapter is called. The receipt proves the tool never ran. Zero rows archived.
+> A human sees a card: 826 pending orders. While they decide, a concurrent job moves 40 of them to shipped. Live data is 786.
+> The action hash is unchanged — the agent is asking for the same tool with the same arguments. Most approval systems would execute that stale click.
+> KRON fingerprints the exact rows the human saw — a SHA-256 over the dataset, not just a count. The approval is rejected with a 409 before the adapter is called. The receipt proves the tool never ran. Zero rows archived.
 > The agent re-evaluates. Fresh card: 786. The human approves the new hash. Exactly 786 archived.
 > Consent has to be bound to the data it was granted for.
 
@@ -225,20 +245,22 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 **ON SCREEN** `826 → 40 → 786 · stale 409 · 0 executed · fresh 786 archived · active 418`
 
-**DELIVERY** This is the differentiator. Do not rush it. The key sentence is "Consent has to be bound to the data it was granted for." Say it once, slowly, then stop.
+**WOW #3 — the differentiator:** the approval did not fail because the agent changed. It failed because the **world** changed. This is time-of-check to time-of-use, applied to human consent. Say "Consent has to be bound to the data it was granted for" once, slowly, then stop.
+
+**DELIVERY** Do not rush. The silence after the 409 is the moment.
 
 ---
 
-### 3:05–3:32 · Audit + counterfactual — why you can trust the numbers
+### 3:12–3:36 · Audit + counterfactual — why you can trust the numbers
 
 **SHOT** Toggle **Baseline** on, run the attack, land on attacker inbox **1**. Hold. Then toggle back to **KRON**, scroll to **Enforcement receipts**, show **Chain intact**.
 
 **SAY**
 
 > Now the audit trail.
-> Toggle baseline: same desk, raw actions, no preview, no rewrite. Approve — and exactly one email reaches the attacker.
+> Toggle baseline: same desk, raw actions, no preview, no rewrite. Approve — exactly one email reaches the attacker.
 > KRON: zero.
-> Every decision leaves a receipt: before and after state, whether the tool actually ran, the grant that authorised it, and the drift evidence when it didn't. The hash chain verifies end to end.
+> Every decision leaves a receipt: before and after state, whether the tool actually ran, the grant that authorised it, the drift evidence when it didn't. The hash chain verifies end to end.
 
 **DO**
 
@@ -249,18 +271,20 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 **ON SCREEN** `baseline: 1 leaked · KRON: 0 · chain intact · toolInvoked`
 
-**DELIVERY** This is the "audit interface" deliverable. The pause after "KRON: zero" does more than any adjective. Do not fill it.
+**WOW #4 — the control experiment:** one variable changes — the guard. Everything else is identical. That is why the number is believable.
+
+**DELIVERY** The pause after "KRON: zero" does more than any adjective. Do not fill it.
 
 ---
 
-### 3:32–4:00 · Close — the claim
+### 3:36–4:00 · Close — the claim
 
 **SHOT** Cut to the wordmark. Optional two-second flash of the terminal: `30/30 deterministic scenarios passed`.
 
 **SAY**
 
-> Under the hood: 30 out of 30 deterministic scenarios, 126 automated tests, no live model, no external network on the control path. Fully reproducible.
-> Settlement proofs can anchor to Algorand TestNet. The control plane itself is chain-agnostic.
+> Under the hood: 30 out of 30 deterministic scenarios, 126 automated tests, no live model, no external network on the control path. Reproducible.
+> Settlement proofs can anchor to Algorand TestNet. The control plane is chain-agnostic.
 > Monitoring tells you what the agent did. KRON decides what it can do — and proves it.
 > KRON. Preview the blast radius. Bind the approval. Prove the enforcement.
 
@@ -270,7 +294,67 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 ---
 
-## 5. The 30-second version (if a judge asks you to pitch before the video)
+## 6. Wow bank — optional 8–12 second inserts
+
+Use these only if your cap is **4:10–4:15** or you are pitching live. Each replaces the last few seconds of the close, not the proof beats.
+
+### A. Tamper with the audit log on camera (10s, highest impact)
+
+1. After showing **Chain intact**, click **Tamper** in the Live timeline header.
+2. The status flips to **Tamper detected**.
+3. Say: *"I just edited the audit log — the database owner is the strongest attacker in the room. The verifier recomputes every hash and link. Tamper detected. That's what proof means."*
+4. Cut to the wordmark.
+
+> This breaks the local control-audit chain until the next `pnpm demo:reset`. Do it **last**, after every other proof beat. It does **not** affect the enforcement-receipt chain.
+
+### B. The hard block that can never be approved (8s)
+
+In the terminal:
+
+```bash
+curl -s -X POST localhost:8787/api/actions/evaluate \
+  -H 'Content-Type: application/json' -b cookies.txt \
+  -d '{"agentId":"<id>","sessionId":"demo","tool":"db.drop_table","args":{"table":"orders"}}'
+```
+
+Say: *"Eighty and above is a hard block. There is no approval button. Some actions a human is not allowed to authorise."* The response returns `BLOCK`, score `100`, and no `approvalId`.
+
+### C. The grant race (8s, technically hardcore)
+
+Show the grant row from the receipt, then say: *"The grant is consumed by one conditional update: status active, not expired, bound to this exact action hash. Two processes race — exactly one update wins. The loser gets a 403 before the tool adapter is ever called."*
+
+This is the strongest line for a security judge; it needs no UI, just confidence and the receipt on screen.
+
+---
+
+## 7. Under the hood (for Q&A and the deck)
+
+**What actually happens in one action:**
+
+1. **Classify** — `read | write | delete | send | pay`.
+2. **Preview** — `BEGIN` → run the real mutation → count rows, sensitive rows, recoverability → `ROLLBACK`. For deletes/updates, hash the exact row set. For email, resolve the attachment's sensitivity and content hash.
+3. **Score** — deterministic rules. `<30 ALLOW`, `30–59 FLAG`, `60–79 HOLD`, `≥80 BLOCK`. Hard-block rules (schema destruction, denied tools, blocklisted recipients) return `BLOCK` at 100 and can never be approved.
+4. **Safe rewrite** — archive instead of delete; internal owner instead of external recipient; scope an unscoped update. The rewrite is re-previewed and re-scored through the same pipeline.
+5. **Approval binding** — `sha256(canonical action JSON)` + `previewFingerprint` + expiry. The fingerprint covers the **rows**, not the count, so a same-count value change still invalidates consent.
+6. **Grant** — issued only after an ALLOW/HOLD decision; scoped to one agent, one tool, one action hash; expires in 60s; consumed by one conditional update before the adapter runs.
+7. **Receipt** — action, decision, before/after state, `toolInvoked`, approval, grant, drift evidence, `prevHash` → `hash`. Chain verifiable; downloadable JSON.
+
+**Threat model the demo covers**
+
+| Threat | Control shown |
+|---|---|
+| Prompt injection → data exfiltration | lethal-trifecta detection, HOLD, safe internal rewrite |
+| Over-broad or irreversible action | real blast-radius preview, archive rewrite |
+| Replay / double execution | one-shot grant, atomic consumption |
+| Stale consent / TOCTOU | dataset fingerprint, 409 before adapter |
+| Silent history edits | hash-chained receipts, tamper detection |
+| Agent bypass | single gateway; typed adapters; no grant, no call |
+
+**What is real vs simulated (say this if asked):** the sandbox data shape is fixed for repeatability; the SQL, previews, rollbacks, hashes, grants, API calls and receipts are real. No live model, no external network on the control path. Algorand TestNet is used for the optional payment rail.
+
+---
+
+## 8. The 30-second pitch (if a judge asks before the video)
 
 > Autonomous agents now have real tools: email, files, customer data, databases, payments. The risk isn't the model — it's the tool call it decides to make.
 > Most safety products observe those calls after they happen. KRON is the enforcement point before them. Every action is previewed against real data, risk-scored, and either allowed, rewritten to a safer form, or held for a human whose approval is cryptographically bound to the exact rows they saw.
@@ -279,7 +363,7 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 ---
 
-## 6. Judge Q&A (rehearse these five)
+## 9. Judge Q&A (rehearse these six)
 
 | Question | Answer |
 |---|---|
@@ -287,24 +371,25 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 | **"Why not just block dangerous tools?"** | Blocking fails the task. KRON's safe rewrite keeps the business outcome — archive instead of delete, internal review instead of external send — and revalidates it through the same pipeline. The hard problem is allowing safely. |
 | **"What about prompt injection?"** | We don't try to win a prompt-filtering arms race. We contain the consequence: an injection only matters when it becomes a tool call, and that call has to pass the gateway. |
 | **"How do you stop replay or a stale click?"** | Grants are scoped to one agent, one tool, one action hash, expire in 60 seconds, and are consumed atomically *before* the adapter runs. Approvals expire and are revalidated against a fresh preview; a moved dataset returns 409 and the receipt records `toolInvoked: false`. |
+| **"What if the data changes but the row count stays the same?"** | That is exactly why the fingerprint hashes every row, not the count. Same count, different values → different SHA-256 → 409. |
 | **"Does this work outside the sandbox?"** | The decision, grant and receipt contracts are adapter-agnostic. The sandbox is the demo target; replace the adapter and the same controls apply to email, files, databases or a payment rail. The Algorand payment path is preserved as one adapter. |
 
 **One honest boundary to state if asked:** this is a hackathon prototype. The sandbox data shape is fixed for repeatability; the queries, previews, mutations and proofs are real.
 
 ---
 
-## 7. If the brief caps you at 3:00
+## 10. If the brief caps you at 3:00
 
 Cut in this order — you keep every proof number:
 
-1. Drop the baseline toggle beat (**3:05–3:32**) to 8 seconds: show the receipt pane and say "baseline leaks one email; KRON leaks zero."
+1. Drop the baseline toggle beat (**3:12–3:36**) to 8 seconds: show the receipt pane and say "baseline leaks one email; KRON leaks zero."
 2. Compress the mechanism to 15 seconds: one sentence over the pipeline strip.
 3. Trim the delete narration to: *"1,204 rows, 37 sensitive, not recoverable — archive instead. 1,204 archived, zero lost."*
 4. Keep the drift demo intact. It is the differentiator.
 
 ---
 
-## 8. Recording & edit notes
+## 11. Recording & edit notes
 
 **Capture**
 - 1080p60 if available; 1080p30 is fine. Record the browser window only, not the desktop.
@@ -327,7 +412,7 @@ Cut in this order — you keep every proof number:
 
 ---
 
-## 9. Final QA
+## 12. Final QA
 
 - [ ] Runtime 3:55–4:05; no dead air longer than 1 second
 - [ ] Every spoken number matches `pnpm demo:attack all` / `pnpm demo:proof`
