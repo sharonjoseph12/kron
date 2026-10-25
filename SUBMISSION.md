@@ -112,19 +112,20 @@ hash-chained audit + enforcement receipts
 
 ---
 
-## Demo Script (2:45)
+## Demo Script (4:00)
 
 Full script: `VIDEO_SCRIPT.md`. Deck: `KRON_PS21_Deck.pptx` / `KRON_PS21_Deck.pdf` (outline: `PPT_OUTLINE.md`).
 
 | Time | Beat | Real number |
 |---|---|---|
 | 0:00 | Monitoring is not control | — |
-| 0:20 | One pipeline, one grant | — |
-| 0:45 | Hero attack: poisoned email + contract → outside send | risk **75/100**, HOLD, attacker **0** |
-| 1:25 | Bulk delete | **1,204** rows, **37** sensitive, archive **1,204** |
-| 1:55 | Shadow drift | **826 → 40 changed → 786**, stale **409**, **0** executed, fresh **786** archived |
-| 2:25 | Baseline counterfactual + receipts | attacker **1** on baseline, **30/30** deterministic |
-| 2:40 | Close | — |
+| 0:25 | One pipeline, one grant | — |
+| 0:55 | Hero attack: poisoned email + contract → outside send | risk **75/100**, HOLD, attacker **0** |
+| 1:45 | Bulk delete | **1,204** rows, **37** sensitive, archive **1,204** |
+| 2:25 | Shadow drift | **826 → 40 changed → 786**, stale **409**, **0** executed, fresh **786** archived |
+| 3:10 | Baseline counterfactual | attacker **1** on baseline, **0** on KRON |
+| 3:20 | Receipts | `toolInvoked`, chain intact, **30/30** deterministic |
+| 3:35 | Close | **126** tests |
 
 ---
 
@@ -197,7 +198,7 @@ PASS  drift     stale 826 → live 786 · rejected 409 · 786 archived
 
 ## Links
 
-- `VIDEO_SCRIPT.md` — 2:45 recording script
+- `VIDEO_SCRIPT.md` — 4:00 recording script
 - `PPT_OUTLINE.md` — 12-slide deck with speaker notes
 - `DEMO_REHEARSAL.md` — setup and fallback plan
 - `JUDGE_PREP.md` — Q&A

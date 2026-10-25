@@ -44,7 +44,7 @@
 
 ## 2. Submission Assets — Remaining
 
-- [x] `VIDEO_SCRIPT.md` — 2:45 script with exact numbers
+- [x] `VIDEO_SCRIPT.md` — 4:00 script with exact numbers
 - [x] `KRON_PS21_Deck.pptx` / `KRON_PS21_Deck.pdf` — 14-slide generated deck
 - [x] `PPT_OUTLINE.md` — slide copy + speaker notes
 - [x] `PITCH.md` — 3-minute pitch + Q&A

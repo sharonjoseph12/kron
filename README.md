@@ -205,6 +205,21 @@ pnpm demo:proof                 # hero + delete + drift, 10 runs each (30/30 ass
 
 Open the dashboard and choose **Control Plane** in the sidebar. The page includes the approval desk, real impact card, safe rewrite, drift panel, hash-chain verify/tamper demo, live timeline, proof pane, enforcement receipts and a KRON Guard / Baseline toggle. No live model or external network is used on the demo path.
 
+### 🎥 The 4-minute demo (verified values)
+
+The full shot-by-shot script — with timings, exact clicks, voiceover and on-screen text — is [`VIDEO_SCRIPT.md`](./VIDEO_SCRIPT.md). Every number below is asserted by `pnpm demo:attack all` and `pnpm demo:proof`.
+
+| Beat | What happens | Verified number |
+|---|---|---|
+| **Hero — lethal trifecta** | poisoned email + private contract → send to a new outside address | risk **75/100** → **HOLD** → safe internal send → attacker inbox **0** |
+| **Bulk delete — blast radius** | hard delete of the order table previewed in a rolled-back transaction | **1,204 rows** · **37 sensitive** · not recoverable → **1,204 archived** |
+| **Shadow drift — stale consent** | 40 rows move after the human card was drawn | **826 → 40 changed → 786 live** · stale **409** · **0 executed** · fresh **786** archived |
+| **Baseline counterfactual** | same desk with raw actions, no preview or rewrite | exactly **1** email reaches the attacker |
+| **Receipts** | hash-chained evidence for every decision | `toolInvoked`, before/after snapshot, grant id, drift evidence |
+| **Determinism** | repeated full-run proof | **30/30** scenarios · **126** tests |
+
+Rehearse with [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md); the click timings there match the 4:00 cut.
+
 <a id="quick-start"></a>
 
 ## 🚀 Quick Start (Zero Docker Required)
@@ -297,14 +312,14 @@ pnpm demo:proof                   # 30/30 repeated runs
 
 ## 📚 Docs & Submission Package
 
-- [`VIDEO_SCRIPT.md`](./VIDEO_SCRIPT.md) — 2:45 demo recording script with exact numbers
+- [`VIDEO_SCRIPT.md`](./VIDEO_SCRIPT.md) — 4:00 shot-by-shot recording script, voiceover and verified values
 - [`KRON_PS21_Deck.pptx`](./KRON_PS21_Deck.pptx) — final 14-slide deck (editable)
 - [`KRON_PS21_Deck.pdf`](./KRON_PS21_Deck.pdf) — submission PDF export
 - [`PPT_OUTLINE.md`](./PPT_OUTLINE.md) — slide copy + speaker notes
 - [`PITCH.md`](./PITCH.md) — 3-Minute Pitch Script & Judge Q&A Cheat Sheet
 - [`SUBMISSION.md`](./SUBMISSION.md) — Full Hackathon Project Submission Document
 - [`TOP3_CHECKLIST.md`](./TOP3_CHECKLIST.md) — submission checklist and verified metrics
-- [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md) — timed 3-minute rehearsal, setup, clicks and fallback plan
+- [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md) — 4:00 rehearsal timeline, exact clicks and fallback plan
 - [`JUDGE_PREP.md`](./JUDGE_PREP.md) — Tough Q&A + Rogue-Agent Demo
 - [`HACKATHON.md`](./HACKATHON.md) — One-Page Judge Summary
 - [`OFFLINE.md`](./OFFLINE.md) — 24-Hour Offline Runbook
