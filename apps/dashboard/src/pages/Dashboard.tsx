@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -89,6 +89,24 @@ function buildNarrative(
   return s;
 }
 
+const GOLDEN_STORAGE_KEY = "kron.golden.lastRun";
+
+/** Restore the last Golden Path run so a route change (or reload) doesn't wipe it. */
+function loadGoldenRun(): { steps: string[]; result: unknown } | null {
+  try {
+    const raw = localStorage.getItem(GOLDEN_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { steps?: unknown; result?: unknown };
+    if (!Array.isArray(parsed.steps)) return null;
+    return {
+      steps: parsed.steps.filter((s): s is string => typeof s === "string"),
+      result: parsed.result ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const overview = useQuery({
@@ -119,8 +137,21 @@ export default function Dashboard() {
   // Kept tiny on purpose: the demo sends to the agent's own wallet, so the only
   // real cost is the 0.001 ALGO network fee per run.
   const GOLDEN_AMOUNT_ALGO = Number(import.meta.env.VITE_GOLDEN_AMOUNT_ALGO ?? "0.001") || 0.001;
-  const [goldenSteps, setGoldenSteps] = useState<string[]>([]);
-  const [goldenResult, setGoldenResult] = useState<any>(null);
+  const [goldenSteps, setGoldenSteps] = useState<string[]>(() => loadGoldenRun()?.steps ?? []);
+  const [goldenResult, setGoldenResult] = useState<any>(() => loadGoldenRun()?.result ?? null);
+
+  // Persist the run across dashboard route changes. It is a UI record only —
+  // the settlement truth lives in the payment row and on TestNet.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        GOLDEN_STORAGE_KEY,
+        JSON.stringify({ steps: goldenSteps.slice(-40), result: goldenResult }),
+      );
+    } catch {
+      /* private mode or quota — the run still works, it just won't be restored */
+    }
+  }, [goldenSteps, goldenResult]);
 
   const goldenPath = useMutation({
     mutationFn: async () => {

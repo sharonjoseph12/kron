@@ -47,8 +47,14 @@ export async function buildServer() {
 
   // Global rate limit (per-IP). Login and the MCP endpoint get stricter
   // per-route limits to blunt brute-force and paywall abuse.
+  //
+  // The control plane polls several live queries (approvals, proof, audit,
+  // receipts, chain verification). At 120/min a single open dashboard tab
+  // exhausts the budget in under a minute and every panel falls back to zero,
+  // so keep headroom for one operator with multiple tabs. Sensitive routes
+  // (login, MCP, public approve) still have their own tighter limits.
   await fastify.register(rateLimit, {
-    max: 120,
+    max: dev ? 2_000 : 600,
     timeWindow: "1 minute",
     keyGenerator: (request) => request.ip,
   });

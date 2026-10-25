@@ -372,13 +372,13 @@ export default function Control() {
   const approvalsQuery = useQuery({
     queryKey: ["approvals", "pending"],
     queryFn: () => api.listApprovals("pending"),
-    refetchInterval: 2_000,
+    refetchInterval: 3_000,
   });
-  const proofQuery = useQuery({ queryKey: ["proof"], queryFn: api.getProof, refetchInterval: 2_000 });
-  const auditQuery = useQuery({ queryKey: ["control-audit"], queryFn: () => api.controlAudit(80), refetchInterval: 2_000 });
-  const verifyQuery = useQuery({ queryKey: ["control-verify"], queryFn: api.verifyControlAudit, refetchInterval: 4_000 });
-  const receiptsQuery = useQuery({ queryKey: ["receipts"], queryFn: () => api.listReceipts(8), refetchInterval: 2_000 });
-  const receiptVerify = useQuery({ queryKey: ["receipt-verify"], queryFn: api.verifyReceipts, refetchInterval: 4_000 });
+  const proofQuery = useQuery({ queryKey: ["proof"], queryFn: api.getProof, refetchInterval: 3_000 });
+  const auditQuery = useQuery({ queryKey: ["control-audit"], queryFn: () => api.controlAudit(80), refetchInterval: 3_000 });
+  const verifyQuery = useQuery({ queryKey: ["control-verify"], queryFn: api.verifyControlAudit, refetchInterval: 6_000 });
+  const receiptsQuery = useQuery({ queryKey: ["receipts"], queryFn: () => api.listReceipts(8), refetchInterval: 3_000 });
+  const receiptVerify = useQuery({ queryKey: ["receipt-verify"], queryFn: api.verifyReceipts, refetchInterval: 6_000 });
   const meQuery = useQuery({ queryKey: ["me"], queryFn: api.me });
 
   const approvals = approvalsQuery.data?.approvals ?? [];
