@@ -16,6 +16,9 @@ export async function resetDemoState(): Promise<void> {
   await prisma.auditEvent.deleteMany({
     where: { action: { in: ["payment.decision", "payment.settled", "payment.blocked"] } },
   });
+  // Seeded history is disposable; the cascade clears its tool calls/timeline.
+  await prisma.agentSession.deleteMany({ where: { id: { startsWith: "demo-sess-" } } });
+  await prisma.auditEvent.deleteMany({ where: { targetId: { startsWith: "demo-" } } });
   await prisma.agentSession.updateMany({ data: { status: "idle" } });
   await prisma.agent.updateMany({ data: { status: "idle" } });
 

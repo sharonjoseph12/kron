@@ -201,6 +201,7 @@ pnpm demo:attack baseline       # before/after: raw approval leaks exactly one e
 pnpm demo:attack drift          # 826 pending → concurrent 40 → live 786; stale card 409, 0 executed, fresh 786 archived
 pnpm demo:attack all            # all four, with exact end-state assertions
 pnpm demo:proof                 # hero + delete + drift, 10 runs each (30/30 assertions)
+pnpm demo:history               # add six sessions + two weeks of sandbox payment history
 ```
 
 Open the dashboard and choose **Control Plane** in the sidebar. The page includes the approval desk, real impact card, safe rewrite, drift panel, hash-chain verify/tamper demo, live timeline, proof pane, enforcement receipts and a KRON Guard / Baseline toggle. No live model or external network is used on the demo path.
@@ -243,7 +244,7 @@ Open **http://localhost:5173** to view the live dashboard (Login: the credential
 
 ## 🌐 Live / Deployed Instance
 
-**Sandbox demo:** <https://kron-ps21.vercel.app> — click **Enter demo control room** on the login screen. The deployment ships with two seeded approvals and receipt history; no credentials are needed. Data resets when the serverless function cold-starts.
+**Sandbox demo:** <https://kron-ps21.vercel.app> — click **Enter demo control room** on the login screen. The deployment ships with two seeded approvals, receipt history, six completed agent sessions and two weeks of policy decisions (18 auto-approved, 4 blocked, 2 escalated/denied); no credentials are needed. Simulated settlements are labelled **Sandbox** — they are never presented as public-ledger proofs. Data resets when the serverless function cold-starts.
 
 Prefer a clickable link over local Docker? Full production deployment instructions — Vercel serverless, VPS / Railway / Render, env vars, and TestNet funding — are in [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
 

@@ -74,8 +74,29 @@ export function Badge({
 }
 
 /** On-chain verified badge — quiet checkmark + link to AlgoExplorer. */
-export function OnChainBadge({ txId, explorerUrl }: { txId?: string | null; explorerUrl?: string | null }) {
+export function OnChainBadge({
+  txId,
+  explorerUrl,
+  verified,
+}: {
+  txId?: string | null;
+  explorerUrl?: string | null;
+  verified?: boolean | null;
+}) {
   if (!txId) return null;
+  // Seeded demo settlements deliberately carry verified=false. Never present
+  // them as public-ledger proofs or link to an explorer page that cannot exist.
+  if (verified === false) {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-soft)] px-2 py-0.5 text-[10px] font-mono font-semibold text-[var(--color-warning)] ring-1 ring-[#d9c48f]"
+        title="Seeded sandbox record — no public-ledger transaction was made"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-warning)]" />
+        Sandbox
+      </span>
+    );
+  }
   const inner = (
     <span className="badge-onchain cursor-pointer">
       <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">

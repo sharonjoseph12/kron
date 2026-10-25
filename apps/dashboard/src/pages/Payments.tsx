@@ -243,14 +243,16 @@ function PaymentRow({
       </td>
       <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
-          {p.txId ? (
+          {p.txId && p.settlementVerified !== false ? (
             <ExplorerLink url={p.explorerUrl}>
               <Mono>{shortId(p.txId, 10)}</Mono>
             </ExplorerLink>
+          ) : p.txId ? (
+            <Mono>{shortId(p.txId, 10)}</Mono>
           ) : (
             <span className="text-[var(--color-ink-3)]">—</span>
           )}
-          <OnChainBadge txId={p.txId} explorerUrl={p.explorerUrl} />
+          <OnChainBadge txId={p.txId} explorerUrl={p.explorerUrl} verified={p.settlementVerified} />
           {p.appId && <AtomicGroupBadge appId={p.appId} />}
         </div>
       </td>
@@ -338,8 +340,10 @@ function PaymentDetailDrawer({
         <GlassCard accent className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-[var(--color-ink)]">Algorand On-Chain Proof</h3>
-              <OnChainBadge txId={p.txId} explorerUrl={p.explorerUrl} />
+              <h3 className="text-sm font-semibold text-[var(--color-ink)]">
+                {p.settlementVerified === false ? "Seeded Settlement Record" : "Algorand On-Chain Proof"}
+              </h3>
+              <OnChainBadge txId={p.txId} explorerUrl={p.explorerUrl} verified={p.settlementVerified} />
             </div>
             {p.appId && <AtomicGroupBadge appId={p.appId} />}
           </div>
@@ -347,10 +351,21 @@ function PaymentDetailDrawer({
           <div className="space-y-3 text-xs pt-2">
             {p.txId && (
               <div>
-                <span className="text-[var(--color-ink-3)] block mb-0.5">Payment Transaction ID:</span>
-                <ExplorerLink url={p.explorerUrl ?? `https://testnet.explorer.perawallet.app/tx/${p.txId}`} className="font-mono text-xs break-all">
-                  {p.txId}
-                </ExplorerLink>
+                <span className="text-[var(--color-ink-3)] block mb-0.5">
+                  {p.settlementVerified === false ? "Sandbox Settlement ID:" : "Payment Transaction ID:"}
+                </span>
+                {p.settlementVerified === false ? (
+                  <Mono>{p.txId}</Mono>
+                ) : (
+                  <ExplorerLink url={p.explorerUrl ?? `https://testnet.explorer.perawallet.app/tx/${p.txId}`} className="font-mono text-xs break-all">
+                    {p.txId}
+                  </ExplorerLink>
+                )}
+              </div>
+            )}
+            {p.settlementVerified === false && (
+              <div className="rounded border border-[#d9c48f] bg-[var(--color-warning-soft)] p-2 text-[11px] text-[var(--color-warning)]">
+                Seeded demo history — this decision is simulated and was not submitted to the public Algorand ledger.
               </div>
             )}
 
@@ -385,7 +400,7 @@ function PaymentDetailDrawer({
             </div>
           </div>
 
-          {p.txId && (
+          {p.txId && p.settlementVerified !== false && (
             <div className="pt-2">
               <a
                 href={p.explorerUrl ?? `https://testnet.explorer.perawallet.app/tx/${p.txId}`}

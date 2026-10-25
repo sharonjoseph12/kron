@@ -129,20 +129,44 @@ export default function Verify() {
       ) : proof ? (
         <div className="space-y-6 anim-fade-up">
           {/* Main Statement Banner */}
-          <div className="rounded-xl border border-[#a8cfb8] bg-[var(--color-success-soft)] p-5 spotlight">
+          <div
+            className={`rounded-xl border p-5 spotlight ${
+              proof.verified
+                ? "border-[#a8cfb8] bg-[var(--color-success-soft)]"
+                : "border-[#d9c48f] bg-[var(--color-warning-soft)]"
+            }`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#d3ead9] text-[var(--color-success)] border border-[#a8cfb8]">
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl border ${
+                    proof.verified
+                      ? "bg-[#d3ead9] text-[var(--color-success)] border-[#a8cfb8]"
+                      : "bg-[#f6e7bd] text-[var(--color-warning)] border-[#d9c48f]"
+                  }`}
+                >
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    {proof.verified ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v4m0 4h.01M10.3 3.9L2.4 17a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />
+                    )}
                   </svg>
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs uppercase font-bold tracking-widest text-[var(--color-success)]">
-                      CRYPTOGRAPHICALLY VERIFIED
+                    <span
+                      className={`text-xs uppercase font-bold tracking-widest ${
+                        proof.verified ? "text-[var(--color-success)]" : "text-[var(--color-warning)]"
+                      }`}
+                    >
+                      {proof.verified ? "CRYPTOGRAPHICALLY VERIFIED" : "SANDBOX RECORD — NOT ON LEDGER"}
                     </span>
-                    <OnChainBadge txId={proof.onChainProof.txId} explorerUrl={proof.payment.explorerUrl} />
+                    <OnChainBadge
+                      txId={proof.onChainProof.txId}
+                      explorerUrl={proof.payment.explorerUrl}
+                      verified={proof.verified}
+                    />
                     {proof.onChainProof.appId && <AtomicGroupBadge appId={proof.onChainProof.appId} />}
                   </div>
                   <div className="text-base font-medium text-[var(--color-ink)] mt-0.5">
@@ -151,7 +175,7 @@ export default function Verify() {
                 </div>
               </div>
 
-              {proof.onChainProof.txId && (
+              {proof.onChainProof.txId && proof.verified && (
                 <ExplorerLink
                   url={proof.payment.explorerUrl}
                   className="rounded-lg border border-[#a8cfb8] bg-[var(--color-success-soft)] px-4 py-2 text-xs font-semibold text-[var(--color-success)] hover:bg-[#d3ead9] transition"
@@ -173,13 +197,15 @@ export default function Verify() {
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="text-xs text-[var(--color-ink-3)] block">Payment Transaction ID</span>
-                  {proof.onChainProof.txId ? (
+                  {proof.onChainProof.txId && proof.verified ? (
                     <ExplorerLink
                       url={proof.payment.explorerUrl ?? `https://testnet.explorer.perawallet.app/tx/${proof.onChainProof.txId}`}
                       className="font-mono text-xs font-semibold"
                     >
                       {proof.onChainProof.txId}
                     </ExplorerLink>
+                  ) : proof.onChainProof.txId ? (
+                    <Mono>{proof.onChainProof.txId}</Mono>
                   ) : (
                     <span className="font-mono text-[var(--color-ink-3)]">—</span>
                   )}
@@ -274,7 +300,7 @@ export default function Verify() {
           </div>
 
           {/* Independent Verification — "Don't trust us, verify" */}
-          {proof.onChainProof.txId && (
+          {proof.verified && proof.onChainProof.txId && (
             <Card className="p-5 space-y-3">
               <CardHeader
                 title="Independent Verification"

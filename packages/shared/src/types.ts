@@ -196,6 +196,8 @@ export type PaymentDTO = {
   decision: PolicyDecision | null;
   decisionReasons: string[];
   txId: string | null;
+  /** Whether the settlement transaction was verified against the public ledger. */
+  settlementVerified: boolean | null;
   /** KRON smart contract app ID (atomic group policy anchor). */
   appId: number | null;
   /** SHA-256 policy decision hash anchored on-chain. */

@@ -324,7 +324,7 @@ export default function Dashboard() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-2)]">Latest Autonomous Settlement</span>
-                  <OnChainBadge txId={payments[0].txId} explorerUrl={payments[0].explorerUrl} />
+                  <OnChainBadge txId={payments[0].txId} explorerUrl={payments[0].explorerUrl} verified={payments[0].settlementVerified} />
                   <AtomicGroupBadge appId={payments[0].appId} />
                 </div>
                 <div className="mt-1 text-sm text-[var(--color-ink-2)]">
@@ -333,7 +333,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            {payments[0].txId && (
+            {payments[0].txId && payments[0].settlementVerified !== false && (
               <ExplorerLink
                 url={payments[0].explorerUrl}
                 className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-3)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
@@ -642,14 +642,16 @@ export default function Dashboard() {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        {p.txId ? (
+                        {p.txId && p.settlementVerified !== false ? (
                           <ExplorerLink url={p.explorerUrl}>
                             <Mono>{shortId(p.txId, 10)}</Mono>
                           </ExplorerLink>
+                        ) : p.txId ? (
+                          <Mono>{shortId(p.txId, 10)}</Mono>
                         ) : (
                           <span className="text-[var(--color-ink-3)]">—</span>
                         )}
-                        <OnChainBadge txId={p.txId} explorerUrl={p.explorerUrl} />
+                        <OnChainBadge txId={p.txId} explorerUrl={p.explorerUrl} verified={p.settlementVerified} />
                       </div>
                     </td>
                     <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-ink-3)]">{fmtTs(p.createdAt)}</td>

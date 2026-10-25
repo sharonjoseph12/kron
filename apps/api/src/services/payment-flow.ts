@@ -74,7 +74,14 @@ export function toPaymentDTO(row: {
   createdAt: Date;
   updatedAt: Date;
   decision?: { decision: string; reasons: unknown; policyVersionNumber: number } | null;
-  settlement?: { txId: string; appId?: number | null; policyHash?: string | null; appCallTxId?: string | null; network?: string } | null;
+  settlement?: {
+    txId: string;
+    verified?: boolean;
+    appId?: number | null;
+    policyHash?: string | null;
+    appCallTxId?: string | null;
+    network?: string;
+  } | null;
 }): PaymentDTO {
   const txId = row.settlement?.txId ?? null;
   const network = row.network as Network;
@@ -95,6 +102,7 @@ export function toPaymentDTO(row: {
     decision: (row.decision?.decision as PolicyDecision) ?? null,
     decisionReasons: (row.decision?.reasons as string[]) ?? [],
     txId,
+    settlementVerified: row.settlement ? row.settlement.verified ?? false : null,
     appId: row.settlement?.appId ?? null,
     policyHash: row.settlement?.policyHash ?? null,
     appCallTxId: row.settlement?.appCallTxId ?? null,

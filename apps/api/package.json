@@ -20,7 +20,8 @@
     "demo:attack:x402": "tsx scripts/demo-attack-x402.ts",
     "demo:reset": "tsx scripts/demo-reset.ts",
     "demo:proof": "tsx scripts/demo-proof.ts",
-    "demo:seed-vercel": "tsx scripts/seed-vercel-demo.ts"
+    "demo:seed-vercel": "tsx scripts/seed-vercel-demo.ts",
+    "demo:seed-history": "tsx scripts/seed-demo-history.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

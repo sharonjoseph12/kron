@@ -26,6 +26,7 @@
     "demo:reset": "pnpm --filter @kron/api demo:reset",
     "demo:attack": "pnpm --filter @kron/api demo:attack",
     "demo:proof": "pnpm --filter @kron/api demo:proof",
+    "demo:history": "pnpm --filter @kron/api demo:seed-history",
     "vercel:build": "pnpm --filter @kron/api prisma:generate && pnpm build && DATABASE_URL=file:$PWD/apps/api/prisma/deploy.db pnpm --filter @kron/api prisma:deploy && DATABASE_URL=file:$PWD/apps/api/prisma/deploy.db KRON_SANDBOX_DB=$PWD/apps/api/prisma/deploy-sandbox.db pnpm --filter @kron/api prisma:seed && DATABASE_URL=file:$PWD/apps/api/prisma/deploy.db KRON_SANDBOX_DB=$PWD/apps/api/prisma/deploy-sandbox.db pnpm --filter @kron/api demo:seed-vercel",
     "demo:run": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev",
     "demo:claude": "pnpm --filter @kron/llm-agent build && pnpm --filter @kron/demo-agent dev -- --provider anthropic",
