@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApprovalDTO, ControlDecision, DriftProofDTO, EnforcementReceiptDTO } from "@kron/shared";
 import { api } from "../api/client.js";
@@ -362,12 +362,207 @@ function ImpactCard({ approval }: { approval: ApprovalDTO }) {
   );
 }
 
+type PipelineState = "done" | "active" | "skipped" | "blocked" | "idle";
+
+const pipelineNodeTone: Record<PipelineState, { dot: string; label: string; sub: string }> = {
+  done: {
+    dot: "border-[var(--color-success)] bg-[var(--color-success)] text-[var(--color-surface-3)]",
+    label: "text-[var(--color-ink)]",
+    sub: "text-[var(--color-ink-2)]",
+  },
+  active: {
+    dot: "border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-surface-3)] ring-2 ring-[var(--color-accent-soft)]",
+    label: "text-[var(--color-accent)]",
+    sub: "text-[var(--color-ink-2)]",
+  },
+  skipped: {
+    dot: "border-dashed border-[var(--color-line)] bg-transparent text-[var(--color-ink-3)]",
+    label: "text-[var(--color-ink-3)]",
+    sub: "text-[var(--color-ink-3)]",
+  },
+  blocked: {
+    dot: "border-[var(--color-danger)] bg-[var(--color-danger)] text-[var(--color-surface-3)]",
+    label: "text-[var(--color-danger)]",
+    sub: "text-[var(--color-ink-2)]",
+  },
+  idle: {
+    dot: "border-[var(--color-line)] bg-[var(--color-surface-3)] text-[var(--color-ink-3)]",
+    label: "text-[var(--color-ink-2)]",
+    sub: "text-[var(--color-ink-3)]",
+  },
+};
+
+function previewPipelineLabel(preview: ApprovalDTO["preview"]): string {
+  if (!preview) return "real impact";
+  if (preview.rowsAffected != null) return `${fmtInt(preview.rowsAffected)} rows`;
+  if (preview.recipient) return preview.recipientKnown ? "known recipient" : "new recipient";
+  return preview.kind;
+}
+
+/**
+ * The seven controls between an agent's intent and a real effect. It reads the
+ * selected card (or the last decision once the card leaves the queue), so the
+ * strip is a live trace of the mechanism rather than a static diagram.
+ */
+function PipelineStrip({
+  approval,
+  receipt,
+  mode,
+}: {
+  approval: ApprovalDTO | null;
+  receipt: EnforcementReceiptDTO | null;
+  mode: Mode;
+}) {
+  const baseline = (approval?.mode ?? mode) === "baseline";
+  const hasReceipt = Boolean(receipt);
+  // On a cold page there is no live card, but the last receipt still proves a
+  // full pass through the path. Use it as a read-only trace instead of showing
+  // the first four steps as "never happened".
+  const receiptPath = !approval && receipt ? receipt : null;
+  const approvalBlocked = receipt?.status === "blocked" || receipt?.status === "rejected";
+  const approvalState: PipelineState = hasReceipt
+    ? approvalBlocked
+      ? "blocked"
+      : "done"
+    : approval?.status === "pending"
+      ? "active"
+      : approval
+        ? "done"
+        : "idle";
+
+  const steps: Array<{ label: string; sub: string; title?: string; state: PipelineState }> = [
+    {
+      label: "Classify",
+      sub: approval?.tool ?? receiptPath?.tool ?? "the tool call",
+      title: approval?.tool ?? receiptPath?.tool,
+      state: approval || receiptPath ? "done" : "idle",
+    },
+    {
+      label: "Preview",
+      sub: approval?.preview
+        ? previewPipelineLabel(approval.preview)
+        : baseline
+          ? "not in baseline"
+          : receiptPath
+            ? "verified before run"
+            : "real sandbox",
+      title: approval?.preview?.summary,
+      state: approval?.preview ? "done" : baseline ? "skipped" : receiptPath ? "done" : "idle",
+    },
+    {
+      label: "Score",
+      sub: approval ? `risk ${approval.riskScore}/100` : receiptPath ? receiptPath.decision : "deterministic rules",
+      state: approval || receiptPath ? "done" : "idle",
+    },
+    {
+      label: "Safe rewrite",
+      sub: approval?.safeActionHash
+        ? (approval.safeLabel ?? "safer action")
+        : baseline
+          ? "not in baseline"
+          : receiptPath
+            ? receiptPath.status === "executed"
+              ? "revalidated + used"
+              : "offered"
+            : "safer action",
+      title: approval?.safeLabel ?? undefined,
+      state: approval?.safeActionHash ? "done" : baseline ? "skipped" : receiptPath ? "done" : "idle",
+    },
+    {
+      label: "Bound approval",
+      sub: hasReceipt
+        ? `${receipt?.status ?? "decided"} by ${
+            approval?.decidedBy === "autopilot" ? "autopilot" : "human"
+          }`
+        : approval?.status === "pending"
+          ? "waiting for human"
+          : "hash + dataset",
+      state: approvalState,
+    },
+    {
+      label: "One-shot grant",
+      sub: receipt?.grantId ? shortId(receipt.grantId, 10) : hasReceipt ? "not needed" : "atomic consume",
+      state: receipt?.grantId ? "done" : hasReceipt ? "skipped" : "idle",
+    },
+    {
+      label: "Receipt",
+      sub: receipt ? `#${receipt.seq} · ${receipt.status}` : "hash-chained",
+      state: receipt ? "done" : "idle",
+    },
+  ];
+
+  return (
+    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-3)]">
+          One path · no bypass
+        </span>
+        <span className="font-mono text-[9px] text-[var(--color-ink-3)]">
+          {receipt
+            ? `last decision · ${shortId(receipt.id, 10)}`
+            : approval
+              ? `card ${shortId(approval.id, 10)}`
+              : "waiting for an action"}
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-stretch overflow-x-auto pb-1">
+        {steps.map((step, i) => {
+          const tone = pipelineNodeTone[step.state];
+          const mark =
+            step.state === "done"
+              ? "✓"
+              : step.state === "blocked"
+                ? "×"
+                : step.state === "skipped"
+                  ? "–"
+                  : step.state === "active"
+                    ? "●"
+                    : String(i + 1);
+          return (
+            <Fragment key={step.label}>
+              {i > 0 ? (
+                <div
+                  className={`mt-[13px] h-px w-4 shrink-0 ${
+                    steps[i - 1]!.state === "done" && step.state === "done"
+                      ? "bg-[var(--color-success)]/50"
+                      : "bg-[var(--color-line)]"
+                  }`}
+                />
+              ) : null}
+              <div className="min-w-[112px] flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold ${tone.dot}`}
+                  >
+                    {mark}
+                  </span>
+                  <span className={`truncate text-[10px] font-semibold uppercase tracking-[0.06em] ${tone.label}`}>
+                    {step.label}
+                  </span>
+                </div>
+                <div
+                  className={`mt-1 truncate pl-[28px] text-[9px] leading-4 ${tone.sub}`}
+                  title={step.title ?? step.sub}
+                >
+                  {step.sub}
+                </div>
+              </div>
+            </Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Control() {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("kron");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [drift, setDrift] = useState<DriftProofDTO | null>(null);
+  const [lastApproval, setLastApproval] = useState<ApprovalDTO | null>(null);
 
   const approvalsQuery = useQuery({
     queryKey: ["approvals", "pending"],
@@ -389,10 +584,32 @@ export default function Control() {
   const proof = proofQuery.data?.proof;
   const verification = verifyQuery.data?.verification;
   const isAdmin = meQuery.data?.user.role === "admin";
+  const receipts = receiptsQuery.data?.receipts ?? [];
 
   useEffect(() => {
     if (!selectedId && approvals[0]) setSelectedId(approvals[0].id);
   }, [approvals, selectedId]);
+
+  // Once a card is decided it leaves the pending queue. Keep it around so the
+  // pipeline still shows the path the action took, and attach its receipt.
+  useEffect(() => {
+    if (selected) setLastApproval(selected);
+  }, [selected]);
+
+  const pipelineApproval = selected ?? lastApproval;
+  // Every evaluated action gets a receipt immediately — including a HOLD while
+  // the card is still waiting. Those are not decisions yet, so a pending card
+  // stops at "Bound approval" and only lights grant/receipt after the human acts.
+  const selectedIsPending =
+    Boolean(selected) && selected?.id === pipelineApproval?.id && pipelineApproval?.status === "pending";
+  const approvalReceipts = pipelineApproval
+    ? receipts.filter((r) => r.approvalId === pipelineApproval.id)
+    : [];
+  const pipelineReceipt = pipelineApproval
+    ? (selectedIsPending
+        ? (approvalReceipts.find((r) => r.status !== "held") ?? null)
+        : (approvalReceipts[0] ?? null))
+    : (receipts[0] ?? null);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["approvals"] });
@@ -477,6 +694,10 @@ export default function Control() {
               decision by hash.
             </p>
           </div>
+        </div>
+
+        <div className="mt-5">
+          <PipelineStrip approval={pipelineApproval} receipt={pipelineReceipt} mode={mode} />
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-line)] pt-4">
