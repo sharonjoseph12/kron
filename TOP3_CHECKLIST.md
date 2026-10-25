@@ -37,7 +37,7 @@
 | Stale approval | **409**, `toolInvoked: false`, archived **0** |
 | Fresh approval | archives exactly **786** |
 | Deterministic runs | **30/30** |
-| Automated tests | **124** |
+| Automated tests | **126** |
 | Typecheck / build | **12 workspaces clean** |
 
 ---

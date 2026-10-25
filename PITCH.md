@@ -72,9 +72,9 @@
 
 > “Every decision emits a receipt: before/after state, whether the tool ran, the linked approval and grant, and drift evidence. The baseline is deliberately worse — approve the raw card and exactly **one** email reaches the attacker.
 >
-> The whole demo is deterministic and offline: **30/30** runs pass, **124 tests** are green, and no live model or external network is involved.”
+> The whole demo is deterministic and offline: **30/30** runs pass, **126 tests** are green, and no live model or external network is involved.”
 
-**Slide:** `hash-chained receipts · one-shot grants · 30/30 · 124 tests`
+**Slide:** `hash-chained receipts · one-shot grants · 30/30 · 126 tests`
 
 ---
 

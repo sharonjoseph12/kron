@@ -51,7 +51,7 @@ Then run `pnpm demo:reset` once more before recording so the dashboard opens on 
 | 1:25 | Bulk delete | Click **Bulk delete**; approve archive | **1,204** rows, **37** sensitive |
 | 1:55 | Drift | Click **Shadow drift** | **826 → 40 → 786**, stale **409**, fresh **786** |
 | 2:25 | Receipts | Scroll to **Enforcement receipts**; click **Download** | `toolInvoked` + before/after |
-| 2:35 | Proof | Cut to terminal or show badge | **30/30**, **124 tests** |
+| 2:35 | Proof | Cut to terminal or show badge | **30/30**, **126 tests** |
 | 2:40 | Close | Title card | “Cap its actions.” |
 
 ---

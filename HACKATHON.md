@@ -30,7 +30,7 @@ classify → real impact preview → risk score → safe rewrite
 | Baseline (raw approval) | attacker inbox **1** |
 | Shadow drift | **826 pending → 40 changed → 786 live**; stale card **409**, archived **0**; fresh approval archives **786** |
 | Repeatability | **30/30** deterministic runs |
-| Automated suite | **124 tests**, typecheck/build clean across 12 workspaces |
+| Automated suite | **126 tests**, typecheck/build clean across 12 workspaces |
 
 ## Key Differentiators
 

@@ -189,7 +189,7 @@ Downloadable JSON. Chain verification endpoint.
 - Sandbox only: `.example` domains, in-app mail sink, Algorand TestNet.
 - `pnpm demo:attack all` → hero, delete, baseline, drift.
 - `pnpm demo:proof` → **30/30** repeated runs.
-- Automated suite: **124 tests**, typecheck and build green across **12 workspaces**.
+- Automated suite: **126 tests**, typecheck and build green across **12 workspaces**.
 
 **Speaker note:** “A judge can reproduce every number in this deck without an API key or a funded wallet.”
 

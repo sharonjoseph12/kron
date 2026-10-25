@@ -93,7 +93,7 @@
 | “One-shot grants” | atomic consume + replay/expiry tests |
 | “Hash-chained receipts” | `GET /api/receipts/verify`; receipt JSON has `prevHash` + `hash` |
 | “30/30 deterministic runs” | `pnpm demo:proof` |
-| “124 automated tests, typecheck + build clean” | `pnpm test`, `pnpm typecheck`, `pnpm build` |
+| “126 automated tests, typecheck + build clean” | `pnpm test`, `pnpm typecheck`, `pnpm build` |
 
 ---
 

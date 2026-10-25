@@ -1,11 +1,12 @@
 # KRON — The Capability Firewall for AI Agents
 
 [![CI](https://github.com/sharonjoseph12/kron/actions/workflows/ci.yml/badge.svg)](https://github.com/sharonjoseph12/kron/actions/workflows/ci.yml)
+[![Live Sandbox](https://img.shields.io/badge/Live-Sandbox%20Demo-000000?style=flat&logo=vercel&logoColor=white)](https://kron-ps21.vercel.app)
 [![Algorand TestNet](https://img.shields.io/badge/Algorand-TestNet-00d2ff?style=flat&logo=algorand)](https://testnet.explorer.perawallet.app)
 [![MCP Protocol](https://img.shields.io/badge/MCP-1.0-8b5cf6?style=flat)](https://modelcontextprotocol.io)
 [![x402 Micropayments](https://img.shields.io/badge/x402-Enabled-10b981?style=flat)](https://x402.org)
 [![TypeScript SDK](https://img.shields.io/badge/@kron/sdk-v0.1.0-blue?style=flat)](./packages/sdk)
-[![Tests Passing](https://img.shields.io/badge/Tests-124%20Passing-emerald?style=flat)](#-testing--verification)
+[![Tests Passing](https://img.shields.io/badge/Tests-126%20Passing-emerald?style=flat)](#-testing--verification)
 
 **One line:** KRON is the capability firewall for AI agents — preview the blast radius, bind the approval, prove the enforcement.
 
@@ -13,7 +14,18 @@
 
 **Also preserved:** the original policy-controlled x402 payment runtime on Algorand TestNet — isolated agent wallets, atomic policy-anchor groups, what-if simulation, on-chain verification and a fleet emergency stop. Payments are now one action kind (`pay`) inside the same control plane.
 
+**Jump to:** [Quick Start](#quick-start) ·
+[Live Demo](https://kron-ps21.vercel.app) ·
+[Control Plane](#control-plane) ·
+[SDK](#sdk) ·
+[Architecture](#architecture) ·
+[Packages](#packages) ·
+[Testing](#testing) ·
+[Docs](#docs)
+
 ---
+
+<a id="sdk"></a>
 
 ## ⚡ 5-Minute Developer Integration (`@kron/sdk`)
 
@@ -109,6 +121,8 @@ Click **▶ Run Golden Path** on the Dashboard to see the entire KRON flow in on
 
 ---
 
+<a id="architecture"></a>
+
 ## 🏛️ Architecture
 
 ```
@@ -173,6 +187,8 @@ Live SDK calls against Algorand TestNet — no canned output.
 
 ---
 
+<a id="control-plane"></a>
+
 ## 🛡️ PS 2.1 Agent Control Plane
 
 The control plane is a **capability firewall**, not a monitoring dashboard. Every read, write, delete, send or payment tool call is classified, previewed against the real sandbox SQLite database inside a rolled-back transaction, risk-scored, and held for a human when needed. Safe alternatives are revalidated through the same pipeline; approvals are bound to `sha256(canonical action JSON)` plus a fingerprint of the exact rows the preview observed. Execution requires a **one-shot capability grant**; every decision emits a **hash-chained enforcement receipt**.
@@ -188,6 +204,8 @@ pnpm demo:proof                 # hero + delete + drift, 10 runs each (30/30 ass
 ```
 
 Open the dashboard and choose **Control Plane** in the sidebar. The page includes the approval desk, real impact card, safe rewrite, drift panel, hash-chain verify/tamper demo, live timeline, proof pane, enforcement receipts and a KRON Guard / Baseline toggle. No live model or external network is used on the demo path.
+
+<a id="quick-start"></a>
 
 ## 🚀 Quick Start (Zero Docker Required)
 
@@ -236,6 +254,8 @@ A scripted run proves the full lifecycle on TestNet:
 
 ---
 
+<a id="packages"></a>
+
 ## 📦 Workspace Packages
 
 | Package | Description | Tests |
@@ -243,19 +263,25 @@ A scripted run proves the full lifecycle on TestNet:
 | [`@kron/sdk`](./packages/sdk) | Official TypeScript SDK for 5-minute agent integration | 7 passing |
 | [`@kron/policy-engine`](./packages/policy-engine) | Pure deterministic policy rule engine (<5ms) + Velocity Guard + Behavioral Anomaly Scoring | 32 passing |
 | [`@kron/x402`](./packages/x402) | Algorand x402 protocol, atomic groups, **on-chain policy enforcement** & anchor-proof verification | 26 passing |
+| [`@kron/action-risk`](./packages/action-risk) | Deterministic 0–100 action classification and risk scoring for the control plane | 5 passing |
+| [`@kron/safe-rewrite`](./packages/safe-rewrite) | Revalidated safe alternatives for dangerous actions (delete → archive, etc.) | 5 passing |
+| [`@kron/business-tools`](./packages/business-tools) | Sandboxed file / mail / contract tools used by the demo and the control plane | 5 passing |
+| [`@kron/llm-agent`](./packages/llm-agent) | Zero-dependency LLM provider adapters (Gemini / OpenAI / Anthropic) | 7 passing |
 | [`@kron/shared`](./packages/shared) | Shared types, DTOs, schemas, constants | 4 passing |
-| [`apps/api`](./apps/api) | Fastify REST API, MCP Gateway, SSE event hub, RBAC + governed escalations | 15 passing |
+| [`apps/api`](./apps/api) | Fastify REST API, MCP Gateway, SSE event hub, RBAC + governed escalations | 25 passing |
 | [`apps/dashboard`](./apps/dashboard) | React + Tailwind + Recharts Operator Dashboard | — |
 | [`apps/resource-server`](./apps/resource-server) | Paid MCP tools gated by x402; rejects unanchored settlements | 10 passing |
 | [`apps/demo-agent`](./apps/demo-agent) | Autonomous agent driving multi-agent & A2A demos | — |
 
 ---
 
+<a id="testing"></a>
+
 ## 🧪 Testing & Verification
 
 ```bash
-# 124 tests across 12 workspaces: shared, policy, x402, SDK, business tools,
-# safe rewrite, risk, LLM agent, API integration, resource server, dashboard
+# 126 tests across 18 files in the workspace: shared, policy, x402, SDK,
+# business tools, safe rewrite, action risk, LLM agent, API integration, resource server
 pnpm test
 pnpm typecheck
 pnpm build
@@ -267,7 +293,9 @@ pnpm demo:proof                   # 30/30 repeated runs
 
 ---
 
-## 🏆 Hackathon Documents
+<a id="docs"></a>
+
+## 📚 Docs & Submission Package
 
 - [`VIDEO_SCRIPT.md`](./VIDEO_SCRIPT.md) — 2:45 demo recording script with exact numbers
 - [`KRON_PS21_Deck.pptx`](./KRON_PS21_Deck.pptx) — final 14-slide deck (editable)
@@ -276,11 +304,12 @@ pnpm demo:proof                   # 30/30 repeated runs
 - [`PITCH.md`](./PITCH.md) — 3-Minute Pitch Script & Judge Q&A Cheat Sheet
 - [`SUBMISSION.md`](./SUBMISSION.md) — Full Hackathon Project Submission Document
 - [`TOP3_CHECKLIST.md`](./TOP3_CHECKLIST.md) — submission checklist and verified metrics
-- [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md) — setup, clicks and fallback plan
+- [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md) — timed 3-minute rehearsal, setup, clicks and fallback plan
 - [`JUDGE_PREP.md`](./JUDGE_PREP.md) — Tough Q&A + Rogue-Agent Demo
 - [`HACKATHON.md`](./HACKATHON.md) — One-Page Judge Summary
 - [`OFFLINE.md`](./OFFLINE.md) — 24-Hour Offline Runbook
+- [`SECURITY.md`](./SECURITY.md) — vulnerability disclosure policy
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — Architecture Diagrams & Data Flow
 - [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) — VPS / Render / Railway Deploy (TestNet)
 - [`docs/SCREENSHOTS.md`](./docs/SCREENSHOTS.md) — 5 Required Screenshots
-- [`DEMO_REHEARSAL.md`](./DEMO_REHEARSAL.md) — Timed 3-Minute Rehearsal + Fallback Plan
+- [`docs/archive/`](./docs/archive/) — superseded PRDs, kept for provenance

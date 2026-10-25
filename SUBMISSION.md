@@ -143,7 +143,7 @@ Deterministic proof, no live model or external network:
 ```bash
 pnpm demo:attack all     # hero | delete | baseline | drift, with exact end-state assertions
 pnpm demo:proof          # 30/30 repeated runs
-pnpm test                # 124 automated tests
+pnpm test                # 126 automated tests
 pnpm typecheck           # 12 workspaces
 pnpm build
 ```
