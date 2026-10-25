@@ -11,6 +11,7 @@
   },
   "routes": [
     { "handle": "filesystem" },
+    { "src": "/(healthz|health)", "dest": "/api/[...path]" },
     { "src": "/api/(.*)", "dest": "/api/[...path]" },
     { "src": "/mcp/(.*)", "dest": "/api/[...path]" },
     { "src": "/(.*)", "dest": "/index.html" }
