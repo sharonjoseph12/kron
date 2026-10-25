@@ -209,6 +209,8 @@ Open the dashboard and choose **Control Plane** in the sidebar. The page include
 
 The full shot-by-shot script — with timings, exact clicks, voiceover and on-screen text — is [`VIDEO_SCRIPT.md`](./VIDEO_SCRIPT.md). Every number below is asserted by `pnpm demo:attack all` and `pnpm demo:proof`.
 
+**What the video proves, in brief order:** monitor and control every action (one gateway, one-shot grant) → detect and block harmful or unauthorised actions (lethal trifecta **75/100**, **1,204**-row delete, stale approval **409**) → audit every action, alert and intervention (approval desk, baseline diff, hash-chained receipts). Algorand is a settlement footnote, not the pitch.
+
 | Beat | What happens | Verified number |
 |---|---|---|
 | **Hero — lethal trifecta** | poisoned email + private contract → send to a new outside address | risk **75/100** → **HOLD** → safe internal send → attacker inbox **0** |
