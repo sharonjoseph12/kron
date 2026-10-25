@@ -132,13 +132,23 @@ export default function Dashboard() {
       const agent = agents[0]!;
       log(`   Found agent "${agent.name}" (${agent.id.slice(0, 8)}…)`);
 
-      // Step 2: Fund wallet
-      log("② Funding agent wallet on Algorand TestNet…");
+      // Step 2: Fund wallet (no-op unless FUNDING_MNEMONIC is configured)
+      log("② Preparing agent wallet on Algorand TestNet…");
+      let balanceAlgo = 0;
       try {
         const funded = await api.fundWallet(agent.id);
-        log(`   Wallet ${funded.address.slice(0, 10)}… → ${funded.balanceAlgo.toFixed(4)} ALGO`);
+        balanceAlgo = funded.balanceAlgo;
+        log(`   Wallet ${funded.address.slice(0, 10)}… → ${balanceAlgo.toFixed(4)} ALGO`);
       } catch {
-        log("   Wallet already funded (skipping).");
+        log("   Could not read wallet balance (continuing).");
+      }
+
+      if (balanceAlgo < 0.12) {
+        log("   ✗ Not enough TestNet ALGO to settle a payment (needs ≥ 0.12 ALGO).");
+        log(`     Address: ${agent.walletAddress}`);
+        log("     Fund it at https://bank.testnet.algorand.network (TestNet dispenser)");
+        log("     or set FUNDING_MNEMONIC in .env so KRON funds agents automatically.");
+        throw new Error("Agent wallet is unfunded — no transaction was attempted.");
       }
 
       // Step 3: Start session
@@ -164,10 +174,22 @@ export default function Dashboard() {
         network: "testnet",
         clientRequestId: `golden_${Date.now()}`,
       });
+
+      const settlementBlocked = result.status === "BLOCKED" || result.decision === "BLOCKED" || !result.txId;
+      if (settlementBlocked) {
+        const reason = (result.reasons as string[] | undefined)?.[0] ?? "settlement produced no transaction";
+        log(`   → Decision: ${result.decision ?? result.status}`);
+        log(`   ✗ ${reason}`);
+        log("⑤ Golden Path stopped — nothing settled on-chain.");
+        return result;
+      }
+
       log(`   → Decision: ${result.decision ?? result.status}`);
-      if (result.txId) {
-        log(`   → Algorand Tx: ${result.txId}`);
-        log("   → Policy hash anchored via atomic group (App Call + Payment)");
+      log(`   → Algorand Tx: ${result.txId}`);
+      if (result.appId) {
+        log(`   → Policy hash anchored via atomic group (App Call + Payment, app ${result.appId})`);
+      } else {
+        log("   → Standalone payment (anchor contract not deployed — no atomic group)");
       }
       log("⑤ Golden Path complete ✓");
       return result;
