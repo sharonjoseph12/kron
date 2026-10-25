@@ -116,6 +116,9 @@ export default function Dashboard() {
   const narrativeLoading = overview.isPending || recent.isPending || agentsSpend.isPending;
 
   // ---- Golden Path Demo ----
+  // Kept tiny on purpose: the demo sends to the agent's own wallet, so the only
+  // real cost is the 0.001 ALGO network fee per run.
+  const GOLDEN_AMOUNT_ALGO = Number(import.meta.env.VITE_GOLDEN_AMOUNT_ALGO ?? "0.001") || 0.001;
   const [goldenSteps, setGoldenSteps] = useState<string[]>([]);
   const [goldenResult, setGoldenResult] = useState<any>(null);
 
@@ -157,7 +160,7 @@ export default function Dashboard() {
       log(`   Session ${session.id.slice(0, 8)}… active.`);
 
       // Step 4: Execute paid tool call (real x402 → policy → Algorand settlement)
-      log("④ Calling paid tool 'market/report' (0.018 ALGO)…");
+      log(`④ Calling paid tool 'market/report' (${GOLDEN_AMOUNT_ALGO} ALGO demo amount)…`);
       log("   → x402 challenge intercepted");
       log("   → Policy engine evaluating…");
       const result = await api.executePayment({
@@ -170,7 +173,7 @@ export default function Dashboard() {
         resourceId: "market/report",
         resourceName: "Real-Time Market Intel Report",
         recipient: agent.walletAddress ?? "RECIPIENT_ADDRESS",
-        amountAlgo: 0.018,
+        amountAlgo: GOLDEN_AMOUNT_ALGO,
         network: "testnet",
         clientRequestId: `golden_${Date.now()}`,
       });

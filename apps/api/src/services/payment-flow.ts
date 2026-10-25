@@ -24,7 +24,7 @@ import { recordAudit } from "./audit.js";
 import { hub } from "../events/hub.js";
 import { reportToGoPlausible } from "./goplausible.js";
 
-const FEE_MICRO = 2000n;
+const FEE_MICRO = 1000n; // Algorand minimum fee per transaction
 const MIN_BALANCE_MICRO = 100_000n;
 
 export interface ExecutePaymentArgs {

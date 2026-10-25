@@ -11,6 +11,15 @@ import { createWalletKeys } from "../src/algorand/vault.js";
 import { createPolicyVersion } from "../src/services/policies.js";
 import crypto from "node:crypto";
 
+// Wallet mnemonics are encrypted at rest with ENCRYPTION_KEY. An ephemeral key
+// would make every seeded wallet permanently unrecoverable, so refuse to run
+// without a persistent one. `pnpm demo:reset` creates .env before this runs.
+if (!process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length < 64) {
+  throw new Error(
+    "ENCRYPTION_KEY is not set (need 64 hex chars). Run `pnpm demo:reset` to create .env before seeding wallets.",
+  );
+}
+
 async function main() {
   console.log("🌱 Seeding KRON database...");
 
